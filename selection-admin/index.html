@@ -7,7 +7,6 @@
     <title>Selection Canvas - Upravljanje Aplikacijom</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-
 </head>
 
 <body>
@@ -16,6 +15,40 @@
         <div class="admin-brand">
             <span class="brand-main">SELECTION</span>
             <span class="brand-sub">Kreativni Radni Prostor</span>
+        </div>
+
+        <div id="master-admin-blok" class="master-card"
+            style="margin: 10px 0 20px 0; border: 1px solid rgba(214, 180, 131, 0.3); padding: 15px; border-radius: 12px; background: rgba(255, 255, 255, 0.02);">
+            <h3
+                style="color: #d4b483; font-family: 'Segoe UI', sans-serif; font-size: 0.85rem; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 1px;">
+                <i class="fa-solid fa-crown" style="color: #d4b483;"></i> Master Admin
+            </h3>
+            <p style="font-size: 10px; color: #888; margin-bottom: 12px;">Kreiraj novog klijenta u bazi:</p>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label
+                        style="font-size: 9px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 4px;">Novi
+                        poddomen</label>
+                    <input type="text" id="master-novi-subdomain" placeholder="npr. luksuzni-apartman"
+                        style="width: 100%; padding: 8px; background: #070b0e; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px;">
+                </div>
+                <div>
+                    <label
+                        style="font-size: 9px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 4px;">Email
+                        klijenta</label>
+                    <input type="email" id="master-novi-email" placeholder="klijent@gmail.com"
+                        style="width: 100%; padding: 8px; background: #070b0e; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px;">
+                </div>
+            </div>
+
+            <button onclick="masterKreirajNovogKorisnika()"
+                style="width: 100%; padding: 10px; background: #d4b483; color: #0f171e; border: none; border-radius: 6px; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; cursor: pointer;">
+                <i class="fa-solid fa-rocket"></i> Lansiraj Korisnika
+            </button>
+
+            <div id="master-status-poruka"
+                style="margin-top: 10px; font-weight: 600; font-size: 11px; text-align: center;"></div>
         </div>
 
         <h2>Stilovi i Fontovi</h2>
@@ -118,41 +151,6 @@
 
     <div class="main-workspace" style="flex: 1.2; border-right: 1px solid var(--admin-border);">
 
-        <div id="master-admin-blok" class="admin-card master-card"
-            style="margin: 20px 20px 0 20px; border: 1px solid rgba(214, 180, 131, 0.3); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.02); box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-            <h3
-                style="color: #d4b483; font-family: 'Cinzel', serif; font-size: 1.1rem; margin-bottom: 5px; display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-crown" style="color: #d4b483;"></i> Master Admin — Kreiraj Klijenta
-            </h3>
-            <p style="font-size: 11px; color: #888; margin-bottom: 15px;">Automatsko generisanje nove KV baze i šablona
-                za SaaS korisnika.</p>
-
-            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 12px;">
-                <div style="flex: 1; min-width: 200px;">
-                    <label
-                        style="font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 5px;">Novi
-                        poddomen (npr. apartmani)</label>
-                    <input type="text" id="master-novi-subdomain" placeholder="Unesi samo poddomen..."
-                        style="width: 100%; padding: 10px; background: #070b0e; border: 1px solid var(--admin-border); border-radius: 6px; color: #fff; font-family: inherit;">
-                </div>
-                <div style="flex: 1; min-width: 200px;">
-                    <label
-                        style="font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 5px;">Email
-                        klijenta (za proveru)</label>
-                    <input type="email" id="master-novi-email" placeholder="klijent@gmail.com"
-                        style="width: 100%; padding: 10px; background: #070b0e; border: 1px solid var(--admin-border); border-radius: 6px; color: #fff; font-family: inherit;">
-                </div>
-            </div>
-
-            <button onclick="masterKreirajNovogKorisnika()"
-                style="width: 100%; padding: 12px; background: #d4b483; color: #0f171e; border: none; border-radius: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: background 0.2s;">
-                <i class="fa-solid fa-rocket"></i> Lansiraj Korisnika u Antigravity
-            </button>
-
-            <div id="master-status-poruka"
-                style="margin-top: 12px; font-weight: 600; font-size: 12px; text-align: center;"></div>
-        </div>
-
         <div class="toolbar">
             <span class="toolbar-title">Prečica:</span>
             <button class="btn-add btn-splash-trigger" onclick="postaviAktivniBlok(-1)">
@@ -174,7 +172,6 @@
         <div class="blocks-container" id="cms-blocks-list"></div>
     </div>
 
-    <!-- DESNA STRANA: ŽIVI SIMULATOR SA DVA REŽIMA PRIKAZA -->
     <div class="preview-panel" id="global-preview-panel"
         style="flex: 0.75; min-width: 320px; background-color: #070b0e; padding: 20px; display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden; border-left: 1px solid var(--admin-border); transition: flex 0.3s ease;">
 
@@ -196,7 +193,6 @@
                 Uvodni ekran</span>
         </div>
 
-        <!-- Glavni kontejner simulatora koji menja stilove u zavisnosti od režima -->
         <div class="device-simulator" id="live-simulator-screen"
             style="flex: 1; width: 100%; background-color: #0f171e; border: 4px solid #1c2a39; border-radius: 24px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); position: relative; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 25px; transition: all 0.3s ease;">
             <div id="simulator-content-target" style="width: 100%; text-align: center; transition: all 0.3s ease;">
@@ -221,6 +217,7 @@
             </div>
         </div>
     </div>
+
     <script src="admin-logic.js?v=1.3.8"></script>
 </body>
 
