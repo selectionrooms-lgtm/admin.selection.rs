@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function ucitajConfig() {
-    fetch('/get_config?subdomain=canvas&nocache=' + Date.now())
+    fetch('https://selection-shell.selectionrooms.workers.dev/?subdomain=canvas&nocache=' + Date.now())
         .then(res => {
             if (!res.ok) throw new Error("Server je vratio grešku: " + res.status);
             return res.json();
@@ -840,7 +840,7 @@ async function sacuvajSveNaServer() {
     }
 
     try {
-        const response = await fetch('/save_data', {
+        const response = await fetch('https://selection-shell.selectionrooms.workers.dev/save_data', {
             method: 'POST',
             body: formData
         });
@@ -1199,4 +1199,102 @@ function osveziZoomGalerijuEkran(blokIndex) {
         `;
     });
     kontejner.innerHTML = slikeHtml;
+}
+// ==========================================================================
+// 🚀 SELECTION SAAS SYSTEM — MASTER ADMIN KREIRANJE KLIJENATA
+// ==========================================================================
+
+async function masterKreirajNovogKorisnika() {
+    const subInput = document.getElementById('master-novi-subdomain');
+    const emailInput = document.getElementById('master-novi-email');
+    const statusPoruka = document.getElementById('master-status-poruka');
+
+    if (!subInput || !emailInput || !statusPoruka) return;
+
+    const subdomain = subInput.value.trim().toLowerCase();
+    const email = emailInput.value.trim();
+
+    // 1. Brza provera unosa
+    if (!subdomain || !email) {
+        statusPoruka.style.color = "#b81d24";
+        statusPoruka.innerText = "❌ Greška: Morate uneti i poddomen i email klijenta!";
+        return;
+    }
+
+    // Provera za nedozvoljene karaktere u poddomenu
+    if (!/^[a-z0-9-]+$/.test(subdomain)) {
+        statusPoruka.style.color = "#b81d24";
+        statusPoruka.innerText = "❌ Greška: Poddomen sme da sadrži samo mala slova, brojeve i crticu (-).";
+        return;
+    }
+
+    if (!confirm(`Da li sigurno želiš da lansiraš novi prostor '${subdomain}.selection.rs' za klijenta ${email}?`)) {
+        return;
+    }
+
+    statusPoruka.style.color = "#d4b483";
+    statusPoruka.innerText = "⚡ Pokrećem Antigravity motore... Molimo sačekajte...";
+
+    // 2. Pravimo čist, fabrički JSON šablon za novog korisnika
+    const noviCistSvemir = {
+        config: {
+            globalSettings: {
+                primaryColor: "#d4b483",
+                secondaryColor: "#d4b483",
+                textColor: "#eeeeee",
+                metaColor: "#a0acb8",
+                backgroundColor: "#0f171e",
+                mainBackgroundImage: "",
+                containerBg: "#1c2a39",
+                fontHeader: "Cinzel",
+                fontQuote: "Cormorant Garamond",
+                fontBody: "Montserrat",
+                projectName: subdomain.toUpperCase(),
+                projectSubtitle: "Dobrodošli u Vaš novi Selection prostor",
+                loaderMusic: "",
+                screensaverMusic: "",
+                screensaverTimeout: 60
+            },
+            hasWarningMessage: true
+        },
+        loader: {
+            warningTitle: "⚠️ UPOZORENJE ⚠️",
+            warningFinalLine: "",
+            warningTexts: ["Pravila korišćenja aplikacije.", "Uživajte u ekspediciji."]
+        },
+        timeline: []
+    };
+
+    // 3. Pakujemo u FormData format koji naš app.js u shell-u očekuje
+    const formData = new FormData();
+    formData.append('subdomain', subdomain);
+    formData.append('config_data', JSON.stringify(noviCistSvemir, null, 2));
+
+    try {
+        // Povezujemo se direktno na naš novi Cloudflare Worker backend
+        // NAPOMENA: Ako ti u Cloudflare nije podešen custom domen shell.selection.rs, ovde stavi onaj *.workers.dev link!
+        const response = await fetch('https://selection-shell.selectionrooms.workers.dev/save_data', {
+            method: 'POST',
+            body: formData
+        });
+
+        const rez = await response.json().catch(() => ({}));
+
+        if (response.ok && rez.success) {
+            statusPoruka.style.color = "#2ecc71";
+            statusPoruka.innerHTML = `🎉 USPEH: Prostor <strong>${subdomain}</strong> je uspešno kreiran!<br>
+            🔗 Link za klijenta: <a href="https://${subdomain}.selection.rs" target="_blank" style="color:#2ecc71; text-decoration:underline;">${subdomain}.selection.rs</a>`;
+
+            // Čistimo formu nakon uspeha
+            subInput.value = '';
+            emailInput.value = '';
+        } else {
+            statusPoruka.style.color = "#b81d24";
+            statusPoruka.innerText = `❌ Greška servera: ${rez.error || "Neznan neuspeh."}`;
+        }
+    } catch (error) {
+        console.error("Master Error:", error);
+        statusPoruka.style.color = "#b81d24";
+        statusPoruka.innerText = "❌ Greška: Neuspešna komunikacija sa Cloudflare Shell-om.";
+    }
 }
