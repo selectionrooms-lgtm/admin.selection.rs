@@ -456,3 +456,53 @@
      height: 16px;
      cursor: pointer;
  }
+
+ /* --- 👑 SELECTION MASTER ADMIN TABLA STYLE --- */
+ .master-card {
+     display: block !important;
+     background: rgba(255, 255, 255, 0.02) !important;
+     border: 1px solid rgba(214, 180, 131, 0.25) !important;
+     border-radius: 12px;
+     padding: 20px;
+     margin: 20px;
+     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+     animation: masterGlowIn 1.5s ease-in-out infinite alternate;
+ }
+
+ .master-card label {
+     font-size: 11px;
+     color: var(--admin-muted);
+     text-transform: uppercase;
+     letter-spacing: 0.5px;
+     display: block;
+     margin-bottom: 5px;
+ }
+
+ .master-card input[type="text"],
+ .master-card input[type="email"] {
+     width: 100%;
+     padding: 10px 14px;
+     background-color: #070b0e !important;
+     border: 1px solid var(--admin-border);
+     color: white;
+     border-radius: 6px;
+     font-size: 0.85rem;
+     outline: none;
+     transition: border-color 0.2s;
+ }
+
+ .master-card input:focus {
+     border-color: var(--admin-accent) !important;
+ }
+
+ @keyframes masterGlowIn {
+     from {
+         border-color: rgba(214, 180, 131, 0.2);
+         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+     }
+
+     to {
+         border-color: rgba(214, 180, 131, 0.4);
+         box-shadow: 0 4px 25px rgba(214, 180, 131, 0.05);
+     }
+ }
