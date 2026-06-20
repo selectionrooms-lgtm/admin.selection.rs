@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="sr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selection Canvas - Upravljanje Aplikacijom</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="admin-brand">
+            <span class="brand-main">SELECTION</span>
+            <span class="brand-sub">Kreativni Radni Prostor</span>
+        </div>
+
+        <h2>Stilovi i Fontovi</h2>
+        <div class="form-group">
+            <label>Boja i stil za GLAVNE NASLOVE</label>
+            <div class="color-picker-wrapper">
+                <input type="color" id="color-h1" value="#d4b483" oninput="osveziZiviPreview()">
+                <select id="font-h1" style="flex: 1;" onchange="osveziZiviPreview()">
+                    <option value="Cinzel">Cinzel (Elegantan akademik)</option>
+                    <option value="Playfair Display">Playfair Display (Moderan žurnal)</option>
+                    <option value="Cormorant Garamond">Cormorant Garamond (Klasičan roman)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Boja i stil za PODNASLOVE i CITATE</label>
+            <div class="color-picker-wrapper">
+                <input type="color" id="color-h2" value="#d4b483" oninput="osveziZiviPreview()">
+                <select id="font-h2" style="flex: 1;" onchange="osveziZiviPreview()">
+                    <option value="Cormorant Garamond">Cormorant Garamond (Ukošena slova)</option>
+                    <option value="Cinzel">Cinzel</option>
+                    <option value="Playfair Display">Playfair Display</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Boja i stil za GLAVNI TEKST priče</label>
+            <div class="color-picker-wrapper">
+                <input type="color" id="color-p" value="#eeeeee" oninput="osveziZiviPreview()">
+                <select id="font-p" style="flex: 1;" onchange="osveziZiviPreview()">
+                    <option value="Montserrat">Montserrat (Čist i jasan)</option>
+                    <option value="Inter">Inter (Prefinjen i tanak)</option>
+                    <option value="Open Sans">Open Sans (Prirodan i čitljiv)</option>
+                </select>
+            </div>
+        </div>
+
+        <h2>Okruženje Ekrana</h2>
+        <div class="form-group">
+            <label>Boja pozadine ekrana</label>
+            <input type="color" id="input-boja-pozadina" value="#0f171e" oninput="osveziZiviPreview()">
+        </div>
+
+        <div class="form-group">
+            <label>Pozadinska slika ekrana</label>
+            <div class="zoom-drop-zone" id="drop-global-pozadina" style="padding: 12px; font-size: 0.8rem;"
+                onclick="okiniGlobalniKlikFajla('slika')">
+                <i class="fa-solid fa-image"
+                    style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
+                <span id="label-global-pozadina"
+                    style="font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Klikni
+                    ili prevuci sliku ovde</span>
+            </div>
+            <input type="hidden" id="input-slika-pozadina" value="">
+        </div>
+
+        <div class="form-group">
+            <label>Boja unutrašnjih tekstualnih kutija</label>
+            <input type="color" id="input-boja-kontejner" value="#1c2a39" oninput="osveziZiviPreview()">
+        </div>
+
+        <h2>Muzika i Automatski Sistemi</h2>
+
+        <div class="form-group">
+            <label>Muzika na uvodnom ekranu</label>
+            <div class="zoom-drop-zone" id="drop-global-loader-muzika" style="padding: 12px; font-size: 0.8rem;"
+                onclick="okiniGlobalniKlikFajla('loader-mp3')">
+                <i class="fa-solid fa-music"
+                    style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
+                <span id="label-global-loader-muzika"
+                    style="font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Klikni
+                    ili prevuci .mp3 ovde</span>
+            </div>
+            <input type="hidden" id="input-loader-muzika" value="">
+        </div>
+
+        <div class="form-group">
+            <label>Muzika kada se ekran zaključa</label>
+            <div class="zoom-drop-zone" id="drop-global-ss-muzika" style="padding: 12px; font-size: 0.8rem;"
+                onclick="okiniGlobalniKlikFajla('ss-mp3')">
+                <i class="fa-solid fa-lock"
+                    style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
+                <span id="label-global-ss-muzika"
+                    style="font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Klikni
+                    ili prevuci .mp3 ovde</span>
+            </div>
+            <input type="hidden" id="input-ss-muzika" value="">
+        </div>
+
+        <div class="form-group">
+            <label>Vreme do zaključavanja ekrana (u sekundama)</label>
+            <input type="number" id="input-ss-tajmer" min="5" max="600" value="60">
+        </div>
+
+        <button class="btn-save" onclick="sacuvajSveNaServer()"><i class="fa-solid fa-cloud-arrow-up"></i> Sačuvaj i
+            Objavi Sve</button>
+    </div>
+
+    <div class="main-workspace" style="flex: 1.2; border-right: 1px solid var(--admin-border);">
+        <div class="toolbar">
+            <span class="toolbar-title">Prečica:</span>
+            <button class="btn-add btn-splash-trigger" onclick="postaviAktivniBlok(-1)"><i
+                    class="fa-solid fa-wand-magic-sparkles"></i> Idi na Uvodni Ekran</button>
+
+            <span class="toolbar-title" style="margin-left: 20px;">Dodaj novu kockicu:</span>
+            <button class="btn-add" onclick="dodajNoviBlok('video')"><i class="fa-solid fa-circle-play"></i> +
+                Video</button>
+            <button class="btn-add" onclick="dodajNoviBlok('chapter')"><i class="fa-solid fa-book-open"></i> +
+                Poglavlje</button>
+            <button class="btn-add" onclick="dodajNoviBlok('gate')"><i class="fa-solid fa-key"></i> + Kapija</button>
+            <button class="btn-add" onclick="dodajNoviBlok('quiz')"><i class="fa-solid fa-list-check"></i> +
+                Kviz</button>
+            <button class="btn-add" onclick="dodajNoviBlok('finale')"><i class="fa-solid fa-crown"></i> + Kraj
+                Priče</button>
+        </div>
+
+        <div class="blocks-container" id="cms-blocks-list">
+        </div>
+    </div>
+
+    <!-- DESNA STRANA: ŽIVI SIMULATOR SA DVA REŽIMA PRIKAZA -->
+    <div class="preview-panel" id="global-preview-panel"
+        style="flex: 0.75; min-width: 320px; background-color: #070b0e; padding: 20px; display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden; border-left: 1px solid var(--admin-border); transition: flex 0.3s ease;">
+
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--admin-border); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <div
+                style="display: flex; gap: 6px; background: rgba(255,255,255,0.03); padding: 4px; border-radius: 8px; border: 1px solid var(--admin-border);">
+                <button id="btn-mode-mobile" onclick="promeniRezimSimulatora('mobile')"
+                    style="background: var(--admin-accent); color: var(--admin-sidebar); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                    <i class="fa-solid fa-mobile-screen-button"></i> Telefon
+                </button>
+                <button id="btn-mode-pc" onclick="promeniRezimSimulatora('pc')"
+                    style="background: transparent; color: var(--admin-muted); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                    <i class="fa-solid fa-desktop"></i> Izgled na PC-u
+                </button>
+            </div>
+            <span id="preview-status-tag"
+                style="font-size: 9px; background: rgba(212,180,131,0.1); color: var(--admin-accent); padding: 3px 6px; border-radius: 4px;">Prikaz:
+                Uvodni ekran</span>
+        </div>
+
+        <!-- Glavni kontejner simulatora koji menja stilove u zavisnosti od režima -->
+        <div class="device-simulator" id="live-simulator-screen"
+            style="flex: 1; width: 100%; background-color: #0f171e; border: 4px solid #1c2a39; border-radius: 24px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); position: relative; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 25px; transition: all 0.3s ease;">
+            <div id="simulator-content-target" style="width: 100%; text-align: center; transition: all 0.3s ease;">
+            </div>
+        </div>
+    </div>
+
+    <div id="zoom-editor-overlay">
+        <div class="zoom-window">
+            <div class="zoom-header">
+                <h3 id="zoom-module-title"
+                    style="color: var(--admin-accent); font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">
+                    UREĐIVANJE KOCKICE Sadržaj</h3>
+                <button onclick="zatvoriZoomEditor()" class="btn-action"
+                    style="border-color:#b81d24; color:#b81d24; font-weight:700;">X ZATVORI PROZOR</button>
+            </div>
+            <div class="zoom-body" id="zoom-dynamic-body"></div>
+            <div class="zoom-footer">
+                <button class="btn-action" onclick="zatvoriZoomEditor()" style="padding:10px 20px;">Poništi</button>
+                <button class="btn-save" onclick="potvrdiIZatvoriZoom()" style="margin:0; padding:10px 25px;"><i
+                        class="fa-solid fa-check"></i> Završi i Primeni Izmene</button>
+            </div>
+        </div>
+    </div>
+    <script src="admin-logic.js?v=1.3.4"></script>
+</body>
+
+</html>

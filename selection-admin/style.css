@@ -1,0 +1,458 @@
+ :root {
+     --admin-bg: #0f171e;
+     --admin-card: rgba(28, 42, 57, 0.95);
+     --admin-sidebar: #0a1015;
+     --admin-accent: #d4b483;
+     --admin-text: #eee;
+     --admin-muted: #a0acb8;
+     --admin-border: rgba(255, 255, 255, 0.08);
+     --btn-glass: rgba(255, 255, 255, 0.06);
+ }
+
+ * {
+     margin: 0;
+     padding: 0;
+     box-sizing: border-box;
+ }
+
+ body {
+     font-family: 'Segoe UI', Roboto, sans-serif;
+     background-color: var(--admin-bg);
+     color: var(--admin-text);
+     display: flex;
+     width: 100vw;
+     height: 100vh;
+     overflow: hidden;
+ }
+
+ /* --- JEDINSTVENA KONTROLNA TABLA (LEVO) --- */
+ .sidebar {
+     width: 320px;
+     min-width: 320px;
+     background-color: var(--admin-sidebar);
+     padding: 22px;
+     display: flex;
+     flex-direction: column;
+     gap: 16px;
+     overflow-y: auto;
+     height: 100%;
+     border-right: 1px solid var(--admin-border);
+ }
+
+ .admin-brand {
+     text-align: center;
+     margin-bottom: 5px;
+     text-transform: uppercase;
+ }
+
+ .brand-main {
+     display: block;
+     font-size: 22px;
+     font-weight: 700;
+     letter-spacing: 4px;
+
+     /* Fallback boja za starije pretraživače */
+     color: var(--admin-accent);
+
+     /* Definisanje gradijenta */
+     background: linear-gradient(to right, #d4b483 20%, #fff 50%, #d4b483 80%);
+     background-size: 200% auto;
+
+     /* Vendor prefiksi za Webkit (Chrome, Safari, Edge) */
+     -webkit-background-clip: text;
+     -webkit-text-fill-color: transparent;
+
+     /* Standardno svojstvo za modernu kompatibilnost */
+     background-clip: text;
+
+     /* Postavljanje boje teksta na providno da bi se video gradijent pozadine */
+     color: transparent;
+ }
+
+ .brand-sub {
+     display: block;
+     font-size: 10px;
+     color: #fff;
+     letter-spacing: 1px;
+     margin-top: 2px;
+     opacity: 0.7;
+ }
+
+ .sidebar h2 {
+     font-size: 0.75rem;
+     color: var(--admin-accent);
+     text-transform: uppercase;
+     letter-spacing: 1.5px;
+     border-bottom: 1px solid var(--admin-border);
+     padding-bottom: 5px;
+     margin-top: 8px;
+ }
+
+ .form-group {
+     display: flex;
+     flex-direction: column;
+     gap: 5px;
+ }
+
+ .form-group label {
+     font-size: 0.65rem;
+     color: var(--admin-muted);
+     text-transform: uppercase;
+     letter-spacing: 0.5px;
+ }
+
+ .color-picker-wrapper {
+     display: flex;
+     gap: 8px;
+     align-items: center;
+ }
+
+ .color-picker-wrapper input[type="color"] {
+     width: 45px;
+     height: 32px;
+     border: 1px solid var(--admin-border);
+     background: none;
+     cursor: pointer;
+     border-radius: 6px;
+ }
+
+ .form-group select,
+ .form-group input[type="text"],
+ .form-group input[type="number"],
+ .form-group textarea {
+     width: 100%;
+     padding: 8px 12px;
+     background-color: rgba(255, 255, 255, 0.03);
+     border: 1px solid var(--admin-border);
+     color: white;
+     border-radius: 8px;
+     font-size: 0.85rem;
+     outline: none;
+ }
+
+ .form-group select:focus,
+ .form-group input[type="text"]:focus,
+ .form-group input[type="number"]:focus,
+ .form-group textarea:focus {
+     border-color: var(--admin-accent);
+     background-color: var(--admin-sidebar);
+ }
+
+ .btn-save {
+     background: rgba(212, 180, 131, 0.15);
+     color: var(--admin-accent);
+     border: 1px solid var(--admin-accent);
+     padding: 12px;
+     font-size: 0.8rem;
+     font-weight: 700;
+     text-transform: uppercase;
+     letter-spacing: 1.5px;
+     cursor: pointer;
+     border-radius: 10px;
+     margin-top: 10px;
+     transition: all 0.2s;
+ }
+
+ .btn-save:hover {
+     background: var(--admin-accent);
+     color: var(--admin-sidebar);
+     box-shadow: 0 0 12px rgba(212, 180, 131, 0.3);
+ }
+
+ /* --- RADNI PROSTOR SA KOCKICAMA (SREDINA) --- */
+ .main-workspace {
+     flex: 1;
+     display: flex;
+     flex-direction: column;
+     height: 100%;
+     background-color: var(--admin-bg);
+ }
+
+ .toolbar {
+     background-color: rgba(28, 42, 57, 0.4);
+     border-bottom: 1px solid var(--admin-border);
+     padding: 15px 30px;
+     display: flex;
+     align-items: center;
+     gap: 12px;
+     backdrop-filter: blur(10px);
+ }
+
+ .toolbar-title {
+     font-size: 0.75rem;
+     font-weight: 700;
+     color: var(--admin-accent);
+     text-transform: uppercase;
+     letter-spacing: 1px;
+ }
+
+ .btn-add {
+     background: var(--btn-glass);
+     border: 1px solid var(--admin-border);
+     color: white;
+     padding: 8px 14px;
+     font-size: 0.75rem;
+     cursor: pointer;
+     border-radius: 8px;
+     font-weight: 600;
+     display: flex;
+     align-items: center;
+     gap: 6px;
+     transition: all 0.2s;
+ }
+
+ .btn-add:hover {
+     border-color: var(--admin-accent);
+     background: rgba(255, 255, 255, 0.1);
+ }
+
+ .btn-splash-trigger {
+     border: 1px dashed var(--admin-accent) !important;
+     background: rgba(212, 180, 131, 0.03);
+ }
+
+ .blocks-container {
+     flex: 1;
+     padding: 30px;
+     overflow-y: auto;
+     display: flex;
+     flex-direction: column;
+     gap: 12px;
+ }
+
+ /* --- LEGO KOCKICE --- */
+ .cms-block-card {
+     background-color: var(--admin-card);
+     border: 1px solid rgba(255, 255, 255, 0.05);
+     border-radius: 12px;
+     padding: 14px 20px;
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+     cursor: pointer;
+     transition: all 0.2s ease;
+ }
+
+ .cms-block-card:hover {
+     border-color: rgba(212, 180, 131, 0.4);
+     transform: translateX(2px);
+ }
+
+ .cms-block-card.active-block {
+     border-color: var(--admin-accent) !important;
+     background: rgba(28, 42, 57, 0.99);
+ }
+
+ .block-info-side {
+     display: flex;
+     align-items: center;
+     gap: 15px;
+ }
+
+ .block-num {
+     font-size: 0.85rem;
+     color: var(--admin-muted);
+     font-weight: 600;
+     min-width: 25px;
+ }
+
+ .block-meta-details {
+     display: flex;
+     flex-direction: column;
+     gap: 2px;
+ }
+
+ .block-type-tag {
+     font-size: 0.75rem;
+     font-weight: 700;
+     color: var(--admin-accent);
+     letter-spacing: 0.5px;
+ }
+
+ .block-summary-text {
+     font-size: 0.85rem;
+     color: #fff;
+     opacity: 0.9;
+ }
+
+ .block-media-indicators {
+     display: flex;
+     gap: 10px;
+     margin-top: 4px;
+     font-size: 0.75rem;
+     color: var(--admin-muted);
+ }
+
+ .block-media-indicators span i {
+     color: var(--admin-accent);
+     margin-right: 3px;
+ }
+
+ .block-actions {
+     display: flex;
+     gap: 6px;
+     align-items: center;
+ }
+
+ .btn-action {
+     background: var(--btn-glass);
+     border: 1px solid var(--admin-border);
+     color: var(--admin-muted);
+     padding: 5px 10px;
+     cursor: pointer;
+     font-size: 0.75rem;
+     border-radius: 6px;
+ }
+
+ .btn-action:hover {
+     color: white;
+     border-color: var(--admin-accent);
+ }
+
+ .btn-edit-zoom {
+     background: rgba(212, 180, 131, 0.1);
+     color: var(--admin-accent);
+     border-color: rgba(212, 180, 131, 0.2);
+     font-weight: 600;
+ }
+
+ .btn-delete:hover {
+     background-color: #b81d24;
+     border-color: #b81d24;
+     color: white;
+ }
+
+ /* --- VELIKI PROZOR ZA UREĐIVANJE (ZOOM MODAL) --- */
+ #zoom-editor-overlay {
+     position: fixed;
+     top: 0;
+     left: 0;
+     width: 100vw;
+     height: 100vh;
+     background: rgba(10, 16, 21, 0.98);
+     backdrop-filter: blur(15px);
+     z-index: 9999;
+     display: none;
+     justify-content: center;
+     align-items: center;
+     padding: 40px;
+ }
+
+ .zoom-window {
+     width: 100%;
+     max-width: 900px;
+     height: 100%;
+     max-height: 80vh;
+     background: var(--admin-card);
+     border: 1px solid var(--admin-border);
+     border-radius: 20px;
+     display: flex;
+     flex-direction: column;
+     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+     overflow: hidden;
+ }
+
+ .zoom-header {
+     padding: 20px 30px;
+     border-bottom: 1px solid var(--admin-border);
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+     background: rgba(0, 0, 0, 0.2);
+ }
+
+ .zoom-body {
+     padding: 30px;
+     overflow-y: auto;
+     flex: 1;
+     display: flex;
+     flex-direction: column;
+     gap: 20px;
+ }
+
+ .zoom-footer {
+     padding: 20px 30px;
+     border-top: 1px solid var(--admin-border);
+     display: flex;
+     justify-content: flex-end;
+     gap: 12px;
+     background: rgba(0, 0, 0, 0.2);
+ }
+
+ /* --- KUTIJE ZA SPUŠTANJE FAJLOVA UNUTAR ZOOMA --- */
+ .zoom-drop-zone {
+     border: 2px dashed var(--admin-border);
+     padding: 25px;
+     text-align: center;
+     border-radius: 12px;
+     background: rgba(255, 255, 255, 0.01);
+     cursor: pointer;
+     transition: all 0.2s;
+ }
+
+ .zoom-drop-zone:hover {
+     border-color: var(--admin-accent);
+     background: rgba(212, 180, 131, 0.03);
+ }
+
+ .zoom-media-grid {
+     display: flex;
+     flex-wrap: wrap;
+     gap: 10px;
+     margin-top: 10px;
+ }
+
+ .zoom-thumb {
+     width: 90px;
+     height: 90px;
+     border-radius: 8px;
+     overflow: hidden;
+     border: 1px solid var(--admin-border);
+     position: relative;
+     background: #000;
+ }
+
+ .zoom-thumb img {
+     width: 100%;
+     height: 100%;
+     object-fit: cover;
+ }
+
+ .zoom-thumb button {
+     position: absolute;
+     top: 0;
+     right: 0;
+     background: #b81d24;
+     color: #fff;
+     border: none;
+     padding: 2px 6px;
+     font-size: 10px;
+     cursor: pointer;
+     border-radius: 0 0 0 6px;
+ }
+
+ .hint-text {
+     font-size: 0.75rem;
+     color: var(--admin-muted);
+     margin-top: 2px;
+ }
+
+ .grid-2 {
+     display: grid;
+     grid-template-columns: 1fr 1fr;
+     gap: 20px;
+ }
+
+ .toggle-group {
+     display: flex;
+     align-items: center;
+     gap: 10px;
+ }
+
+ .toggle-group input[type="checkbox"] {
+     accent-color: var(--admin-accent);
+     width: 16px;
+     height: 16px;
+     cursor: pointer;
+ }
