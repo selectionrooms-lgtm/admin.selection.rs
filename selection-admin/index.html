@@ -117,10 +117,47 @@
     </div>
 
     <div class="main-workspace" style="flex: 1.2; border-right: 1px solid var(--admin-border);">
+
+        <div id="master-admin-blok" class="admin-card master-card"
+            style="margin: 20px 20px 0 20px; border: 1px solid rgba(214, 180, 131, 0.3); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.02); box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <h3
+                style="color: #d4b483; font-family: 'Cinzel', serif; font-size: 1.1rem; margin-bottom: 5px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-crown" style="color: #d4b483;"></i> Master Admin — Kreiraj Klijenta
+            </h3>
+            <p style="font-size: 11px; color: #888; margin-bottom: 15px;">Automatsko generisanje nove KV baze i šablona
+                za SaaS korisnika.</p>
+
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 12px;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label
+                        style="font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 5px;">Novi
+                        poddomen (npr. apartmani)</label>
+                    <input type="text" id="master-novi-subdomain" placeholder="Unesi samo poddomen..."
+                        style="width: 100%; padding: 10px; background: #070b0e; border: 1px solid var(--admin-border); border-radius: 6px; color: #fff; font-family: inherit;">
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label
+                        style="font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 5px;">Email
+                        klijenta (za proveru)</label>
+                    <input type="email" id="master-novi-email" placeholder="klijent@gmail.com"
+                        style="width: 100%; padding: 10px; background: #070b0e; border: 1px solid var(--admin-border); border-radius: 6px; color: #fff; font-family: inherit;">
+                </div>
+            </div>
+
+            <button onclick="masterKreirajNovogKorisnika()"
+                style="width: 100%; padding: 12px; background: #d4b483; color: #0f171e; border: none; border-radius: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: background 0.2s;">
+                <i class="fa-solid fa-rocket"></i> Lansiraj Korisnika u Antigravity
+            </button>
+
+            <div id="master-status-poruka"
+                style="margin-top: 12px; font-weight: 600; font-size: 12px; text-align: center;"></div>
+        </div>
+
         <div class="toolbar">
             <span class="toolbar-title">Prečica:</span>
-            <button class="btn-add btn-splash-trigger" onclick="postaviAktivniBlok(-1)"><i
-                    class="fa-solid fa-wand-magic-sparkles"></i> Idi na Uvodni Ekran</button>
+            <button class="btn-add btn-splash-trigger" onclick="postaviAktivniBlok(-1)">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Idi na Uvodni Ekran
+            </button>
 
             <span class="toolbar-title" style="margin-left: 20px;">Dodaj novu kockicu:</span>
             <button class="btn-add" onclick="dodajNoviBlok('video')"><i class="fa-solid fa-circle-play"></i> +
@@ -134,8 +171,7 @@
                 Priče</button>
         </div>
 
-        <div class="blocks-container" id="cms-blocks-list">
-        </div>
+        <div class="blocks-container" id="cms-blocks-list"></div>
     </div>
 
     <!-- DESNA STRANA: ŽIVI SIMULATOR SA DVA REŽIMA PRIKAZA -->
