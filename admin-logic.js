@@ -21,7 +21,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         console.log("🔒 Proveravam mrežni identitet korisnika sa Cloudflare Shell-a...");
 
         // 1. Pitamo direktno naš Shell backend ko drži sesiju preko Zero Trust-a
-        const res = await fetch('https://shell-selection-rs.selectionrooms.workers.dev/get_user');
+        const res = await fetch('https://shell.selection.rs/get_user');
         if (!res.ok) throw new Error("Neuspešna mrežna autentifikacija.");
 
         const userData = await res.json();
@@ -89,7 +89,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 
 function ucitajConfig(subdomain) {
     // OSVEŽENO: Sada URL koristi dinamički poddomen koji mu prosledimo u funkciju!
-    fetch(`https://shell-selection-rs.selectionrooms.workers.dev/?subdomain=${subdomain}&nocache=${Date.now()}`)
+    fetch(`https://shell.selection.rs/?subdomain=${subdomain}&nocache=${Date.now()}`)
         .then(res => {
             if (!res.ok) throw new Error("Server je vratio grešku: " + res.status);
             return res.json();
@@ -918,7 +918,7 @@ async function sacuvajSveNaServer() {
     }
 
     try {
-        const response = await fetch('https://shell-selection-rs.selectionrooms.workers.dev/save_data', {
+        const response = await fetch('https://shell.selection.rs/save_data', {
             method: 'POST',
             body: formData
         });
@@ -1342,7 +1342,7 @@ async function masterKreirajNovogKorisnika() {
     formData.append('config_data', JSON.stringify(noviCistSvemir, null, 2));
 
     try {
-        const response = await fetch('https://shell-selection-rs.selectionrooms.workers.dev/save_data', {
+        const response = await fetch('https://shell.selection.rs/save_data', {
             method: 'POST',
             body: formData
         });
