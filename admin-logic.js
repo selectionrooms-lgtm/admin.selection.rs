@@ -21,38 +21,37 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
     try {
         console.log("🔒 Proveravam mrežni identitet korisnika sa Cloudflare Shell-a...");
 
-        // 1. Pitamo naš novi poddomen ruter ko drži sesiju preko Zero Trust-a
-        // credentials: "include" omogućava prenos Cloudflare Access mrežnih tokena
+        // Pitamo naš poddomen ruter ko drži sesiju preko Zero Trust-a
         const res = await fetch('https://shell.selection.rs/get_user', {
-            credentials: "include"
+            method: 'GET',
+            credentials: "include" // Omogućava prenos Cloudflare Access tokena
         });
-        if (!res.ok) throw new Error("Neuspešna mrežna autentifikacija.");
+
+        if (!res.ok) throw new Error(`Server odgovorio sa statusom: ${res.status}`);
 
         const userData = await res.json();
         console.log("👤 Podaci o sesiji uspešno povučeni:", userData);
 
-        // Ako server vrati mrežnu grešku koju smo mi definisali (prazan token)
         if (userData.error) {
             throw new Error(userData.error);
         }
 
-        // 2. Ispisujemo ulogovanog korisnika u gornji desni ćošak
+        // Ispisujemo ulogovanog korisnika u gornji desni ćošak
         if (badge) {
             const ikonica = userData.role === "master" ? "👑" : "🔒";
             badge.innerHTML = `${ikonica} <span style="color: var(--admin-accent); font-weight: 600;">${userData.email}</span>`;
             badge.style.display = "block";
         }
 
-        // 3. Proveravamo ulogu i krojimo interfejs
+        // Proveravamo ulogu i krojimo interfejs
         if (userData.role === "master") {
-            // 👑 MASTER ADMIN (selectionrooms@gmail.com) -> Otključavamo panel
             if (masterBlok) masterBlok.style.display = "block";
             console.log("👑 Dobrodošao, Master Admin. Sistemi za lansiranje su spremni.");
 
             localStorage.setItem('userEmail', userData.email);
-            ucitajConfig("canvas");
+            ucitajConfig("canvas"); // Master po defaultu učitava radni šablon
         } else {
-            // 🔒 OBIČAN KLIJENT -> Striktno i fizički uklanjamo panel iz koda
+            // OBIČAN KLIJENT -> Striktno i fizički uklanjamo panel iz koda
             if (masterBlok) {
                 masterBlok.remove();
             } else {
@@ -72,21 +71,25 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
     } catch (err) {
         console.error("❌ Greška pri proveri korisnika. Koristim bezbednosni fallback.", err);
 
-        // Prikaz mrežnog statusa na interfejsu
         if (badge) {
             badge.innerHTML = `⚠️ <span style="color: #b81d24; font-weight: 600;">Mreža nedostupna</span>`;
             badge.style.display = "block";
         }
 
-        // STRIKTNA BEZBEDNOST: Ako mreža baci bilo kakvu grešku, fizički uništavamo master blok sa ekrana
+        // STRIKTNA BEZBEDNOST: Fizički uništavamo master blok sa ekrana
         const proveraBloka = document.getElementById('master-admin-blok') || document.querySelector('.master-card');
         if (proveraBloka) {
             proveraBloka.remove();
         }
 
-        // Učitavamo rezervni poddomen iz memorije da klijentu ne ostane prazan ekran
-        const klijentovSubdomain = localStorage.getItem('userSubdomain') || "canvas";
-        ucitajConfig(klijentovSubdomain);
+        // Bezbednosni fallback za poddomen: sprečavamo slanje praznog stringa ili "canvas" za obične klijente
+        const klijentovSubdomain = localStorage.getItem('userSubdomain');
+        if (klijentovSubdomain) {
+            ucitajConfig(klijentovSubdomain);
+        } else {
+            console.log("📭 Nema lokalno sačuvanog poddomena. Preusmeravam na glavni login.");
+            // Opciono: ovde možeš dodati redirekciju na login ako želiš
+        }
     }
 }
 function ucitajConfig(subdomain) {
