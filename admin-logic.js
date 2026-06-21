@@ -1226,6 +1226,10 @@ async function masterKreirajNovogKorisnika() {
             ℹ️ <em>${porukaServera}</em><br>
             🔗 Link za klijenta: <a href="https://${subdomain}.selection.rs" target="_blank" style="color:#2ecc71; text-decoration:underline;">${subdomain}.selection.rs</a>`;
 
+
+            // 🌟 DODAJ OVU LINIJU ZA DIREKTAN TEST:
+            alert(`🚀 SISTEM POTVRĐUJE: Prostor ${subdomain} je kreiran! Ako ovo vidiš, kod radi, proveri HTML ID za poruku!`);
+
             subInput.value = '';
             emailInput.value = '';
         } else {
