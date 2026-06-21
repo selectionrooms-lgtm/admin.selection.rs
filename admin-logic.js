@@ -1199,6 +1199,7 @@ async function masterKreirajNovogKorisnika() {
         });
 
         // POPRAVKA: Čitamo kao sirovi tekst da sprečimo tiho zamrzavanje
+        // ... tvoj dosadašnji kod (fetch i čitanje teksta) ...
         const tekstOdgovora = await response.text();
         console.log("📄 Odgovor sa Cloudflare Shell-a (RAW):", tekstOdgovora);
 
@@ -1206,9 +1207,8 @@ async function masterKreirajNovogKorisnika() {
         let porukaServera = tekstOdgovora;
 
         try {
-            // Ako je odgovor zapravo ispravan JSON, izvući ćemo lepe podatke
             const rez = JSON.parse(tekstOdgovora);
-            if (rez.success) jeUspesno = true;
+            if (rez.success === true || rez.success === "true") jeUspesno = true;
             if (rez.error) {
                 jeUspesno = false;
                 porukaServera = rez.error;
@@ -1216,10 +1216,11 @@ async function masterKreirajNovogKorisnika() {
                 porukaServera = rez.message;
             }
         } catch (e) {
-            // Ako nije JSON, ostaje sirovi tekst greške iz Workera
+            // Ako nije JSON, ostaje sirovi tekst
         }
 
-        if (response.ok && jeUspesno) {
+        // DODATA SIGURNOST: Ako server vrati status 200 i u tekstu piše "success":true, ovo PROLAZI!
+        if (response.ok && (jeUspesno || tekstOdgovora.includes('"success":true') || tekstOdgovora.includes('uspešno sačuvao'))) {
             statusPoruka.style.color = "#2ecc71";
             statusPoruka.innerHTML = `🎉 USPEH: Prostor <strong>${subdomain}</strong> je uspešno kreiran u bazi!<br>
             ℹ️ <em>${porukaServera}</em><br>
