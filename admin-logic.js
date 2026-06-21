@@ -1367,3 +1367,5 @@ function globalDrop(e) {
         }
     }
 }
+// Mapiramo lokalni poziv na tvoju postojeću globalnu funkciju
+function okiniLokalniKlikFajla(tip) { okiniGlobalniKlikFajla(tip); }
