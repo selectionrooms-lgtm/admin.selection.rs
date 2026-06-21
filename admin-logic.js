@@ -22,7 +22,10 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         console.log("🔒 Proveravam mrežni identitet korisnika sa Cloudflare Shell-a...");
 
         // 1. Pitamo naš novi poddomen ruter ko drži sesiju preko Zero Trust-a
-        const res = await fetch('https://shell.selection.rs/get_user');
+        // Dodajemo credentials: "include" kako bi ruter mogao da pročita Cloudflare mrežne kolačiće (cookies)
+        const res = await fetch('https://shell.selection.rs/get_user', {
+            credentials: "include"
+        });
         if (!res.ok) throw new Error("Neuspešna mrežna autentifikacija.");
 
         const userData = await res.json();
@@ -40,18 +43,18 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
             badge.style.display = "block";
         }
 
-        // 3. Proveravamo ulogu i krojimo interfejs bez ostataka u memoriji
+        // 3. Proveravamo ulogu i krojimo interfejs
         if (userData.role === "master") {
-            // 👑 MASTER ADMIN (selectionrooms@gmail.com)
+            // 👑 MASTER ADMIN (selectionrooms@gmail.com) -> Otključavamo panel
             if (masterBlok) masterBlok.style.display = "block";
             console.log("👑 Dobrodošao, Master Admin. Sistemi za lansiranje su spremni.");
 
             localStorage.setItem('userEmail', userData.email);
             ucitajConfig("canvas");
         } else {
-            // 🔒 OBIČAN KLIJENT (npr. knezziks@hotmail.com)
+            // 🔒 OBIČAN KLIJENT -> Striktno sklanjamo panel iz koda
             if (masterBlok) {
-                masterBlok.remove(); // Potpuno brisanje forme iz koda da klijent ne može da je upali kroz Inspect Element
+                masterBlok.remove();
             }
             console.log(`🔒 Logovan klijent sa adresom: ${userData.email}`);
             console.log(`📂 Dodeljeni radni prostor iz baze: ${userData.subdomain}`);
@@ -66,15 +69,18 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
     } catch (err) {
         console.error("❌ Greška pri proveri korisnika. Koristim bezbednosni fallback.", err);
 
-        // Bezbedan prikaz greške na interfejsu umesto lažnog Mastera
+        // Prikaz mrežnog statusa na interfejsu
         if (badge) {
             badge.innerHTML = `⚠️ <span style="color: #b81d24; font-weight: 600;">Mreža nedostupna</span>`;
             badge.style.display = "block";
         }
 
-        // Ako je prekid, sakrij master kontrole za svaki slučaj
-        if (masterBlok) masterBlok.style.display = "none";
+        // STRIKTNA BEZBEDNOST: Ako je mreža pukla, master kontrole moraju ostati sakrivene
+        if (masterBlok) {
+            masterBlok.style.display = "none";
+        }
 
+        // Učitavamo rezervni poddomen iz memorije da klijentu ne ostane prazan ekran
         const klijentovSubdomain = localStorage.getItem('userSubdomain') || "canvas";
         ucitajConfig(klijentovSubdomain);
     }
