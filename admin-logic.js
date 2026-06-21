@@ -16,77 +16,69 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function proveriKorisnikaIUpravljajInterfejsom() {
     const masterBlok = document.getElementById('master-admin-blok');
+    const badge = document.getElementById('user-session-badge');
 
     try {
         console.log("🔒 Proveravam mrežni identitet korisnika sa Cloudflare Shell-a...");
 
-        // 1. Pitamo direktno naš Shell backend ko drži sesiju preko Zero Trust-a
+        // 1. Pitamo naš novi poddomen ruter ko drži sesiju preko Zero Trust-a
         const res = await fetch('https://shell.selection.rs/get_user');
         if (!res.ok) throw new Error("Neuspešna mrežna autentifikacija.");
 
         const userData = await res.json();
         console.log("👤 Podaci o sesiji uspešno povučeni:", userData);
 
-        // 🔥 NOVI DODATAK: Ispisujemo ulogovanog korisnika u gornji desni ćošak (Kada mreža radi)
-        const badge = document.getElementById('user-session-badge');
+        // Ako server vrati mrežnu grešku koju smo mi definisali (prazan token)
+        if (userData.error) {
+            throw new Error(userData.error);
+        }
+
+        // 2. Ispisujemo ulogovanog korisnika u gornji desni ćošak
         if (badge) {
             const ikonica = userData.role === "master" ? "👑" : "🔒";
             badge.innerHTML = `${ikonica} <span style="color: var(--admin-accent); font-weight: 600;">${userData.email}</span>`;
             badge.style.display = "block";
         }
 
-        // 2. Proveravamo ulogu koju je backend dodelio korisniku
+        // 3. Proveravamo ulogu i krojimo interfejs bez ostataka u memoriji
         if (userData.role === "master") {
-            // 👑 AKO JE MASTER ADMIN (selectionrooms@gmail.com)
+            // 👑 MASTER ADMIN (selectionrooms@gmail.com)
             if (masterBlok) masterBlok.style.display = "block";
             console.log("👑 Dobrodošao, Master Admin. Sistemi za lansiranje su spremni.");
 
-            // Keširamo za ostatak frontenda ako zatreba
             localStorage.setItem('userEmail', userData.email);
-
-            // Master podrazumevano učitava glavni šablon
             ucitajConfig("canvas");
         } else {
-            // 🔒 AKO JE OBIČAN KLIJENT (npr. knezziks@yahoo.com)
+            // 🔒 OBIČAN KLIJENT (npr. knezziks@hotmail.com)
             if (masterBlok) {
-                masterBlok.remove(); // 🔥 POTPUNO BRISANJE IZ DOM-a
+                masterBlok.remove(); // Potpuno brisanje forme iz koda da klijent ne može da je upali kroz Inspect Element
             }
             console.log(`🔒 Logovan klijent sa adresom: ${userData.email}`);
             console.log(`📂 Dodeljeni radni prostor iz baze: ${userData.subdomain}`);
 
-            // Skladištimo klijentov dodeljeni poddomen da ga ostale funkcije za čuvanje koriste
             localStorage.setItem('userEmail', userData.email);
             localStorage.setItem('userSubdomain', userData.subdomain);
 
-            // Učitavamo isključivo njegov sajt iz baze podataka
+            // Učitavamo isključivo njegov namenski sajt iz baze podataka
             ucitajConfig(userData.subdomain);
         }
 
     } catch (err) {
-        console.error("❌ Greška pri proveri korisnika. Koristim fallback mehanizam.", err);
+        console.error("❌ Greška pri proveri korisnika. Koristim bezbednosni fallback.", err);
 
-        // Fallback u slučaju da pukne mreža tokom razvoja (koristi trenutni localStorage)
-        const ulogovaniEmail = localStorage.getItem('userEmail') || "nepoznat@korisnik.com";
-
-        // 🔥 NOVI DODATAK: Ispisujemo simuliranog korisnika u gornji desni ćošak (Unutar Fallback-a!)
-        const badge = document.getElementById('user-session-badge');
+        // Bezbedan prikaz greške na interfejsu umesto lažnog Mastera
         if (badge) {
-            const ikonica = ulogovaniEmail.trim().toLowerCase() === "selectionrooms@gmail.com" ? "👑" : "🔒";
-            badge.innerHTML = `${ikonica} <span style="color: var(--admin-accent); font-weight: 600;">${ulogovaniEmail}</span>`;
+            badge.innerHTML = `⚠️ <span style="color: #b81d24; font-weight: 600;">Mreža nedostupna</span>`;
             badge.style.display = "block";
         }
 
-        if (ulogovaniEmail.trim().toLowerCase() === "selectionrooms@gmail.com") {
-            if (masterBlok) masterBlok.style.display = "block";
-            ucitajConfig("canvas");
-        } else {
-            if (masterBlok) masterBlok.style.display = "none";
-            const klijentovSubdomain = localStorage.getItem('userSubdomain') || "test";
-            ucitajConfig(klijentovSubdomain);
-        }
+        // Ako je prekid, sakrij master kontrole za svaki slučaj
+        if (masterBlok) masterBlok.style.display = "none";
+
+        const klijentovSubdomain = localStorage.getItem('userSubdomain') || "canvas";
+        ucitajConfig(klijentovSubdomain);
     }
 }
-
 function ucitajConfig(subdomain) {
     // OSVEŽENO: Sada URL koristi dinamički poddomen koji mu prosledimo u funkciju!
     fetch(`https://shell.selection.rs/?subdomain=${subdomain}&nocache=${Date.now()}`)
