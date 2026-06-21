@@ -1076,25 +1076,34 @@ function osveziZoomGalerijuEkran(blokIndex) {
     if (!kontejner) return;
 
     let slikeHtml = '';
-    blok.galleryImages.forEach((imgSrc, imgIndex) => {
-        let putanjaZaEkran = imgSrc;
-        if (putanjaZaEkran && !putanjaZaEkran.startsWith('blob:') && !putanjaZaEkran.startsWith('http')) {
-            putanjaZaEkran = '/' + putanjaZaEkran;
-        }
 
-        slikeHtml += `
+    // Provera da li galerija uopšte postoji
+    if (blok.galleryImages && blok.galleryImages.length > 0) {
+        blok.galleryImages.forEach((imgSrc, imgIndex) => {
+            let putanjaZaEkran = imgSrc;
+            // Popravka putanje ako nije apsolutni URL ili Blob
+            if (putanjaZaEkran && !putanjaZaEkran.startsWith('blob:') && !putanjaZaEkran.startsWith('http') && !putanjaZaEkran.startsWith('/')) {
+                putanjaZaEkran = '/' + putanjaZaEkran;
+            }
+
+            slikeHtml += `
             <div class="zoom-thumb" 
-                  draggable="true" 
-                  data-img-index="${imgIndex}"
-                  style="position: relative; cursor: move;"
-                  ondragstart="hendlujDragStart(event)"
-                  ondragover="hendlujDragOver(event)"
-                  ondrop="hendlujDrop(event, ${blokIndex})">
-                <img src="${putanjaZaEkran}" alt="Sličica ${imgIndex}">
-                <button onclick="ukloniSlikuIzGalerijeZoom(${imgIndex})">X</button>
+                 draggable="true" 
+                 data-img-index="${imgIndex}"
+                 ondragstart="hendlujDragStart(event)"
+                 ondragover="hendlujDragOver(event)"
+                 ondrop="hendlujDrop(event, ${blokIndex})">
+                <img src="${putanjaZaEkran}" alt="Sličica ${imgIndex}" loading="lazy">
+                <button type="button" 
+                        onclick="event.stopPropagation(); ukloniSlikuIzGalerijeZoom(${imgIndex})" 
+                        title="Ukloni sliku">×</button>
             </div>
-        `;
-    });
+            `;
+        });
+    } else {
+        slikeHtml = `<p style="font-size: 0.75rem; color: var(--admin-muted); padding: 10px;">Galerija je prazna. Prevucite slike ovde.</p>`;
+    }
+
     kontejner.innerHTML = slikeHtml;
 }
 
@@ -1190,5 +1199,89 @@ async function masterKreirajNovogKorisnika() {
         console.error("Master Error:", error);
         statusPoruka.style.color = "#b81d24";
         statusPoruka.innerText = "❌ Greška: Neuspešna komunikacija sa Cloudflare Shell-om.";
+    }
+}
+// ==========================================================================
+// 8. GLOBAL DRAG & DROP HANDLERS (Popunjena verzija)
+// ==========================================================================
+function inicijalizujDragAndDrop() {
+    // Čistimo stare listenere da ne bi duplirali akcije
+    window.removeEventListener('dragover', globalDragOver);
+    window.removeEventListener('drop', globalDrop);
+
+    window.addEventListener('dragover', globalDragOver);
+    window.addEventListener('drop', globalDrop);
+}
+
+function globalDragOver(e) { e.preventDefault(); }
+
+function globalDrop(e) {
+    e.preventDefault();
+
+    const dropPozadina = e.target.closest('#drop-global-pozadina');
+    const dropLoaderMuzika = e.target.closest('#drop-global-loader-muzika');
+    const dropSsMuzika = e.target.closest('#drop-global-ss-muzika');
+    const dropFinaleIkona = e.target.closest('#final-icon-drop-zone');
+
+    if (e.dataTransfer.files.length > 0) {
+        const fajl = e.dataTransfer.files[0];
+        const imeFajla = fajl.name;
+
+        // 1. Finale ikona
+        if (dropFinaleIkona) {
+            const ekstenzija = imeFajla.split('.').pop().toLowerCase();
+            if (['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'].includes(ekstenzija)) {
+                document.getElementById('zoom-field-endIconType').value = 'images/' + imeFajla;
+                trenutniConfig.timeline[aktivniIndex]._realIconName = imeFajla;
+                fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
+                document.getElementById('final-icon-status').innerText = `Učitano: ${imeFajla}`;
+                osveziZiviPreview();
+            } else {
+                alert("Molimo te spusti validan slikovni fajl.");
+            }
+            return;
+        }
+
+        // 2. Pozadinska slika
+        if (dropPozadina) {
+            const previewUrl = URL.createObjectURL(fajl);
+            document.getElementById('input-slika-pozadina').value = 'images/' + imeFajla;
+            document.getElementById('label-global-pozadina').innerText = 'images/' + imeFajla;
+            fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
+            trenutniConfig.config.globalSettings._tempBgPreview = previewUrl;
+            osveziZiviPreview();
+            return;
+        }
+
+        // 3. Loader muzika
+        if (dropLoaderMuzika) {
+            document.getElementById('input-loader-muzika').value = 'audio/' + imeFajla;
+            document.getElementById('label-global-loader-muzika').innerText = 'audio/' + imeFajla;
+            fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
+            osveziZiviPreview();
+            return;
+        }
+
+        // 4. Screensaver muzika
+        if (dropSsMuzika) {
+            document.getElementById('input-ss-muzika').value = 'audio/' + imeFajla;
+            document.getElementById('label-global-ss-muzika').innerText = 'audio/' + imeFajla;
+            fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
+            osveziZiviPreview();
+            return;
+        }
+
+        // 5. Drag & drop na blokove (ako nije u zoom editoru)
+        const card = e.target.closest('.cms-block-card');
+        if (card && !isEditingCore) {
+            const idx = parseInt(card.getAttribute('data-index'));
+            procitajFajlIUbaciUConfig(fajl, idx);
+            renderujTimelineBlokove();
+        }
+        // 6. Drag & drop unutar zoom editora
+        else if (document.getElementById('zoom-editor-overlay').style.display === 'flex' && aktivniIndex !== null) {
+            procitajFajlIUbaciUConfig(fajl, aktivniIndex);
+            if (aktivniIndex !== -1) osveziZoomGalerijuEkran(aktivniIndex);
+        }
     }
 }
