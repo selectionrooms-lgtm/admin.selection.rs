@@ -1263,7 +1263,7 @@ async function masterKreirajNovogKorisnika() {
     }
 
     statusPoruka.style.color = "#d4b483";
-    statusPoruka.innerText = "⚡ Pokrećem Antigravity motore... Molimo sačekajte...";
+    statusPoruka.innerText = "⚡ Pokrećem sisteme... Molimo sačekajte...";
 
     // 2. Pravimo čist, fabrički JSON šablon za novog korisnika
     const noviCistSvemir = {
@@ -1298,12 +1298,12 @@ async function masterKreirajNovogKorisnika() {
     // 3. Pakujemo u FormData format koji naš app.js u shell-u očekuje
     const formData = new FormData();
     formData.append('subdomain', subdomain);
+    formData.append('client_email', email); // Šaljemo i email klijenta da ga backend poveže!
     formData.append('config_data', JSON.stringify(noviCistSvemir, null, 2));
 
     try {
-        // Povezujemo se direktno na naš novi Cloudflare Worker backend
-        // NAPOMENA: Ako ti u Cloudflare nije podešen custom domen shell.selection.rs, ovde stavi onaj *.workers.dev link!
-        const response = await fetch('https://selection-shell.selectionrooms.workers.dev/save_data', {
+        // TAČAN URL ka tvom novom produkcionom workeru:
+        const response = await fetch('https://shell-selection-rs.selectionrooms.workers.dev/save_data', {
             method: 'POST',
             body: formData
         });
@@ -1312,7 +1312,7 @@ async function masterKreirajNovogKorisnika() {
 
         if (response.ok && rez.success) {
             statusPoruka.style.color = "#2ecc71";
-            statusPoruka.innerHTML = `🎉 USPEH: Prostor <strong>${subdomain}</strong> je uspešno kreiran!<br>
+            statusPoruka.innerHTML = `🎉 USPEH: Prostor <strong>${subdomain}</strong> je uspešno kreiran u bazi!<br>
             🔗 Link za klijenta: <a href="https://${subdomain}.selection.rs" target="_blank" style="color:#2ecc71; text-decoration:underline;">${subdomain}.selection.rs</a>`;
 
             // Čistimo formu nakon uspeha
