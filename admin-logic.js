@@ -1,3 +1,4 @@
+
 // Global CMS State mapping config.json
 let trenutniConfig = null;
 let aktivniIndex = null; // Koristi se i za selekciju i za zoom tracking
