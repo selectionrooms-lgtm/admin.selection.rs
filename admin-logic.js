@@ -1360,8 +1360,16 @@ async function masterKreirajNovogKorisnika() {
     formData.append('config_data', JSON.stringify(noviCistSvemir, null, 2));
 
     try {
+        console.log(`🚀 Lansiram novi prostor [${subdomain}] preko Cloudflare Shell-a...`);
+
+        // OSVEŽENO: Dodat prenos sesije i XMLHttpRequest signalizacija
         const response = await fetch('https://shell.selection.rs/save_data', {
             method: 'POST',
+            credentials: "include", // Ključno za prenos mrežnog identiteta klijenta kroz Access kapiju
+            headers: {
+                // Signalizuje Cloudflare-u da je u pitanju fetch i sprečava lažne HTML redirekcije u slučaju isteka tokena
+                'X-Requested-With': 'XMLHttpRequest'
+            },
             body: formData
         });
 
