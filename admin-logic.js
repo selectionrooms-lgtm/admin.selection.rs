@@ -698,21 +698,10 @@ function osveziZiviPreview() {
         const inputPozadina = document.getElementById('input-slika-pozadina');
         let slikaZaPrikaz = tempPutanja || (inputPozadina ? inputPozadina.value : '');
 
-        // 🎯 NEPROBOJNA POPRAVKA: Gledamo tačne podatke o sesiji koji su povučeni sa servera
+        // 🌟 FINAL FRONTEND FIX: Don't change paths that are already absolute
         if (slikaZaPrikaz && !slikaZaPrikaz.startsWith('blob:') && !slikaZaPrikaz.startsWith('http')) {
-
-            // Prvo proveravamo da li u kodu imamo sačuvan čist poddomen u sesiji (npr. u nekoj globalnoj varijabli ili elementu)
-            // Najbezbednije je da pročitamo iz input polja ili sesije koja je trenutno aktivna
-            const masterBlok = document.getElementById('master-admin-blok');
-            const ulogovaniSubdomain = window.trenutniSubdomenSesije || localStorage.getItem('userSubdomain');
-
-            if (!ulogovaniSubdomain || ulogovaniSubdomain === 'canvas' || ulogovaniSubdomain === 'admin') {
-                // Ako nema poddomena ili si ti Master, slika se vuče lokalno
-                slikaZaPrikaz = '/' + slikaZaPrikaz;
-            } else {
-                // Ako je pravi klijent, tačno ga gađamo na njegovom poddomenu koji je učitan!
-                slikaZaPrikaz = `https://${ulogovaniSubdomain}.selection.rs/` + slikaZaPrikaz;
-            }
+            // Only add the slash if it's NOT a blob or http(s) URL
+            slikaZaPrikaz = '/' + slikaZaPrikaz;
         }
 
         if (slikaZaPrikaz) {
@@ -724,6 +713,8 @@ function osveziZiviPreview() {
         }
 
         const stilKontejnera = `background: ${bojaKontejnera}; padding: 20px; border-radius: 14px; text-align: left; border: 1px solid rgba(255,255,255,0.04); box-shadow: 0 10px 25px rgba(0,0,0,0.35); width: 100%;`;
+
+
 
         if (aktivniIndex === null || aktivniIndex === undefined || aktivniIndex === -1) {
             if (statusTag) statusTag.innerText = "Prikaz: Uvodni ekran";
