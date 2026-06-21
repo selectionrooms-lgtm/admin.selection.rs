@@ -22,7 +22,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         console.log("🔒 Proveravam mrežni identitet korisnika sa Cloudflare Shell-a...");
 
         // 1. Pitamo naš novi poddomen ruter ko drži sesiju preko Zero Trust-a
-        // Dodajemo credentials: "include" kako bi ruter mogao da pročita Cloudflare mrežne kolačiće (cookies)
+        // credentials: "include" omogućava prenos Cloudflare Access mrežnih tokena
         const res = await fetch('https://shell.selection.rs/get_user', {
             credentials: "include"
         });
@@ -52,9 +52,12 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
             localStorage.setItem('userEmail', userData.email);
             ucitajConfig("canvas");
         } else {
-            // 🔒 OBIČAN KLIJENT -> Striktno sklanjamo panel iz koda
+            // 🔒 OBIČAN KLIJENT -> Striktno i fizički uklanjamo panel iz koda
             if (masterBlok) {
                 masterBlok.remove();
+            } else {
+                const alternativniBlok = document.querySelector('.master-card');
+                if (alternativniBlok) alternativniBlok.remove();
             }
             console.log(`🔒 Logovan klijent sa adresom: ${userData.email}`);
             console.log(`📂 Dodeljeni radni prostor iz baze: ${userData.subdomain}`);
@@ -75,9 +78,10 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
             badge.style.display = "block";
         }
 
-        // STRIKTNA BEZBEDNOST: Ako je mreža pukla, master kontrole moraju ostati sakrivene
-        if (masterBlok) {
-            masterBlok.style.display = "none";
+        // STRIKTNA BEZBEDNOST: Ako mreža baci bilo kakvu grešku, fizički uništavamo master blok sa ekrana
+        const proveraBloka = document.getElementById('master-admin-blok') || document.querySelector('.master-card');
+        if (proveraBloka) {
+            proveraBloka.remove();
         }
 
         // Učitavamo rezervni poddomen iz memorije da klijentu ne ostane prazan ekran
