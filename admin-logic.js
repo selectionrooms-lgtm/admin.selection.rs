@@ -881,7 +881,7 @@ async function sacuvajSveNaServer() {
                 screensaverMusic: document.getElementById('input-ss-muzika').value,
                 screensaverTimeout: parseInt(document.getElementById('input-ss-tajmer').value) || 60,
                 projectName: trenutniConfig.config?.globalSettings?.projectName || "Selection",
-                projectSubtitle: trenches = trenutniConfig.config?.globalSettings?.projectSubtitle || ""
+                projectSubtitle: trenutniConfig.config?.globalSettings?.projectSubtitle || ""
             },
             hasWarningMessage: trenutniConfig.config?.hasWarningMessage ?? true
         },
@@ -900,6 +900,10 @@ async function sacuvajSveNaServer() {
 
     const aktivniSubdomenZaSnimanje = localStorage.getItem('userSubdomain') || 'canvas';
     formData.append('subdomain', aktivniSubdomenZaSnimanje);
+    const trenutniEmail = localStorage.getItem('userEmail');
+    if (trenutniEmail) {
+        formData.append('client_email', trenutniEmail);
+    }
 
     if (fajloviZaUpload && fajloviZaUpload.length > 0) {
         fajloviZaUpload.forEach((item, index) => {
@@ -925,8 +929,19 @@ async function sacuvajSveNaServer() {
             alert("✅ USPEŠNO: Izmene i mediji su sačuvani na Cloudflare serveru!");
             location.reload();
         } else {
-            const errData = await response.json().catch(() => ({}));
-            alert("❌ Greška: Server nije sačuvao podatke. " + (errData.error || ""));
+            // Unapređeno čitanje greške (prvo hvatamo sirovi tekst iz Workera)
+            const tekstGreske = await response.text();
+            console.error("❌ RAW server greška:", tekstGreske);
+
+            let porukaZaPrikaz = tekstGreske;
+            try {
+                const jsonGreska = JSON.parse(tekstGreske);
+                if (jsonGreska.error) porukaZaPrikaz = jsonGreska.error;
+            } catch (e) {
+                // Ako nije JSON, ostaje sirovi tekst koji je server vratio
+            }
+
+            alert("❌ Greška sa servera:\n" + porukaZaPrikaz);
         }
     } catch (error) {
         console.error("❌ Greška u komunikaciji:", error);
