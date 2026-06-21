@@ -27,6 +27,14 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         const userData = await res.json();
         console.log("👤 Podaci o sesiji uspešno povučeni:", userData);
 
+        // 🔥 NOVI DODATAK: Ispisujemo ulogovanog korisnika u gornji desni ćošak (Kada mreža radi)
+        const badge = document.getElementById('user-session-badge');
+        if (badge) {
+            const ikonica = userData.role === "master" ? "👑" : "🔒";
+            badge.innerHTML = `${ikonica} <span style="color: var(--admin-accent); font-weight: 600;">${userData.email}</span>`;
+            badge.style.display = "block";
+        }
+
         // 2. Proveravamo ulogu koju je backend dodelio korisniku
         if (userData.role === "master") {
             // 👑 AKO JE MASTER ADMIN (selectionrooms@gmail.com)
@@ -41,7 +49,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         } else {
             // 🔒 AKO JE OBIČAN KLIJENT (npr. knezziks@yahoo.com)
             if (masterBlok) {
-                masterBlok.remove(); // 🔥 POTPUNO BRISANJE IZ DOM-a: Klijent ne može ni preko konzole da ga upali!
+                masterBlok.remove(); // 🔥 POTPUNO BRISANJE IZ DOM-a
             }
             console.log(`🔒 Logovan klijent sa adresom: ${userData.email}`);
             console.log(`📂 Dodeljeni radni prostor iz baze: ${userData.subdomain}`);
@@ -58,13 +66,21 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         console.error("❌ Greška pri proveri korisnika. Koristim fallback mehanizam.", err);
 
         // Fallback u slučaju da pukne mreža tokom razvoja (koristi trenutni localStorage)
-        const ulogovaniEmail = localStorage.getItem('userEmail') || "";
+        const ulogovaniEmail = localStorage.getItem('userEmail') || "nepoznat@korisnik.com";
+
+        // 🔥 NOVI DODATAK: Ispisujemo simuliranog korisnika u gornji desni ćošak (Unutar Fallback-a!)
+        const badge = document.getElementById('user-session-badge');
+        if (badge) {
+            const ikonica = ulogovaniEmail.trim().toLowerCase() === "selectionrooms@gmail.com" ? "👑" : "🔒";
+            badge.innerHTML = `${ikonica} <span style="color: var(--admin-accent); font-weight: 600;">${ulogovaniEmail}</span>`;
+            badge.style.display = "block";
+        }
+
         if (ulogovaniEmail.trim().toLowerCase() === "selectionrooms@gmail.com") {
             if (masterBlok) masterBlok.style.display = "block";
             ucitajConfig("canvas");
         } else {
             if (masterBlok) masterBlok.style.display = "none";
-            // ✅ ISPRAVLJENO: Zamenjena uglasta zagrada običnom )
             const klijentovSubdomain = localStorage.getItem('userSubdomain') || "test";
             ucitajConfig(klijentovSubdomain);
         }
