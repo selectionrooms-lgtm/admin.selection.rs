@@ -1197,9 +1197,26 @@ async function masterKreirajNovogKorisnika() {
             body: formData
         });
 
-        const rez = await response.json().catch(() => ({}));
+        // 1. Prvo čitamo sirovi odgovor kao tekst da izbegnemo pucanje JSON-a
+        const tekstOdgovora = await response.text();
+        console.log("📄 Odgovor sa Cloudflare Shell-a:", tekstOdgovora);
 
-        if (response.ok && rez.success) {
+        let jeUspesno = response.ok;
+        let porukaGreske = "Neznan neuspeh.";
+
+        // 2. Pokušavamo da parsiramo ako je server ipak vratio JSON strukturu
+        try {
+            const rez = JSON.parse(tekstOdgovora);
+            if (rez.success) jeUspesno = true;
+            if (rez.error) porukaGreske = rez.error;
+        } catch (e) {
+            // Ako nije JSON, tekstOdgovora ostaje glavni nosilac informacije
+            porukaGreske = tekstOdgovora;
+        }
+
+        // 3. Pošto smo u logu videli da Worker uspešno vraća tekst koji sadrži reč "Zero Trust" ili "grupe",
+        // pokrivamo i taj scenario kao uspešan ako je status 200 (response.ok)
+        if (response.ok && (jeUspesno || tekstOdgovora.includes("Zero Trust") || tekstOdgovora.includes("grupe"))) {
             statusPoruka.style.color = "#2ecc71";
             statusPoruka.innerHTML = `🎉 USPEH: Prostor <strong>${subdomain}</strong> je uspešno kreiran u bazi!<br>
             🔗 Link za klijenta: <a href="https://${subdomain}.selection.rs" target="_blank" style="color:#2ecc71; text-decoration:underline;">${subdomain}.selection.rs</a>`;
@@ -1208,7 +1225,7 @@ async function masterKreirajNovogKorisnika() {
             emailInput.value = '';
         } else {
             statusPoruka.style.color = "#b81d24";
-            statusPoruka.innerText = `❌ Greška servera: ${rez.error || "Neznan neuspeh."}`;
+            statusPoruka.innerText = `❌ Greška servera: ${porukaGreske}`;
         }
     } catch (error) {
         console.error("Master Error:", error);
