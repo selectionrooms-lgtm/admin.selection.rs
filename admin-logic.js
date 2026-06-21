@@ -1201,6 +1201,52 @@ async function masterKreirajNovogKorisnika() {
         statusPoruka.innerText = "❌ Greška: Neuspešna komunikacija sa Cloudflare Shell-om.";
     }
 }
+
+// ==========================================================================
+// 7. SMART DRAG & DROP LOGIC (ZOOM COMPATIBLE)
+// ==========================================================================
+function procitajFajlIUbaciUConfig(file, index) {
+    if (!file || index === null || index === undefined) return;
+    const tip = file.type;
+    const imeFajla = file.name;
+    const previewUrl = URL.createObjectURL(file);
+
+    const finalnaPutanjaSlike = 'images/' + imeFajla;
+    const finalnaPutanjaVideo = 'videos/' + imeFajla;
+    const finalnaPutanjaAudio = 'audio/' + imeFajla;
+
+    const blok = trenutniConfig.timeline[index];
+
+    if (tip.startsWith('image/')) {
+        if (!blok.galleryImages) blok.galleryImages = [];
+        if (!blok._realGalleryNames) blok._realGalleryNames = [];
+        blok.galleryImages.push(previewUrl);
+        blok._realGalleryNames.push(finalnaPutanjaSlike);
+
+        fajloviZaUpload.push({ putanja: finalnaPutanjaSlike, rawFile: file });
+    }
+    else if (tip.startsWith('video/')) {
+        blok.url = previewUrl;
+        blok._realVideoName = imeFajla;
+        blok._realName = finalnaPutanjaVideo;
+
+        fajloviZaUpload.push({ putanja: finalnaPutanjaVideo, rawFile: file });
+    }
+    else if (tip.startsWith('audio/')) {
+        blok.bgMusicUrl = previewUrl;
+        blok._realAudioName = imeFajla;
+        blok._realName = finalnaPutanjaAudio;
+
+        fajloviZaUpload.push({ putanja: finalnaPutanjaAudio, rawFile: file });
+    }
+
+    if (blok.type === 'chapter') {
+        osveziZoomGalerijuEkran(index);
+    }
+    osveziZiviPreview();
+}
+
+
 // ==========================================================================
 // 8. GLOBAL DRAG & DROP HANDLERS (Popunjena verzija)
 // ==========================================================================
