@@ -698,16 +698,16 @@ function osveziZiviPreview() {
         const inputPozadina = document.getElementById('input-slika-pozadina');
         let slikaZaPrikaz = tempPutanja || (inputPozadina ? inputPozadina.value : '');
 
-        // 🌟 POPRAVKA: Umesto slepe kose crte, vučemo sliku sa tačnog klijentskog poddomena
+        // 👑 HIRURŠKA POPRAVKA: Čitamo naziv aktivnog projekta direktno iz konfiguracije baze
         if (slikaZaPrikaz && !slikaZaPrikaz.startsWith('blob:') && !slikaZaPrikaz.startsWith('http')) {
-            const trenutniSubdomen = localStorage.getItem('userSubdomain') || 'canvas';
+            const aktivniProjekat = trenutniConfig.config?.globalSettings?.projectName?.toLowerCase() || 'canvas';
 
-            if (trenutniSubdomen === 'canvas' || trenutniSubdomen === 'admin') {
-                // Ako si ti ulogovan kao Master i sređuješ osnovni šablon, vuče se sa podrazumevane lokacije
+            if (aktivniProjekat === 'canvas' || aktivniProjekat === 'admin' || aktivniProjekat === 'unnamed') {
+                // Ako je u pitanju tvoj master šablon, slika se vuče lokalno sa admina
                 slikaZaPrikaz = '/' + slikaZaPrikaz;
             } else {
-                // Ako je ulogovan klijent (npr. knezziks), slika se gađa tamo gde je realno i skladištena na internetu
-                slikaZaPrikaz = `https://${trenutniSubdomen}.selection.rs/` + slikaZaPrikaz;
+                // Ako je pravi klijentski prostor (npr. knezziks), slika se gađa direktno na njegovoj zvaničnoj mrežnoj adresi!
+                slikaZaPrikaz = `https://${aktivniProjekat}.selection.rs/` + slikaZaPrikaz;
             }
         }
 
