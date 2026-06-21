@@ -96,6 +96,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 function ucitajConfig(subdomain) {
     console.log(`📂 Pokrećem učitavanje konfiguracije za poddomen: ${subdomain}...`);
 
+    // 🚀 PROMENJENO: Eksplicitno gađamo API na shell-u
     fetch(`https://shell.selection.rs/?subdomain=${subdomain}&nocache=${Date.now()}`, {
         credentials: "include"
     })
@@ -109,6 +110,7 @@ function ucitajConfig(subdomain) {
             popuniGlobalneStilove();
             osveziCoreSummaryTekst();
             renderujTimelineBlokove();
+            osveziZiviPreview(); // Osiguravamo preview odmah nakon učitavanja
             promeniRezimSimulatora('mobile');
         })
         .catch(err => {
@@ -907,7 +909,7 @@ async function sacuvajSveNaServer() {
     formData.append('subdomain', aktivniSubdomenZaSnimanje);
     const trenutniEmail = localStorage.getItem('userEmail');
     if (trenutniEmail) {
-        formData.append('client_email', trenutniEmail);
+        formData.append('client_email', trenchesEmail);
     }
 
     if (fajloviZaUpload && fajloviZaUpload.length > 0) {
@@ -919,6 +921,7 @@ async function sacuvajSveNaServer() {
     try {
         console.log("🚀 Šaljem konfiguraciju i medije na server...");
 
+        // 🚀 PROMENJENO: Eksplicitno gađamo API na shell-u za čuvanje
         const response = await fetch('https://shell.selection.rs/save_data', {
             method: 'POST',
             credentials: "include",
@@ -934,7 +937,6 @@ async function sacuvajSveNaServer() {
             alert("✅ USPEŠNO: Izmene i mediji su sačuvani na Cloudflare serveru!");
             location.reload();
         } else {
-            // Unapređeno čitanje greške (prvo hvatamo sirovi tekst iz Workera)
             const tekstGreske = await response.text();
             console.error("❌ RAW server greška:", tekstGreske);
 
@@ -942,9 +944,7 @@ async function sacuvajSveNaServer() {
             try {
                 const jsonGreska = JSON.parse(tekstGreske);
                 if (jsonGreska.error) porukaZaPrikaz = jsonGreska.error;
-            } catch (e) {
-                // Ako nije JSON, ostaje sirovi tekst koji je server vratio
-            }
+            } catch (e) { }
 
             alert("❌ Greška sa servera:\n" + porukaZaPrikaz);
         }
