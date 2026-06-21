@@ -917,21 +917,30 @@ async function sacuvajSveNaServer() {
 
     const aktivniSubdomenZaSnimanje = localStorage.getItem('userSubdomain') || 'canvas';
     formData.append('subdomain', aktivniSubdomenZaSnimanje);
-    if (fajloviZaUpload.length > 0) {
+
+    if (fajloviZaUpload && fajloviZaUpload.length > 0) {
         fajloviZaUpload.forEach((item, index) => {
             formData.append(`file_${index}`, item.rawFile, item.putanja);
         });
     }
 
     try {
+        console.log("🚀 Šaljem konfiguraciju i medije na server...");
+
+        // OSVEŽENO: Fetch sada nosi credentials i mrežna uputstva za Cloudflare Access
         const response = await fetch('https://shell.selection.rs/save_data', {
             method: 'POST',
-            body: formData
+            credentials: "include", // Ključno za prenos mrežnog identiteta klijenta
+            headers: {
+                // Signalizuje Cloudflare-u da je u pitanju fetch zahtev i sprečava preusmeravanje na login stranu
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData // Browser automatski postavlja tačan Content-Type za FormData
         });
 
         if (response.ok) {
             trenutniConfig = cistConfigZaExport;
-            fajloviZaUpload = [];
+            if (typeof fajloviZaUpload !== 'undefined') fajloviZaUpload = [];
             alert("✅ USPEŠNO: Izmene i mediji su sačuvani na Cloudflare serveru!");
             location.reload();
         } else {
@@ -939,7 +948,7 @@ async function sacuvajSveNaServer() {
             alert("❌ Greška: Server nije sačuvao podatke. " + (errData.error || ""));
         }
     } catch (error) {
-        console.error("Error:", error);
+        console.error("❌ Greška u komunikaciji:", error);
         alert("❌ Greška u komunikaciji sa Cloudflare serverom.");
     }
 }
