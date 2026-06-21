@@ -88,14 +88,13 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
             ucitajConfig(klijentovSubdomain);
         } else {
             console.log("📭 Nema lokalno sačuvanog poddomena. Preusmeravam na glavni login.");
-            // Opciono: ovde možeš dodati redirekciju na login ako želiš
         }
     }
 }
+
 function ucitajConfig(subdomain) {
     console.log(`📂 Pokrećem učitavanje konfiguracije za poddomen: ${subdomain}...`);
 
-    // OSVEŽENO: Dodat credentials: "include" kako bi zahtev preneo kolačiće sesije kroz Zero Trust kapiju
     fetch(`https://shell.selection.rs/?subdomain=${subdomain}&nocache=${Date.now()}`, {
         credentials: "include"
     })
@@ -672,293 +671,6 @@ function potvrdiIZatvoriZoom() {
     zatvoriZoomEditor();
 }
 
-function ukloniSlikuIzGalerijeZoom(imgIndex) {
-    if (aktivniIndex !== null && aktivniIndex !== -1) {
-        const blok = trenutniConfig.timeline[aktivniIndex];
-        blok.galleryImages.splice(imgIndex, 1);
-        if (blok._realGalleryNames) blok._realGalleryNames.splice(imgIndex, 1);
-
-        osveziZoomGalerijuEkran(aktivniIndex);
-        osveziZiviPreview();
-    }
-}
-
-function okiniLokalniKlikFajla() {
-    const input = document.createElement('input');
-    input.type = 'file';
-
-    const jeFinale = (aktivniIndex !== null && aktivniIndex !== -1 && trenutniConfig.timeline[aktivniIndex].type === 'finale');
-    if (jeFinale) {
-        input.accept = 'image/*';
-        input.multiple = false;
-    } else {
-        input.accept = 'image/*, video/*, audio/*';
-        input.multiple = true;
-    }
-
-    input.onchange = (e) => {
-        if (e.target.files.length > 0) {
-            const fajl = e.target.files[0];
-            const imeFajla = fajl.name;
-
-            if (jeFinale) {
-                const ekstenzija = imeFajla.split('.').pop().toLowerCase();
-                if (['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'].includes(ekstenzija)) {
-                    document.getElementById('zoom-field-endIconType').value = 'images/' + imeFajla;
-                    trenutniConfig.timeline[aktivniIndex]._realIconName = imeFajla;
-                    fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
-
-                    const statusEl = document.getElementById('final-icon-status');
-                    if (statusEl) statusEl.innerText = `Učitano: ${imeFajla}`;
-                    osveziZiviPreview();
-                } else {
-                    alert("Molimo te izaberi validan slikovni fajl (.png, .svg, .jpg)...");
-                }
-                return;
-            }
-
-            Array.from(e.target.files).forEach(fajl => {
-                procitajFajlIUbaciUConfig(fajl, aktivniIndex);
-            });
-
-            if (!isEditingCore && aktivniIndex !== null && aktivniIndex !== -1) {
-                const blok = trenutniConfig.timeline[aktivniIndex];
-                if (blok.type === 'chapter') {
-                    osveziZoomGalerijuEkran(aktivniIndex);
-                } else if (blok.type === 'video') {
-                    const vidLabel = document.getElementById('zoom-video-display-name');
-                    if (vidLabel) vidLabel.innerText = blok._realVideoName || imeFajla;
-                }
-                const audioLabel = document.getElementById('zoom-audio-display-name');
-                if (audioLabel && blok._realAudioName) {
-                    audioLabel.innerText = `Trenutna traka: ${blok._realAudioName}`;
-                }
-            }
-        }
-    };
-    input.click();
-}
-
-// ==========================================================================
-// 7. SMART DRAG & DROP LOGIC (ZOOM COMPATIBLE)
-// ==========================================================================
-function procitajFajlIUbaciUConfig(file, index) {
-    if (!file || index === null || index === undefined) return;
-    const tip = file.type;
-    const imeFajla = file.name;
-    const previewUrl = URL.createObjectURL(file);
-
-    const finalnaPutanjaSlike = 'images/' + imeFajla;
-    const finalnaPutanjaVideo = 'videos/' + imeFajla;
-    const finalnaPutanjaAudio = 'audio/' + imeFajla;
-
-    const blok = trenutniConfig.timeline[index];
-
-    if (tip.startsWith('image/')) {
-        if (!blok.galleryImages) blok.galleryImages = [];
-        if (!blok._realGalleryNames) blok._realGalleryNames = [];
-        blok.galleryImages.push(previewUrl);
-        blok._realGalleryNames.push(finalnaPutanjaSlike);
-
-        fajloviZaUpload.push({ putanja: finalnaPutanjaSlike, rawFile: file });
-    }
-    else if (tip.startsWith('video/')) {
-        blok.url = previewUrl;
-        blok._realVideoName = imeFajla;
-        blok._realName = finalnaPutanjaVideo;
-
-        fajloviZaUpload.push({ putanja: finalnaPutanjaVideo, rawFile: file });
-    }
-    else if (tip.startsWith('audio/')) {
-        blok.bgMusicUrl = previewUrl;
-        blok._realAudioName = imeFajla;
-        blok._realName = finalnaPutanjaAudio;
-
-        fajloviZaUpload.push({ putanja: finalnaPutanjaAudio, rawFile: file });
-    }
-
-    if (blok.type === 'chapter') {
-        osveziZoomGalerijuEkran(index);
-    }
-    osveziZiviPreview();
-}
-
-function inicijalizujDragAndDrop() {
-    window.addEventListener('dragover', (e) => e.preventDefault());
-    window.addEventListener('drop', (e) => {
-        e.preventDefault();
-
-        const dropPozadina = e.target.closest('#drop-global-pozadina');
-        const dropLoaderMuzika = e.target.closest('#drop-global-loader-muzika');
-        const dropSsMuzika = e.target.closest('#drop-global-ss-muzika');
-        const dropFinaleIkona = e.target.closest('#final-icon-drop-zone');
-
-        if (e.dataTransfer.files.length > 0) {
-            const fajl = e.dataTransfer.files[0];
-            const imeFajla = fajl.name;
-
-            if (dropFinaleIkona) {
-                const ekstenzija = imeFajla.split('.').pop().toLowerCase();
-                if (['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'].includes(ekstenzija)) {
-                    document.getElementById('zoom-field-endIconType').value = 'images/' + imeFajla;
-                    trenutniConfig.timeline[aktivniIndex]._realIconName = imeFajla;
-                    fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
-                    document.getElementById('final-icon-status').innerText = `Učitano: ${imeFajla}`;
-                    osveziZiviPreview();
-                } else {
-                    alert("Molimo te spusti validan slikovni fajl (.png, .svg, .jpg)...");
-                }
-                return;
-            }
-
-            if (dropPozadina) {
-                const previewUrl = URL.createObjectURL(fajl);
-                document.getElementById('input-slika-pozadina').value = 'images/' + imeFajla;
-                document.getElementById('label-global-pozadina').innerText = 'images/' + imeFajla;
-
-                fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
-
-                if (trenutniConfig && trenutniConfig.config.globalSettings) {
-                    trenutniConfig.config.globalSettings._tempBgPreview = previewUrl;
-                }
-                osveziZiviPreview();
-                return;
-            }
-            if (dropLoaderMuzika) {
-                document.getElementById('input-loader-muzika').value = 'audio/' + imeFajla;
-                document.getElementById('label-global-loader-muzika').innerText = 'audio/' + imeFajla;
-
-                fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
-                osveziZiviPreview();
-                return;
-            }
-            if (dropSsMuzika) {
-                document.getElementById('input-ss-muzika').value = 'audio/' + imeFajla;
-                document.getElementById('label-global-ss-muzika').innerText = 'audio/' + imeFajla;
-
-                fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
-                osveziZiviPreview();
-                return;
-            }
-        }
-
-        const card = e.target.closest('.cms-block-card');
-        if (card && !isEditingCore) {
-            const idx = parseInt(card.getAttribute('data-index'));
-            if (e.dataTransfer.files.length > 0) {
-                procitajFajlIUbaciUConfig(e.dataTransfer.files[0], idx);
-                renderujTimelineBlokove();
-            }
-        }
-        else if (document.getElementById('zoom-editor-overlay').style.display === 'flex' && aktivniIndex !== null) {
-            if (e.dataTransfer.files.length > 0) {
-                Array.from(e.dataTransfer.files).forEach(fajl => {
-                    procitajFajlIUbaciUConfig(fajl, aktivniIndex);
-                });
-                if (aktivniIndex !== -1) {
-                    osveziZoomGalerijuEkran(aktivniIndex);
-                }
-            }
-        }
-    });
-}
-
-// ==========================================================================
-async function sacuvajSveNaServer() {
-    if (!confirm("⚠️ PAŽNJA: Da li želiš da objaviš izmene na JAVNI sajt?")) {
-        return;
-    }
-    if (!trenutniConfig) return;
-
-    if (trenutniConfig.timeline) {
-        trenutniConfig.timeline.forEach(blok => {
-            if (blok.url && blok.url.startsWith('blob:')) blok.url = blok._realName || '';
-            if (blok.bgMusicUrl && blok.bgMusicUrl.startsWith('blob:')) blok.bgMusicUrl = blok._realName || '';
-            if (blok.galleryImages) {
-                blok.galleryImages = blok.galleryImages.map((img, i) => {
-                    if (img.startsWith('blob:') && blok._realGalleryNames && blok._realGalleryNames[i]) {
-                        return blok._realGalleryNames[i];
-                    }
-                    return img;
-                }).filter(img => !img.startsWith('blob:'));
-            }
-        });
-    }
-
-    const cistConfigZaExport = {
-        config: {
-            globalSettings: {
-                primaryColor: document.getElementById('color-h1').value,
-                secondaryColor: document.getElementById('color-h2').value,
-                textColor: document.getElementById('color-p').value,
-                backgroundColor: document.getElementById('input-boja-pozadina').value,
-                containerBg: document.getElementById('input-boja-kontejner').value,
-                mainBackgroundImage: document.getElementById('input-slika-pozadina').value,
-                fontHeader: document.getElementById('font-h1').value,
-                fontQuote: document.getElementById('font-h2').value,
-                fontBody: document.getElementById('font-p').value,
-                loaderMusic: document.getElementById('input-loader-muzika').value,
-                screensaverMusic: document.getElementById('input-ss-muzika').value,
-                screensaverTimeout: parseInt(document.getElementById('input-ss-tajmer').value) || 60,
-                projectName: trenutniConfig.config?.globalSettings?.projectName || "Selection",
-                projectSubtitle: trenutniConfig.config?.globalSettings?.projectSubtitle || ""
-            },
-            hasWarningMessage: trenutniConfig.config?.hasWarningMessage ?? true
-        },
-        loader: {
-            warningTitle: document.getElementById('zoom-core-warningTitle')?.value || "⚠️ UPOZORENJE ⚠️",
-            warningFinalLine: "",
-            warningTexts: trenutniConfig.loader?.warningTexts || []
-        },
-        timeline: trenutniConfig.timeline || []
-    };
-
-    const jsonString = JSON.stringify(cistConfigZaExport, null, 2);
-
-    const formData = new FormData();
-    formData.append('config_data', jsonString);
-
-    const aktivniSubdomenZaSnimanje = localStorage.getItem('userSubdomain') || 'canvas';
-    formData.append('subdomain', aktivniSubdomenZaSnimanje);
-
-    if (fajloviZaUpload && fajloviZaUpload.length > 0) {
-        fajloviZaUpload.forEach((item, index) => {
-            formData.append(`file_${index}`, item.rawFile, item.putanja);
-        });
-    }
-
-    try {
-        console.log("🚀 Šaljem konfiguraciju i medije na server...");
-
-        // OSVEŽENO: Fetch sada nosi credentials i mrežna uputstva za Cloudflare Access
-        const response = await fetch('https://shell.selection.rs/save_data', {
-            method: 'POST',
-            credentials: "include", // Ključno za prenos mrežnog identiteta klijenta
-            headers: {
-                // Signalizuje Cloudflare-u da je u pitanju fetch zahtev i sprečava preusmeravanje na login stranu
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData // Browser automatski postavlja tačan Content-Type za FormData
-        });
-
-        if (response.ok) {
-            trenutniConfig = cistConfigZaExport;
-            if (typeof fajloviZaUpload !== 'undefined') fajloviZaUpload = [];
-            alert("✅ USPEŠNO: Izmene i mediji su sačuvani na Cloudflare serveru!");
-            location.reload();
-        } else {
-            const errData = await response.json().catch(() => ({}));
-            alert("❌ Greška: Server nije sačuvao podatke. " + (errData.error || ""));
-        }
-    } catch (error) {
-        console.error("❌ Greška u komunikaciji:", error);
-        alert("❌ Greška u komunikaciji sa Cloudflare serverom.");
-    }
-}
-
-// ==========================================================================
-// ŽIVI LIVE PREVIEW ENGINE (UNIVERZALNA PODRŠKA ZA INSANT MEDIJA PREVIEW)
-// ==========================================================================
 function osveziZiviPreview() {
     if (!trenutniConfig) return;
 
@@ -1129,6 +841,96 @@ function osveziZiviPreview() {
         }
     } catch (err) {
         console.error("Greška unutar live preview engine-a:", err);
+    }
+}
+
+async function sacuvajSveNaServer() {
+    if (!confirm("⚠️ PAŽNJA: Da li želiš da objaviš izmene na JAVNI sajt?")) {
+        return;
+    }
+    if (!trenutniConfig) return;
+
+    if (trenutniConfig.timeline) {
+        trenutniConfig.timeline.forEach(blok => {
+            if (blok.url && blok.url.startsWith('blob:')) blok.url = blok._realName || '';
+            if (blok.bgMusicUrl && blok.bgMusicUrl.startsWith('blob:')) blok.bgMusicUrl = blok._realName || '';
+            if (blok.galleryImages) {
+                blok.galleryImages = blok.galleryImages.map((img, i) => {
+                    if (img.startsWith('blob:') && blok._realGalleryNames && blok._realGalleryNames[i]) {
+                        return blok._realGalleryNames[i];
+                    }
+                    return img;
+                }).filter(img => !img.startsWith('blob:'));
+            }
+        });
+    }
+
+    const cistConfigZaExport = {
+        config: {
+            globalSettings: {
+                primaryColor: document.getElementById('color-h1').value,
+                secondaryColor: document.getElementById('color-h2').value,
+                textColor: document.getElementById('color-p').value,
+                backgroundColor: document.getElementById('input-boja-pozadina').value,
+                containerBg: document.getElementById('input-boja-kontejner').value,
+                mainBackgroundImage: document.getElementById('input-slika-pozadina').value,
+                fontHeader: document.getElementById('font-h1').value,
+                fontQuote: document.getElementById('font-h2').value,
+                fontBody: document.getElementById('font-p').value,
+                loaderMusic: document.getElementById('input-loader-muzika').value,
+                screensaverMusic: document.getElementById('input-ss-muzika').value,
+                screensaverTimeout: parseInt(document.getElementById('input-ss-tajmer').value) || 60,
+                projectName: trenutniConfig.config?.globalSettings?.projectName || "Selection",
+                projectSubtitle: trenches = trenutniConfig.config?.globalSettings?.projectSubtitle || ""
+            },
+            hasWarningMessage: trenutniConfig.config?.hasWarningMessage ?? true
+        },
+        loader: {
+            warningTitle: document.getElementById('zoom-core-warningTitle')?.value || "⚠️ UPOZORENJE ⚠️",
+            warningFinalLine: "",
+            warningTexts: trenutniConfig.loader?.warningTexts || []
+        },
+        timeline: trenutniConfig.timeline || []
+    };
+
+    const jsonString = JSON.stringify(cistConfigZaExport, null, 2);
+
+    const formData = new FormData();
+    formData.append('config_data', jsonString);
+
+    const aktivniSubdomenZaSnimanje = localStorage.getItem('userSubdomain') || 'canvas';
+    formData.append('subdomain', aktivniSubdomenZaSnimanje);
+
+    if (fajloviZaUpload && fajloviZaUpload.length > 0) {
+        fajloviZaUpload.forEach((item, index) => {
+            formData.append(`file_${index}`, item.rawFile, item.putanja);
+        });
+    }
+
+    try {
+        console.log("🚀 Šaljem konfiguraciju i medije na server...");
+
+        const response = await fetch('https://shell.selection.rs/save_data', {
+            method: 'POST',
+            credentials: "include",
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            trenutniConfig = cistConfigZaExport;
+            if (typeof fajloviZaUpload !== 'undefined') fajloviZaUpload = [];
+            alert("✅ USPEŠNO: Izmene i mediji su sačuvani na Cloudflare serveru!");
+            location.reload();
+        } else {
+            const errData = await response.json().catch(() => ({}));
+            alert("❌ Greška: Server nije sačuvao podatke. " + (errData.error || ""));
+        }
+    } catch (error) {
+        console.error("❌ Greška u komunikaciji:", error);
+        alert("❌ Greška u komunikaciji sa Cloudflare serverom.");
     }
 }
 
@@ -1362,12 +1164,10 @@ async function masterKreirajNovogKorisnika() {
     try {
         console.log(`🚀 Lansiram novi prostor [${subdomain}] preko Cloudflare Shell-a...`);
 
-        // OSVEŽENO: Dodat prenos sesije i XMLHttpRequest signalizacija
         const response = await fetch('https://shell.selection.rs/save_data', {
             method: 'POST',
-            credentials: "include", // Ključno za prenos mrežnog identiteta klijenta kroz Access kapiju
+            credentials: "include",
             headers: {
-                // Signalizuje Cloudflare-u da je u pitanju fetch i sprečava lažne HTML redirekcije u slučaju isteka tokena
                 'X-Requested-With': 'XMLHttpRequest'
             },
             body: formData
