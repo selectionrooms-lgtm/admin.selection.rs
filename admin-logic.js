@@ -14,31 +14,60 @@ document.addEventListener("DOMContentLoaded", () => {
     proveriKorisnikaIUpravljajInterfejsom();
 });
 
-function proveriKorisnikaIUpravljajInterfejsom() {
-    // Hvatamo email korisnika koji se ulogovao iz skladišta browsera
-    const ulogovaniEmail = localStorage.getItem('userEmail') || "";
+async function proveriKorisnikaIUpravljajInterfejsom() {
     const masterBlok = document.getElementById('master-admin-blok');
 
-    if (!ulogovaniEmail) {
-        console.log("Korisnik nije ulogovan. Sistem čeka podatke.");
-        // Ako nema logina, podrazumevano učitavamo glavni canvas šablon
-        ucitajConfig("canvas");
-        return;
-    }
+    try {
+        console.log("🔒 Proveravam mrežni identitet korisnika sa Cloudflare Shell-a...");
 
-    // 👑 KRITIČNA TAČKA SIGURNOSTI NA FRONTENDU: Samo ti vidiš krunu
-    if (ulogovaniEmail.trim().toLowerCase() === "selectionrooms@gmail.com") {
-        if (masterBlok) masterBlok.style.display = "block";
-        console.log("👑 Dobrodošao, Master Admin. Sistemi za lansiranje su spremni.");
-        ucitajConfig("canvas");
-    } else {
-        // Ako je običan admin (klijent koji plaća), sakrij mu krunu zauvek
-        if (masterBlok) masterBlok.style.display = "none";
-        console.log(`🔒 Logovan klijent sa adresom: ${ulogovaniEmail}`);
+        // 1. Pitamo direktno naš Shell backend ko drži sesiju preko Zero Trust-a
+        const res = await fetch('https://shell-selection-rs.selectionrooms.workers.dev/get_user');
+        if (!res.ok) throw new Error("Neuspešna mrežna autentifikacija.");
 
-        // Klijent ne sme da učita "canvas", već svoj lični poddomen koji mu je dodeljen
-        const klijentovSubdomain = localStorage.getItem('userSubdomain') || "test";
-        ucitajConfig(klijentovSubdomain);
+        const userData = await res.json();
+        console.log("👤 Podaci o sesiji uspešno povučeni:", userData);
+
+        // 2. Proveravamo ulogu koju je backend dodelio korisniku
+        if (userData.role === "master") {
+            // 👑 AKO JE MASTER ADMIN (selectionrooms@gmail.com)
+            if (masterBlok) masterBlok.style.display = "block";
+            console.log("👑 Dobrodošao, Master Admin. Sistemi za lansiranje su spremni.");
+
+            // Keširamo za ostatak frontenda ako zatreba
+            localStorage.setItem('userEmail', userData.email);
+
+            // Master podrazumevano učitava glavni šablon
+            ucitajConfig("canvas");
+        } else {
+            // 🔒 AKO JE OBIČAN KLIJENT (npr. knezziks@yahoo.com)
+            if (masterBlok) {
+                masterBlok.remove(); // 🔥 POTPUNO BRISANJE IZ DOM-a: Klijent ne može ni preko konzole da ga upali!
+            }
+            console.log(`🔒 Logovan klijent sa adresom: ${userData.email}`);
+            console.log(`📂 Dodeljeni radni prostor iz baze: ${userData.subdomain}`);
+
+            // Skladištimo klijentov dodeljeni poddomen da ga ostale funkcije za čuvanje koriste
+            localStorage.setItem('userEmail', userData.email);
+            localStorage.setItem('userSubdomain', userData.subdomain);
+
+            // Učitavamo isključivo njegov sajt iz baze podataka
+            ucitajConfig(userData.subdomain);
+        }
+
+    } catch (err) {
+        console.error("❌ Greška pri proveri korisnika. Koristim fallback mehanizam.", err);
+
+        // Fallback u slučaju da pukne mreža tokom razvoja (koristi trenutni localStorage)
+        const ulogovaniEmail = localStorage.getItem('userEmail') || "";
+        if (ulogovaniEmail.trim().toLowerCase() === "selectionrooms@gmail.com") {
+            if (masterBlok) masterBlok.style.display = "block";
+            ucitajConfig("canvas");
+        } else {
+            if (masterBlok) masterBlok.style.display = "none";
+            // ✅ ISPRAVLJENO: Zamenjena uglasta zagrada običnom )
+            const klijentovSubdomain = localStorage.getItem('userSubdomain') || "test";
+            ucitajConfig(klijentovSubdomain);
+        }
     }
 }
 
@@ -62,11 +91,21 @@ function ucitajConfig(subdomain) {
             trenutniConfig = {
                 config: {
                     globalSettings: {
-                        primaryColor: "#d4b483", secondaryColor: "#d4b483", textColor: "#eeeeee", metaColor: "#a0acb8",
-                        backgroundColor: "#0f171e", mainBackgroundImage: "bg.webp", containerBg: "#1c2a39",
-                        fontHeader: "Cinzel", fontQuote: "Cormorant Garamond", fontBody: "Montserrat",
-                        projectName: subdomain.toUpperCase(), projectSubtitle: "Beyond the Canvas", loaderMusic: "loader-ambient.mp3",
-                        screensaverMusic: "screensaver.mp3", screensaverTimeout: 60
+                        primaryColor: "#d4b483",
+                        secondaryColor: "#d4b483",
+                        textColor: "#eeeeee",
+                        metaColor: "#a0acb8",
+                        backgroundColor: "#0f171e",
+                        mainBackgroundImage: "", // ✅ OČIŠĆENO: Nema više bg.webp
+                        containerBg: "#1c2a39",
+                        fontHeader: "Cinzel",
+                        fontQuote: "Cormorant Garamond",
+                        fontBody: "Montserrat",
+                        projectName: subdomain.toUpperCase(),
+                        projectSubtitle: "Dobrodošli u Vaš Selection prostor",
+                        loaderMusic: "", // ✅ OČIŠĆENO
+                        screensaverMusic: "", // ✅ OČIŠĆENO: Nema više screensaver.mp3
+                        screensaverTimeout: 60
                     },
                     hasWarningMessage: true
                 },
@@ -78,7 +117,7 @@ function ucitajConfig(subdomain) {
             renderujTimelineBlokove();
             promeniRezimSimulatora('mobile');
         });
-}
+} // 🔥 OVDE JE FALILO ZATVARANJE FUNKCIJE UCITAJCONFIG!
 
 function popuniGlobalneStilove() {
     if (!trenutniConfig || !trenutniConfig.config || !trenutniConfig.config.globalSettings) return;
@@ -139,22 +178,22 @@ function renderujTimelineBlokove() {
     if (aktivniIndex === -1) coreCard.classList.add('active-block');
 
     coreCard.innerHTML = `
-        <div class="block-info-side">
-            <div class="block-num">
-                <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--admin-accent);"></i>
-            </div>
-            <div class="block-meta-details">
-                <div class="block-type-tag">UVOĐENJE U APLIKACIJU</div>
-                <div class="block-summary-text" id="summary-core-title">Početni Ekran i Uvodna Pravila</div>
-                <div class="block-media-indicators"><span><i class="fa-solid fa-gear"></i> Ime projekta, podnaslov i uvodne poruke</span></div>
-            </div>
+    <div class="block-info-side">
+        <div class="block-num">
+            <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--admin-accent);"></i>
         </div>
-        <div class="block-actions">
-            <button class="btn-action btn-edit-zoom" onclick="event.stopPropagation(); otvoriCoreZoomEditor()">
-                <i class="fa-solid fa-expand"></i> Otvori i Uredi
-            </button>
+        <div class="block-meta-details">
+            <div class="block-type-tag">UVOĐENJE U APLIKACIJU</div>
+            <div class="block-summary-text" id="summary-core-title">Početni Ekran i Uvodna Pravila</div>
+            <div class="block-media-indicators"><span><i class="fa-solid fa-gear"></i> Ime projekta, podnaslov i uvodne poruke</span></div>
         </div>
-    `;
+    </div>
+    <div class="block-actions">
+        <button class="btn-action btn-edit-zoom" onclick="event.stopPropagation(); otvoriCoreZoomEditor()">
+            <i class="fa-solid fa-expand"></i> Otvori i Uredi
+        </button>
+    </div>
+`;
     container.appendChild(coreCard);
 
     osveziCoreSummaryTekst();
@@ -181,7 +220,6 @@ function renderujTimelineBlokove() {
             const vName = blok._realVideoName || (blok.url && !blok.url.startsWith('blob:') ? blok.url.split('/').pop() : 'Video je ubačen');
             if (vName) mediaIndicators += `<span><i class="fa-solid fa-video"></i> ${vName}</span>`;
         }
-        // Novi kôd koji broji sve slike u letu (uključujući i blobove):
         if (blok.type === 'chapter' && blok.galleryImages && blok.galleryImages.length > 0) {
             mediaIndicators += `<span><i class="fa-solid fa-images"></i> Sadrži ${blok.galleryImages.length} slika</span>`;
         }
@@ -209,21 +247,21 @@ function renderujTimelineBlokove() {
         }
 
         card.innerHTML = `
-            <div class="block-info-side">
-                <div class="block-num">KOCKICA #${index + 1}</div>
-                <div class="block-meta-details">
-                    <div class="block-type-tag">${srpskiTip}</div>
-                    <div class="block-summary-text">${summaryTekst}</div>
-                    <div class="block-media-indicators">${mediaIndicators || '<span><i class="fa-solid fa-folder-open"></i> Prazna kockica (ubaci sadržaj)</span>'}</div>
-                </div>
+        <div class="block-info-side">
+            <div class="block-num">KOCKICA #${index + 1}</div>
+            <div class="block-meta-details">
+                <div class="block-type-tag">${srpskiTip}</div>
+                <div class="block-summary-text">${summaryTekst}</div>
+                <div class="block-media-indicators">${mediaIndicators || '<span><i class="fa-solid fa-folder-open"></i> Prazna kockica (ubaci sadržaj)</span>'}</div>
             </div>
-            <div class="block-actions">
-                <button class="btn-action btn-edit-zoom" onclick="otvoriZoomEditorZaBlok(${index})"><i class="fa-solid fa-expand"></i> Otvori i Uredi</button>
-                <button class="btn-action" onclick="pomeriBlok(${index}, -1)">▲</button>
-                <button class="btn-action" onclick="pomeriBlok(${index}, 1)">▼</button>
-                <button class="btn-action btn-delete" onclick="obrisiBlok(${index})">X</button>
-            </div>
-        `;
+        </div>
+        <div class="block-actions">
+            <button class="btn-action btn-edit-zoom" onclick="otvoriZoomEditorZaBlok(${index})"><i class="fa-solid fa-expand"></i> Otvori i Uredi</button>
+            <button class="btn-action" onclick="pomeriBlok(${index}, -1)">▲</button>
+            <button class="btn-action" onclick="pomeriBlok(${index}, 1)">▼</button>
+            <button class="btn-action btn-delete" onclick="obrisiBlok(${index})">X</button>
+        </div>
+    `;
 
         container.appendChild(card);
     });
@@ -303,185 +341,184 @@ function otvoriZoomEditorZaBlok(index) {
     if (blok.type === 'video') {
         const videoName = blok._realVideoName || (blok.url && !blok.url.startsWith('blob:') ? blok.url : 'Nema selektovanog videa');
         dynamicHtml = `
-            <div class="form-group">
-                <label for="zoom-drop-zone-trigger">Video fajl (Prevuci .mp4 direktno u kućicu ili klikni):</label>
-                <div id="zoom-drop-zone-trigger" class="zoom-drop-zone" onclick="okiniLokalniKlikFajla()">
-                    <i class="fa-solid fa-circle-play" style="font-size:35px; color:var(--admin-accent); margin-bottom:8px;"></i>
-                    <p id="zoom-video-display-name" style="font-weight:600;">${videoName}</p>
-                    <span class="hint-text">Spusti fajl ovde</span>
-                </div>
+        <div class="form-group">
+            <label for="zoom-drop-zone-trigger">Video fajl (Prevuci .mp4 direktno u kućicu ili klikni):</label>
+            <div id="zoom-drop-zone-trigger" class="zoom-drop-zone" onclick="okiniLokalniKlikFajla()">
+                <i class="fa-solid fa-circle-play" style="font-size:35px; color:var(--admin-accent); margin-bottom:8px;"></i>
+                <p id="zoom-video-display-name" style="font-weight:600;">${videoName}</p>
+                <span class="hint-text">Spusti fajl ovde</span>
             </div>
-            <div class="form-group" style="margin-top:15px;">
-                <label for="zoom-field-sceneEffect"><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Ambijentalni efekat preko videa:</label>
-                <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()">
-                    <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Čist mrak / Bez efekta (Preporučeno za video)</option>
-                    <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice ruža)</option>
-                    <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Konfete)</option>
-                    <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust / Zlatne čestice</option>
-                </select>
-            </div>
-        `;
+        </div>
+        <div class="form-group" style="margin-top:15px;">
+            <label for="zoom-field-sceneEffect"><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Ambijentalni efekat preko videa:</label>
+            <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()">
+                <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Čist mrak / Bez efekta (Preporučeno za video)</option>
+                <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice ruža)</option>
+                <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Konfete)</option>
+                <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust / Zlatne čestice</option>
+            </select>
+        </div>
+    `;
     }
     else if (blok.type === 'chapter') {
         let slikeHtml = '';
         if (blok.galleryImages && blok.galleryImages.length > 0) {
             blok.galleryImages.forEach((imgSrc, imgIndex) => {
-                // ISPRAVLJENO: Dozvoljavamo i prikaz blobova unutar admin prozorčića
                 slikeHtml += `
-                    <div class="zoom-thumb" 
-                          draggable="true" 
-                          data-img-index="${imgIndex}"
-                          style="position: relative; cursor: move;"
-                          ondragstart="hendlujDragStart(event)"
-                          ondragover="hendlujDragOver(event)"
-                          ondrop="hendlujDrop(event, ${index})">
-                        <img src="${imgSrc.startsWith('blob:') || imgSrc.startsWith('http') ? imgSrc : '/' + imgSrc}" alt="Galerija slika ${imgIndex}">
-                        <button onclick="ukloniSlikuIzGalerijeZoom(${imgIndex})">X</button>
-                    </div>
-                `;
+                <div class="zoom-thumb" 
+                     draggable="true" 
+                     data-img-index="${imgIndex}"
+                     style="position: relative; cursor: move;"
+                     ondragstart="hendlujDragStart(event)"
+                     ondragover="hendlujDragOver(event)"
+                     ondrop="hendlujDrop(event, ${index})">
+                    <img src="${imgSrc.startsWith('blob:') || imgSrc.startsWith('http') ? imgSrc : '/' + imgSrc}" alt="Galerija slika ${imgIndex}">
+                    <button onclick="ukloniSlikuIzGalerijeZoom(${imgIndex})">X</button>
+                </div>
+            `;
             });
         }
 
         dynamicHtml = `
-            <div class="grid-2">
-                <div class="form-group">
-                    <label for="zoom-field-title">Naslov Poglavlja:</label>
-                    <input type="text" id="zoom-field-title" value="${blok.title || ''}" oninput="sinhronizujZoomSaPreviewom()">
-                </div>
-                <div class="form-group">
-                    <label for="zoom-field-subtitle">Podnaslov / Kratka lepa poruka:</label>
-                    <input type="text" id="zoom-field-subtitle" value="${blok.subtitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
-                </div>
+        <div class="grid-2">
+            <div class="form-group">
+                <label for="zoom-field-title">Naslov Poglavlja:</label>
+                <input type="text" id="zoom-field-title" value="${blok.title || ''}" oninput="sinhronizujZoomSaPreviewom()">
             </div>
             <div class="form-group">
-                <label for="zoom-field-paragraphs">Glavni tekst priče poglavlja (Double Enter pravi novi pasus):</label>
-                <textarea id="zoom-field-paragraphs" style="min-height:220px; font-size:0.95rem; line-height:1.5;" oninput="sinhronizujZoomSaPreviewom()">${blok.paragraphs ? blok.paragraphs.join('\n\n') : ''}</textarea>
+                <label for="zoom-field-subtitle">Podnaslov / Kratka lepa poruka:</label>
+                <input type="text" id="zoom-field-subtitle" value="${blok.subtitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
             </div>
-            <div class="grid-2" style="align-items: center; margin-top:10px;">
-                <div class="form-group">
-                    <label for="zoom-field-nextButtonText">Tekst na dugmetu za nastavak:</label>
-                    <input type="text" id="zoom-field-nextButtonText" value="${blok.nextButtonText || 'Sledeća stranica'}" oninput="sinhronizujZoomSaPreviewom()">
-                </div>
-                <div class="form-group">
-                    <label for="zoom-field-sceneEffect"><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Vizuelni efekat za ovo poglavlje:</label>
-                    <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()">
-                        <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Čist mrak / Bez efekta</option>
-                        <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice ruža)</option>
-                        <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Konfete)</option>
-                        <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust / Zlatne čestice</option>
-                    </select>
-                </div>
+        </div>
+        <div class="form-group">
+            <label for="zoom-field-paragraphs">Glavni tekst priče poglavlja (Double Enter pravi novi pasus):</label>
+            <textarea id="zoom-field-paragraphs" style="min-height:220px; font-size:0.95rem; line-height:1.5;" oninput="sinhronizujZoomSaPreviewom()">${blok.paragraphs ? blok.paragraphs.join('\n\n') : ''}</textarea>
+        </div>
+        <div class="grid-2" style="align-items: center; margin-top:10px;">
+            <div class="form-group">
+                <label for="zoom-field-nextButtonText">Tekst na dugmetu za nastavak:</label>
+                <input type="text" id="zoom-field-nextButtonText" value="${blok.nextButtonText || 'Sledeća stranica'}" oninput="sinhronizujZoomSaPreviewom()">
             </div>
-            <div class="form-group" style="margin-top:15px;">
-                <label for="zoom-gallery-container-trigger">Galerija slika (Spusti fotografije direktno u kućicu ispod):</label>
-                <div id="zoom-gallery-container-trigger" class="zoom-drop-zone" onclick="okiniLokalniKlikFajla()">
-                    <i class="fa-solid fa-images" style="font-size:30px; color:var(--admin-accent); margin-bottom:5px;"></i>
-                    <p style="font-size:0.85rem; font-weight:600;">Klikni ili prevuci slike ovde za mini-galeriju</p>
-                </div>
-                <div class="zoom-media-grid" id="zoom-gallery-container">${slikeHtml}</div>
+            <div class="form-group">
+                <label for="zoom-field-sceneEffect"><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Vizuelni efekat za ovo poglavlje:</label>
+                <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()">
+                    <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Čist mrak / Bez efekta</option>
+                    <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice ruža)</option>
+                    <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Konfete)</option>
+                    <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust / Zlatne čestice</option>
+                </select>
             </div>
-        `;
+        </div>
+        <div class="form-group" style="margin-top:15px;">
+            <label for="zoom-gallery-container-trigger">Galerija slika (Spusti fotografije direktno u kućicu ispod):</label>
+            <div id="zoom-gallery-container-trigger" class="zoom-drop-zone" onclick="okiniLokalniKlikFajla()">
+                <i class="fa-solid fa-images" style="font-size:30px; color:var(--admin-accent); margin-bottom:5px;"></i>
+                <p style="font-size:0.85rem; font-weight:600;">Klikni ili prevuci slike ovde za mini-galeriju</p>
+            </div>
+            <div class="zoom-media-grid" id="zoom-gallery-container">${slikeHtml}</div>
+        </div>
+    `;
     }
     else if (blok.type === 'gate') {
         dynamicHtml = `
-            <div class="grid-2">
-                <div class="form-group">
-                    <label for="zoom-field-hint">Tekst Zagonetke / Asocijacija (Glavno pitanje):</label>
-                    <input type="text" id="zoom-field-hint" value="${blok.hint || ''}" oninput="sinhronizujZoomSaPreviewom()">
-                </div>
-                <div class="form-group">
-                    <label upgrade for="zoom-field-placeholder">Tekst unutar polja za kucanje (Smernica korisniku):</label>
-                    <input type="text" id="zoom-field-placeholder" value="${blok.placeholder || ''}" oninput="sinhronizujZoomSaPreviewom()">
-                </div>
+        <div class="grid-2">
+            <div class="form-group">
+                <label for="zoom-field-hint">Tekst Zagonetke / Asocijacija (Glavno pitanje):</label>
+                <input type="text" id="zoom-field-hint" value="${blok.hint || ''}" oninput="sinhronizujZoomSaPreviewom()">
             </div>
-            <div class="grid-2">
-                <div class="form-group">
-                    <label for="zoom-field-answers">Sve tačne lozinke (odvojene zarezom):</label>
-                    <input type="text" id="zoom-field-answers" value="${blok.answers ? blok.answers.join(', ') : ''}" placeholder="npr. ljubav, sreća, ljupkost">
-                </div>
-                <div class="form-group">
-                    <label for="zoom-field-errorMessage">Poruka koja izlazi ako pogreše lozinku:</label>
-                    <input type="text" id="zoom-field-errorMessage" value="${blok.errorMessage || ''}" oninput="sinhronizujZoomSaPreviewom()">
-                </div>
+            <div class="form-group">
+                <label for="zoom-field-placeholder">Tekst unutar polja za kucanje (Smernica korisniku):</label>
+                <input type="text" id="zoom-field-placeholder" value="${blok.placeholder || ''}" oninput="sinhronizujZoomSaPreviewom()">
             </div>
-            <div class="grid-2" style="align-items: center; margin-top:10px;">
-                <div class="form-group">
-                    <label for="zoom-field-buttonText">Tekst na dugmetu za proveru:</label>
-                    <input type="text" id="zoom-field-buttonText" value="${blok.buttonText || 'Potvrdi'}" oninput="sinhronizujZoomSaPreviewom()">
-                </div>
-                <div class="form-group">
-                    <label for="zoom-field-sceneEffect"><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Vizuelni efekat dok rešavaju kapiju:</label>
-                    <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()">
-                        <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Čist mrak / Bez efekta</option>
-                        <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice ruža)</option>
-                        <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Konfete)</option>
-                        <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust / Zlatne čestice</option>
-                    </select>
-                </div>
+        </div>
+        <div class="grid-2">
+            <div class="form-group">
+                <label for="zoom-field-answers">Sve tačne lozinke (odvojene zarezom):</label>
+                <input type="text" id="zoom-field-answers" value="${blok.answers ? blok.answers.join(', ') : ''}" placeholder="npr. ljubav, sreća, ljupkost">
             </div>
-        `;
+            <div class="form-group">
+                <label for="zoom-field-errorMessage">Poruka koja izlazi ako pogreše lozinku:</label>
+                <input type="text" id="zoom-field-errorMessage" value="${blok.errorMessage || ''}" oninput="sinhronizujZoomSaPreviewom()">
+            </div>
+        </div>
+        <div class="grid-2" style="align-items: center; margin-top:10px;">
+            <div class="form-group">
+                <label for="zoom-field-buttonText">Tekst na dugmetu za proveru:</label>
+                <input type="text" id="zoom-field-buttonText" value="${blok.buttonText || 'Potvrdi'}" oninput="sinhronizujZoomSaPreviewom()">
+            </div>
+            <div class="form-group">
+                <label for="zoom-field-sceneEffect"><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Vizuelni efekat dok rešavaju kapiju:</label>
+                <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()">
+                    <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Čist mrak / Bez efekta</option>
+                    <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice ruža)</option>
+                    <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Konfete)</option>
+                    <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust / Zlatne čestice</option>
+                </select>
+            </div>
+        </div>
+    `;
     }
     else if (blok.type === 'finale') {
         const iconName = blok._realIconName || (blok.endIconType && !blok.endIconType.startsWith('blob:') ? blok.endIconType : 'Slikica nije izabrana (podrazumevana je ruža)');
         dynamicHtml = `
-            <div class="grid-2">
-                <div class="form-group">
-                    <label for="zoom-field-finalLoveMessage">Završna ljubavna poruka (Glavni natpis):</label>
-                    <input type="text" id="zoom-field-finalLoveMessage" value="${blok.finalLoveMessage || ''}" oninput="sinhronizujZoomSaPreviewom()">
-                </div>
-                <div class="form-group">
-                    <label for="zoom-field-finalSignature">Završni potpis na samom kraju:</label>
-                    <input type="text" id="zoom-field-finalSignature" value="${blok.finalSignature || ''}" oninput="sinhronizujZoomSaPreviewom()">
-                </div>
+        <div class="grid-2">
+            <div class="form-group">
+                <label for="zoom-field-finalLoveMessage">Završna ljubavna poruka (Glavni natpis):</label>
+                <input type="text" id="zoom-field-finalLoveMessage" value="${blok.finalLoveMessage || ''}" oninput="sinhronizujZoomSaPreviewom()">
             </div>
-            <div class="grid-2">
-                <div class="form-group">
-                    <label for="final-icon-drop-zone">Ikona na dugmetu (Spusti sliku/ikonu direktno u kućicu):</label>
-                    <div id="final-icon-drop-zone" class="zoom-drop-zone" onclick="okiniLokalniKlikFajla()">
-                        <i class="fa-solid fa-heart-pulse" style="font-size:30px; color:var(--admin-accent); margin-bottom:5px;"></i>
-                        <p style="font-size:0.85rem; font-weight:600;" id="final-icon-status">${iconName}</p>
-                        <span class="hint-text">Spusti fajl ovde ili klikni</span>
-                    </div>
-                    <input type="hidden" id="zoom-field-endIconType" value="${blok.endIconType || 'images/rose.png'}">
-                </div>
-                <div class="form-group">
-                    <label for="zoom-field-endIconLabel">Tekst na finalnom dugmetu (Labela):</label>
-                    <input type="text" id="zoom-field-endIconLabel" value="${blok.endIconLabel || 'Restartuj ekspediciju'}" oninput="sinhronizujZoomSaPreviewom()">
-                </div>
+            <div class="form-group">
+                <label for="zoom-field-finalSignature">Završni potpis na samom kraju:</label>
+                <input type="text" id="zoom-field-finalSignature" value="${blok.finalSignature || ''}" oninput="sinhronizujZoomSaPreviewom()">
             </div>
-            <div class="grid-2" style="align-items: center; margin-top:10px;">
-                <div class="form-group">
-                    <label for="zoom-field-epilogueFinalLabel">Sitno tekstualno pitanje na dnu:</label>
-                    <input type="text" id="zoom-field-epilogueFinalLabel" value="${blok.epilogueFinalLabel || ''}" oninput="sinhronizujZoomSaPreviewom()">
+        </div>
+        <div class="grid-2">
+            <div class="form-group">
+                <label for="final-icon-drop-zone">Ikona na dugmetu (Spusti sliku/ikonu direktno u kućicu):</label>
+                <div id="final-icon-drop-zone" class="zoom-drop-zone" onclick="okiniLokalniKlikFajla()">
+                    <i class="fa-solid fa-heart-pulse" style="font-size:30px; color:var(--admin-accent); margin-bottom:5px;"></i>
+                    <p style="font-size:0.85rem; font-weight:600;" id="final-icon-status">${iconName}</p>
+                    <span class="hint-text">Spusti fajl ovde ili klikni</span>
                 </div>
-                <div class="form-group">
-                    <label for="zoom-field-sceneEffect"><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Vizuelni efekat za finale ekrana:</label>
-                    <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()">
-                        <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Čist mrak / Bez efekta</option>
-                        <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice ruža)</option>
-                        <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Konfete)</option>
-                        <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust / Zlatne čestice</option>
-                    </select>
-                </div>
+                <input type="hidden" id="zoom-field-endIconType" value="${blok.endIconType || 'images/rose.png'}">
             </div>
-            <div class="form-group" style="margin-top:10px;">
-                <label for="zoom-field-epilogueQuote">Završni mudri citat:</label>
-                <textarea id="zoom-field-epilogueQuote" style="min-height:100px;" oninput="sinhronizujZoomSaPreviewom()">${blok.epilogueQuote || ''}</textarea>
+            <div class="form-group">
+                <label for="zoom-field-endIconLabel">Tekst na finalnom dugmetu (Labela):</label>
+                <input type="text" id="zoom-field-endIconLabel" value="${blok.endIconLabel || 'Restartuj ekspediciju'}" oninput="sinhronizujZoomSaPreviewom()">
             </div>
-        `;
+        </div>
+        <div class="grid-2" style="align-items: center; margin-top:10px;">
+            <div class="form-group">
+                <label for="zoom-field-epilogueFinalLabel">Sitno tekstualno pitanje na dnu:</label>
+                <input type="text" id="zoom-field-epilogueFinalLabel" value="${blok.epilogueFinalLabel || ''}" oninput="sinhronizujZoomSaPreviewom()">
+            </div>
+            <div class="form-group">
+                <label for="zoom-field-sceneEffect"><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Vizuelni efekat za finale ekrana:</label>
+                <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()">
+                    <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Čist mrak / Bez efekta</option>
+                    <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice ruža)</option>
+                    <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Konfete)</option>
+                    <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust / Zlatne čestice</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group" style="margin-top:10px;">
+            <label for="zoom-field-epilogueQuote">Završni mudri citat:</label>
+            <textarea id="zoom-field-epilogueQuote" style="min-height:100px;" oninput="sinhronizujZoomSaPreviewom()">${blok.epilogueQuote || ''}</textarea>
+        </div>
+    `;
     }
 
     telo.innerHTML = `
-        ${dynamicHtml}
-        <div class="form-group" style="margin-top:15px;">
-            <label for="zoom-audio-drop-trigger">Pozadinska muzika ove kockice (Spusti .mp3 u polje ispod):</label>
-            <div id="zoom-audio-drop-trigger" class="zoom-drop-zone" style="padding:15px;" onclick="okiniLokalniKlikFajla()">
-                <i class="fa-solid fa-music" style="color:var(--admin-accent); margin-right:5px;"></i>
-                <span id="zoom-audio-display-name" style="font-weight:600; font-size:0.85rem;">Trenutna traka: ${audioName}</span>
-                <span class="hint-text"> (Klikni ili spusti .mp3 ovde za izmenu)</span>
-            </div>
+    ${dynamicHtml}
+    <div class="form-group" style="margin-top:15px;">
+        <label for="zoom-audio-drop-trigger">Pozadinska muzika ove kockice (Spusti .mp3 u polje ispod):</label>
+        <div id="zoom-audio-drop-trigger" class="zoom-drop-zone" style="padding:15px;" onclick="okiniLokalniKlikFajla()">
+            <i class="fa-solid fa-music" style="color:var(--admin-accent); margin-right:5px;"></i>
+            <span id="zoom-audio-display-name" style="font-weight:600; font-size:0.85rem;">Trenutna traka: ${audioName}</span>
+            <span class="hint-text"> (Klikni ili spusti .mp3 ovde za izmenu)</span>
         </div>
-    `;
+    </div>
+`;
 
     overlay.style.display = 'flex';
 }
@@ -500,31 +537,31 @@ function otvoriCoreZoomEditor() {
     const settings = trenutniConfig.config.globalSettings;
 
     telo.innerHTML = `
-        <div class="grid-2">
-            <div class="form-group">
-                <label for="zoom-core-projectName">Glavni Naslov Projekta (Velika slova na sredini)</label>
-                <input type="text" id="zoom-core-projectName" value="${settings.projectName || ''}" oninput="sinhronizujZoomSaPreviewom()">
-            </div>
-            <div class="form-group">
-                <label for="zoom-core-projectSubtitle">Podnaslov / Kratka lepa poruka ispod naslova</label>
-                <input type="text" id="zoom-core-projectSubtitle" value="${settings.projectSubtitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
-            </div>
+    <div class="grid-2">
+        <div class="form-group">
+            <label for="zoom-core-projectName">Glavni Naslov Projekta (Velika slova na sredini)</label>
+            <input type="text" id="zoom-core-projectName" value="${settings.projectName || ''}" oninput="sinhronizujZoomSaPreviewom()">
         </div>
         <div class="form-group">
-            <label for="zoom-core-warningTexts">Uvodna Pravila igre / Smernice za ponašanje (Napiši jedno pravilo po redu)</label>
-            <textarea id="zoom-core-warningTexts" style="min-height:180px;" oninput="sinhronizujZoomSaPreviewom()">${loader.warningTexts ? loader.warningTexts.join('\n') : ''}</textarea>
+            <label for="zoom-core-projectSubtitle">Podnaslov / Kratka lepa poruka ispod naslova</label>
+            <input type="text" id="zoom-core-projectSubtitle" value="${settings.projectSubtitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
         </div>
-        <div class="grid-2">
-            <div class="form-group">
-                <label for="zoom-core-warningTitle">Mali gornji naslov iznad pravila (npr. VAŽNA NAPOMENA:)</label>
-                <input type="text" id="zoom-core-warningTitle" value="${loader.warningTitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
-            </div>
-            <div class="form-group toggle-group" style="margin-top:20px;">
-                <input type="checkbox" id="zoom-core-hasWarningMessage" ${trenutniConfig.config.hasWarningMessage ? 'checked' : ''} onchange="sinhronizujZoomSaPreviewom()">
-                <label for="zoom-core-hasWarningMessage" style="cursor:pointer; font-size:0.85rem;">Prikaži ekran sa pravilima pre nego što aplikacija počne</label>
-            </div>
+    </div>
+    <div class="form-group">
+        <label for="zoom-core-warningTexts">Uvodna Pravila igre / Smernice za ponašanje (Napiši jedno pravilo po redu)</label>
+        <textarea id="zoom-core-warningTexts" style="min-height:180px;" oninput="sinhronizujZoomSaPreviewom()">${loader.warningTexts ? loader.warningTexts.join('\n') : ''}</textarea>
+    </div>
+    <div class="grid-2">
+        <div class="form-group">
+            <label for="zoom-core-warningTitle">Mali gornji naslov iznad pravila (npr. VAŽNA NAPOMENA:)</label>
+            <input type="text" id="zoom-core-warningTitle" value="${loader.warningTitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
         </div>
-    `;
+        <div class="form-group toggle-group" style="margin-top:20px;">
+            <input type="checkbox" id="zoom-core-hasWarningMessage" ${trenutniConfig.config.hasWarningMessage ? 'checked' : ''} onchange="sinhronizujZoomSaPreviewom()">
+            <label for="zoom-core-hasWarningMessage" style="cursor:pointer; font-size:0.85rem;">Prikaži ekran sa pravilima pre nego što aplikacija počne</label>
+        </div>
+    </div>
+`;
 
     overlay.style.display = 'flex';
 }
@@ -606,10 +643,8 @@ function potvrdiIZatvoriZoom() {
         console.error("Greška pri sinhronizaciji polja unutar Zoom-a:", err);
     }
 
-    // NA SAMOM KRAJU OVE FUNKCIJE MORAJU STAJATI OVE DVE LINIJE:
-    renderujTimelineBlokove(); // <-- Ovo menja tekst kockice tek kad klikne na Završi!
+    renderujTimelineBlokove();
     zatvoriZoomEditor();
-
 }
 
 function ukloniSlikuIzGalerijeZoom(imgIndex) {
@@ -618,7 +653,6 @@ function ukloniSlikuIzGalerijeZoom(imgIndex) {
         blok.galleryImages.splice(imgIndex, 1);
         if (blok._realGalleryNames) blok._realGalleryNames.splice(imgIndex, 1);
 
-        // Ponovo iscrtavamo sličice unutar otvorenog modala
         osveziZoomGalerijuEkran(aktivniIndex);
         osveziZiviPreview();
     }
@@ -662,8 +696,6 @@ function okiniLokalniKlikFajla() {
                 procitajFajlIUbaciUConfig(fajl, aktivniIndex);
             });
 
-            // ISPRAVLJENO: Umesto da zatvorimo i otvorimo ceo modal (što je brisalo blob prikaz),
-            // sada samo dinamički dodajemo novu sličicu ili tekst unutar već otvorenog prozora!
             if (!isEditingCore && aktivniIndex !== null && aktivniIndex !== -1) {
                 const blok = trenutniConfig.timeline[aktivniIndex];
                 if (blok.type === 'chapter') {
@@ -720,7 +752,6 @@ function procitajFajlIUbaciUConfig(file, index) {
         fajloviZaUpload.push({ putanja: finalnaPutanjaAudio, rawFile: file });
     }
 
-    // FORSIRANO OSVEŽAVANJE SVEGA ODMAH:
     if (blok.type === 'chapter') {
         osveziZoomGalerijuEkran(index);
     }
@@ -860,9 +891,10 @@ async function sacuvajSveNaServer() {
     const jsonString = JSON.stringify(cistConfigZaExport, null, 2);
 
     const formData = new FormData();
-    formData.append('config', jsonString);
-    formData.append('subdomain', 'canvas');
+    formData.append('config_data', jsonString);
 
+    const aktivniSubdomenZaSnimanje = localStorage.getItem('userSubdomain') || 'canvas';
+    formData.append('subdomain', aktivniSubdomenZaSnimanje);
     if (fajloviZaUpload.length > 0) {
         fajloviZaUpload.forEach((item, index) => {
             formData.append(`file_${index}`, item.rawFile, item.putanja);
@@ -870,7 +902,7 @@ async function sacuvajSveNaServer() {
     }
 
     try {
-        const response = await fetch('https://selection-shell.selectionrooms.workers.dev/save_data', {
+        const response = await fetch('https://shell-selection-rs.selectionrooms.workers.dev/save_data', {
             method: 'POST',
             body: formData
         });
@@ -945,15 +977,15 @@ function osveziZiviPreview() {
             }
 
             target.innerHTML = `
-                <div style="width: 100%; padding: 10px; text-align:center;">
-                    <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 2rem; text-transform: uppercase; letter-spacing:3px; margin-bottom:10px;">${pName}</h1>
-                    <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 1.1rem; margin-bottom:25px;">${pSub}</h2>
-                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 10px;">
-                        <p style="font-family: '${fontP}', sans-serif; color: ${bojaP}; font-size: 0.75rem; opacity: 0.6; line-height:1.4;">[ Uvodna poruka i smernice za igru... ]</p>
-                    </div>
-                    ${audioPreviewHtml}
+            <div style="width: 100%; padding: 10px; text-align:center;">
+                <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 2rem; text-transform: uppercase; letter-spacing:3px; margin-bottom:10px;">${pName}</h1>
+                <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 1.1rem; margin-bottom:25px;">${pSub}</h2>
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 10px;">
+                    <p style="font-family: '${fontP}', sans-serif; color: ${bojaP}; font-size: 0.75rem; opacity: 0.6; line-height:1.4;">[ Uvodna poruka i smernice za igru... ]</p>
                 </div>
-            `;
+                ${audioPreviewHtml}
+            </div>
+        `;
         } else {
             const blok = trenutniConfig.timeline[aktivniIndex];
             if (statusTag) statusTag.innerText = `Prikaz: Kockica #${aktivniIndex + 1} (${blok.type.toUpperCase()})`;
@@ -1209,7 +1241,6 @@ function osveziZoomGalerijuEkran(blokIndex) {
 
     let slikeHtml = '';
     blok.galleryImages.forEach((imgSrc, imgIndex) => {
-        // DOZVOLJAVAMO BLOB: Ako je blob ili pun url, pusti ga, inače dodaj kosu crtu
         let putanjaZaEkran = imgSrc;
         if (putanjaZaEkran && !putanjaZaEkran.startsWith('blob:') && !putanjaZaEkran.startsWith('http')) {
             putanjaZaEkran = '/' + putanjaZaEkran;
@@ -1230,9 +1261,6 @@ function osveziZoomGalerijuEkran(blokIndex) {
     });
     kontejner.innerHTML = slikeHtml;
 }
-// ==========================================================================
-// 🚀 SELECTION SAAS SYSTEM — MASTER ADMIN KREIRANJE KLIJENATA
-// ==========================================================================
 
 async function masterKreirajNovogKorisnika() {
     const subInput = document.getElementById('master-novi-subdomain');
@@ -1244,14 +1272,12 @@ async function masterKreirajNovogKorisnika() {
     const subdomain = subInput.value.trim().toLowerCase();
     const email = emailInput.value.trim();
 
-    // 1. Brza provera unosa
     if (!subdomain || !email) {
         statusPoruka.style.color = "#b81d24";
         statusPoruka.innerText = "❌ Greška: Morate uneti i poddomen i email klijenta!";
         return;
     }
 
-    // Provera za nedozvoljene karaktere u poddomenu
     if (!/^[a-z0-9-]+$/.test(subdomain)) {
         statusPoruka.style.color = "#b81d24";
         statusPoruka.innerText = "❌ Greška: Poddomen sme da sadrži samo mala slova, brojeve i crticu (-).";
@@ -1265,7 +1291,6 @@ async function masterKreirajNovogKorisnika() {
     statusPoruka.style.color = "#d4b483";
     statusPoruka.innerText = "⚡ Pokrećem sisteme... Molimo sačekajte...";
 
-    // 2. Pravimo čist, fabrički JSON šablon za novog korisnika
     const noviCistSvemir = {
         config: {
             globalSettings: {
@@ -1295,14 +1320,12 @@ async function masterKreirajNovogKorisnika() {
         timeline: []
     };
 
-    // 3. Pakujemo u FormData format koji naš app.js u shell-u očekuje
     const formData = new FormData();
     formData.append('subdomain', subdomain);
-    formData.append('client_email', email); // Šaljemo i email klijenta da ga backend poveže!
+    formData.append('client_email', email);
     formData.append('config_data', JSON.stringify(noviCistSvemir, null, 2));
 
     try {
-        // TAČAN URL ka tvom novom produkcionom workeru:
         const response = await fetch('https://shell-selection-rs.selectionrooms.workers.dev/save_data', {
             method: 'POST',
             body: formData
@@ -1315,7 +1338,6 @@ async function masterKreirajNovogKorisnika() {
             statusPoruka.innerHTML = `🎉 USPEH: Prostor <strong>${subdomain}</strong> je uspešno kreiran u bazi!<br>
             🔗 Link za klijenta: <a href="https://${subdomain}.selection.rs" target="_blank" style="color:#2ecc71; text-decoration:underline;">${subdomain}.selection.rs</a>`;
 
-            // Čistimo formu nakon uspeha
             subInput.value = '';
             emailInput.value = '';
         } else {
