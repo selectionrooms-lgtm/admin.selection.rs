@@ -698,16 +698,20 @@ function osveziZiviPreview() {
         const inputPozadina = document.getElementById('input-slika-pozadina');
         let slikaZaPrikaz = tempPutanja || (inputPozadina ? inputPozadina.value : '');
 
-        // 👑 HIRURŠKA POPRAVKA: Čitamo naziv aktivnog projekta direktno iz konfiguracije baze
+        // 🎯 NEPROBOJNA POPRAVKA: Gledamo tačne podatke o sesiji koji su povučeni sa servera
         if (slikaZaPrikaz && !slikaZaPrikaz.startsWith('blob:') && !slikaZaPrikaz.startsWith('http')) {
-            const aktivniProjekat = trenutniConfig.config?.globalSettings?.projectName?.toLowerCase() || 'canvas';
 
-            if (aktivniProjekat === 'canvas' || aktivniProjekat === 'admin' || aktivniProjekat === 'unnamed') {
-                // Ako je u pitanju tvoj master šablon, slika se vuče lokalno sa admina
+            // Prvo proveravamo da li u kodu imamo sačuvan čist poddomen u sesiji (npr. u nekoj globalnoj varijabli ili elementu)
+            // Najbezbednije je da pročitamo iz input polja ili sesije koja je trenutno aktivna
+            const masterBlok = document.getElementById('master-admin-blok');
+            const ulogovaniSubdomain = window.trenutniSubdomenSesije || localStorage.getItem('userSubdomain');
+
+            if (!ulogovaniSubdomain || ulogovaniSubdomain === 'canvas' || ulogovaniSubdomain === 'admin') {
+                // Ako nema poddomena ili si ti Master, slika se vuče lokalno
                 slikaZaPrikaz = '/' + slikaZaPrikaz;
             } else {
-                // Ako je pravi klijentski prostor (npr. knezziks), slika se gađa direktno na njegovoj zvaničnoj mrežnoj adresi!
-                slikaZaPrikaz = `https://${aktivniProjekat}.selection.rs/` + slikaZaPrikaz;
+                // Ako je pravi klijent, tačno ga gađamo na njegovom poddomenu koji je učitan!
+                slikaZaPrikaz = `https://${ulogovaniSubdomain}.selection.rs/` + slikaZaPrikaz;
             }
         }
 
