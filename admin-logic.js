@@ -90,22 +90,26 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
     }
 }
 function ucitajConfig(subdomain) {
-    // OSVEŽENO: Sada URL koristi dinamički poddomen koji mu prosledimo u funkciju!
-    fetch(`https://shell.selection.rs/?subdomain=${subdomain}&nocache=${Date.now()}`)
+    console.log(`📂 Pokrećem učitavanje konfiguracije za poddomen: ${subdomain}...`);
+
+    // OSVEŽENO: Dodat credentials: "include" kako bi zahtev preneo kolačiće sesije kroz Zero Trust kapiju
+    fetch(`https://shell.selection.rs/?subdomain=${subdomain}&nocache=${Date.now()}`, {
+        credentials: "include"
+    })
         .then(res => {
             if (!res.ok) throw new Error("Server je vratio grešku: " + res.status);
             return res.json();
         })
         .then(data => {
             trenutniConfig = data;
-            console.log(`Config za [${subdomain}] uspešno učitan iz Cloudflare baze:`, trenutniConfig);
+            console.log(`✅ Config za [${subdomain}] uspešno učitan iz Cloudflare baze:`, trenutniConfig);
             popuniGlobalneStilove();
             osveziCoreSummaryTekst();
             renderujTimelineBlokove();
             promeniRezimSimulatora('mobile');
         })
         .catch(err => {
-            console.error("Greška pri učitavanju konfiguracije. Pravim prazan šablon.", err);
+            console.error("❌ Greška pri učitavanju konfiguracije. Pravim prazan šablon.", err);
             trenutniConfig = {
                 config: {
                     globalSettings: {
@@ -114,15 +118,15 @@ function ucitajConfig(subdomain) {
                         textColor: "#eeeeee",
                         metaColor: "#a0acb8",
                         backgroundColor: "#0f171e",
-                        mainBackgroundImage: "", // ✅ OČIŠĆENO: Nema više bg.webp
+                        mainBackgroundImage: "",
                         containerBg: "#1c2a39",
                         fontHeader: "Cinzel",
                         fontQuote: "Cormorant Garamond",
                         fontBody: "Montserrat",
                         projectName: subdomain.toUpperCase(),
                         projectSubtitle: "Dobrodošli u Vaš Selection prostor",
-                        loaderMusic: "", // ✅ OČIŠĆENO
-                        screensaverMusic: "", // ✅ OČIŠĆENO: Nema više screensaver.mp3
+                        loaderMusic: "",
+                        screensaverMusic: "",
                         screensaverTimeout: 60
                     },
                     hasWarningMessage: true
@@ -135,7 +139,7 @@ function ucitajConfig(subdomain) {
             renderujTimelineBlokove();
             promeniRezimSimulatora('mobile');
         });
-} // 🔥 OVDE JE FALILO ZATVARANJE FUNKCIJE UCITAJCONFIG!
+}
 
 function popuniGlobalneStilove() {
     if (!trenutniConfig || !trenutniConfig.config || !trenutniConfig.config.globalSettings) return;
