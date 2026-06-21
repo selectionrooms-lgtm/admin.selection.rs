@@ -1198,8 +1198,6 @@ async function masterKreirajNovogKorisnika() {
             body: formData
         });
 
-        // POPRAVKA: Čitamo kao sirovi tekst da sprečimo tiho zamrzavanje
-        // ... tvoj dosadašnji kod (fetch i čitanje teksta) ...
         const tekstOdgovora = await response.text();
         console.log("📄 Odgovor sa Cloudflare Shell-a (RAW):", tekstOdgovora);
 
@@ -1215,20 +1213,16 @@ async function masterKreirajNovogKorisnika() {
             } else if (rez.message) {
                 porukaServera = rez.message;
             }
-        } catch (e) {
-            // Ako nije JSON, ostaje sirovi tekst
-        }
+        } catch (e) { }
 
-        // DODATA SIGURNOST: Ako server vrati status 200 i u tekstu piše "success":true, ovo PROLAZI!
+        // Obavezno osiguravamo da se div vidi na ekranu
+        statusPoruka.style.display = "block";
+
         if (response.ok && (jeUspesno || tekstOdgovora.includes('"success":true') || tekstOdgovora.includes('uspešno sačuvao'))) {
             statusPoruka.style.color = "#2ecc71";
             statusPoruka.innerHTML = `🎉 USPEH: Prostor <strong>${subdomain}</strong> je uspešno kreiran u bazi!<br>
             ℹ️ <em>${porukaServera}</em><br>
             🔗 Link za klijenta: <a href="https://${subdomain}.selection.rs" target="_blank" style="color:#2ecc71; text-decoration:underline;">${subdomain}.selection.rs</a>`;
-
-
-            // 🌟 DODAJ OVU LINIJU ZA DIREKTAN TEST:
-            alert(`🚀 SISTEM POTVRĐUJE: Prostor ${subdomain} je kreiran! Ako ovo vidiš, kod radi, proveri HTML ID za poruku!`);
 
             subInput.value = '';
             emailInput.value = '';
@@ -1238,6 +1232,7 @@ async function masterKreirajNovogKorisnika() {
         }
     } catch (error) {
         console.error("Master Error:", error);
+        statusPoruka.style.display = "block"; // I ovde za svaki slučaj
         statusPoruka.style.color = "#b81d24";
         statusPoruka.innerText = "❌ Greška: Neuspešna komunikacija sa Cloudflare Shell-om.";
     }
