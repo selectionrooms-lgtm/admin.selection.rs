@@ -10,18 +10,48 @@ let fajloviZaUpload = [];
 // 1. INITIALIZATION & DATA FETCHING
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
-    ucitajConfig();
+    // PRVO: Proveravamo ko je korisnik i krojimo Sidebar (sakrivamo/prikazujemo krunu)
+    proveriKorisnikaIUpravljajInterfejsom();
 });
 
-function ucitajConfig() {
-    fetch('https://selection-shell.selectionrooms.workers.dev/?subdomain=canvas&nocache=' + Date.now())
+function proveriKorisnikaIUpravljajInterfejsom() {
+    // Hvatamo email korisnika koji se ulogovao iz skladišta browsera
+    const ulogovaniEmail = localStorage.getItem('userEmail') || "";
+    const masterBlok = document.getElementById('master-admin-blok');
+
+    if (!ulogovaniEmail) {
+        console.log("Korisnik nije ulogovan. Sistem čeka podatke.");
+        // Ako nema logina, podrazumevano učitavamo glavni canvas šablon
+        ucitajConfig("canvas");
+        return;
+    }
+
+    // 👑 KRITIČNA TAČKA SIGURNOSTI NA FRONTENDU: Samo ti vidiš krunu
+    if (ulogovaniEmail.trim().toLowerCase() === "selectionrooms@gmail.com") {
+        if (masterBlok) masterBlok.style.display = "block";
+        console.log("👑 Dobrodošao, Master Admin. Sistemi za lansiranje su spremni.");
+        ucitajConfig("canvas");
+    } else {
+        // Ako je običan admin (klijent koji plaća), sakrij mu krunu zauvek
+        if (masterBlok) masterBlok.style.display = "none";
+        console.log(`🔒 Logovan klijent sa adresom: ${ulogovaniEmail}`);
+
+        // Klijent ne sme da učita "canvas", već svoj lični poddomen koji mu je dodeljen
+        const klijentovSubdomain = localStorage.getItem('userSubdomain') || "test";
+        ucitajConfig(klijentovSubdomain);
+    }
+}
+
+function ucitajConfig(subdomain) {
+    // OSVEŽENO: Sada URL koristi dinamički poddomen koji mu prosledimo u funkciju!
+    fetch(`https://shell-selection-rs.selectionrooms.workers.dev/?subdomain=${subdomain}&nocache=${Date.now()}`)
         .then(res => {
             if (!res.ok) throw new Error("Server je vratio grešku: " + res.status);
             return res.json();
         })
         .then(data => {
             trenutniConfig = data;
-            console.log("Config uspešno učitan iz Cloudflare KV baze:", trenutniConfig);
+            console.log(`Config za [${subdomain}] uspešno učitan iz Cloudflare baze:`, trenutniConfig);
             popuniGlobalneStilove();
             osveziCoreSummaryTekst();
             renderujTimelineBlokove();
@@ -35,7 +65,7 @@ function ucitajConfig() {
                         primaryColor: "#d4b483", secondaryColor: "#d4b483", textColor: "#eeeeee", metaColor: "#a0acb8",
                         backgroundColor: "#0f171e", mainBackgroundImage: "bg.webp", containerBg: "#1c2a39",
                         fontHeader: "Cinzel", fontQuote: "Cormorant Garamond", fontBody: "Montserrat",
-                        projectName: "Selection", projectSubtitle: "Beyond the Canvas", loaderMusic: "loader-ambient.mp3",
+                        projectName: subdomain.toUpperCase(), projectSubtitle: "Beyond the Canvas", loaderMusic: "loader-ambient.mp3",
                         screensaverMusic: "screensaver.mp3", screensaverTimeout: 60
                     },
                     hasWarningMessage: true
