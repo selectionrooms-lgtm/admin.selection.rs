@@ -698,8 +698,17 @@ function osveziZiviPreview() {
         const inputPozadina = document.getElementById('input-slika-pozadina');
         let slikaZaPrikaz = tempPutanja || (inputPozadina ? inputPozadina.value : '');
 
+        // 🌟 POPRAVKA: Umesto slepe kose crte, vučemo sliku sa tačnog klijentskog poddomena
         if (slikaZaPrikaz && !slikaZaPrikaz.startsWith('blob:') && !slikaZaPrikaz.startsWith('http')) {
-            slikaZaPrikaz = '/' + slikaZaPrikaz;
+            const trenutniSubdomen = localStorage.getItem('userSubdomain') || 'canvas';
+
+            if (trenutniSubdomen === 'canvas' || trenutniSubdomen === 'admin') {
+                // Ako si ti ulogovan kao Master i sređuješ osnovni šablon, vuče se sa podrazumevane lokacije
+                slikaZaPrikaz = '/' + slikaZaPrikaz;
+            } else {
+                // Ako je ulogovan klijent (npr. knezziks), slika se gađa tamo gde je realno i skladištena na internetu
+                slikaZaPrikaz = `https://${trenutniSubdomen}.selection.rs/` + slikaZaPrikaz;
+            }
         }
 
         if (slikaZaPrikaz) {
