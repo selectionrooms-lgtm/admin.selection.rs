@@ -23,15 +23,16 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
     const masterBlok = document.getElementById('master-admin-blok');
     const badge = document.getElementById('user-session-badge');
 
+    // Prvo sakrij blok dok ne utvrdimo ko je korisnik
     if (masterBlok) masterBlok.style.display = "none";
 
     try {
         console.log("🔒 Proveravam mrežni identitet korisnika sa Capability Kernela...");
 
-        // Prva autorizacija ide preko Cf-Access propusnice na Edge-u
+        // 🚀 OVDE IDE ČISTI FETCH SA AKREDITIVIMA (CREDENTIALS: "INCLUDE")
         const res = await fetch(`${API_BASE}/get_user`, {
             method: 'GET',
-            credentials: "include"
+            credentials: "include" // 🔒 Tera pretraživač da prosledi Access sesiju preko poddomena ka shell-u
         });
 
         if (!res.ok) throw new Error(`Server odgovorio sa statusom: ${res.status}`);
@@ -41,6 +42,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 
         if (userData.error) throw new Error(userData.error);
 
+        // Postavljanje vizuelnog bedža sa emailom
         if (badge) {
             const ikonica = userData.role === "master" ? "👑" : "🔒";
             badge.innerHTML = `${ikonica} <span style="color: var(--admin-accent); font-weight: 600;">${userData.email}</span>`;
@@ -49,12 +51,13 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 
         localStorage.setItem('userEmail', userData.email);
 
-        // 🪙 ODMAH MINTUJEMO STATELESS TOKEN ZA SVE BUDUĆE POST/WRITE OPERACIJE
+        // 🪙 Razmena zaštićene sesije za brzi stateless Selection Bearer Token
         const token = await mintujSesioniToken();
-        if (!token) console.warn("⚠️ Nismo dobili token, proveri JWT_SECRET na radniku.");
+        if (!token) console.warn("⚠️ Nismo dobili Selection token, proveri JWT_SECRET na radniku.");
 
+        // Rutiranje interfejsa na osnovu uloge iz baze
         if (userData.role === "master") {
-            if (masterBlok) masterBlok.style.display = "block";
+            if (masterBlok) masterBlok.style.display = "block"; // Prikaži master panel
             console.log("👑 Dobrodošao, Master Admin. Sistemi za lansiranje su spremni.");
 
             localStorage.setItem('userSubdomain', 'admin');
@@ -68,7 +71,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         }
 
     } catch (err) {
-        console.error("❌ Greška pri proveri korisnika. Aktiviram bezbednosni Master Fallback...", err);
+        console.error("❌ Greška pri proveri korisnika. Aktiviram bezbednosni Master Fallback za lokalni rad...", err);
 
         if (badge) {
             badge.innerHTML = `⚠️ <span style="color: #d4b483; font-weight: 600;">Lokalni Režim (Devel)</span>`;
