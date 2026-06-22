@@ -1,4 +1,3 @@
-
 // Global CMS State mapping config.json
 let trenutniConfig = null;
 let aktivniIndex = null; // Koristi se i za selekciju i za zoom tracking
@@ -83,7 +82,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
             proveraBloka.remove();
         }
 
-        // Bezbednosni fallback za poddomen: sprečavamo slanje praznog stringa ili "canvas" za obične klijente
+        // Bezbednosni fallback za poddomen
         const klijentovSubdomain = localStorage.getItem('userSubdomain');
         if (klijentovSubdomain) {
             ucitajConfig(klijentovSubdomain);
@@ -96,7 +95,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 function ucitajConfig(subdomain) {
     console.log(`📂 Pokrećem učitavanje konfiguracije za poddomen: ${subdomain}...`);
 
-    // 🚀 PROMENJENO: Eksplicitno gađamo API na shell-u
+    // 🚀 POPRAVLJENO: Precizno gađamo Worker ruter na osnovu V14 specifikacije
     fetch(`https://shell.selection.rs/?subdomain=${subdomain}&nocache=${Date.now()}`, {
         credentials: "include"
     })
@@ -700,9 +699,7 @@ function osveziZiviPreview() {
         const inputPozadina = document.getElementById('input-slika-pozadina');
         let slikaZaPrikaz = tempPutanja || (inputPozadina ? inputPozadina.value : '');
 
-        // 🌟 FINAL FRONTEND FIX: Don't change paths that are already absolute
         if (slikaZaPrikaz && !slikaZaPrikaz.startsWith('blob:') && !slikaZaPrikaz.startsWith('http')) {
-            // Only add the slash if it's NOT a blob or http(s) URL
             slikaZaPrikaz = '/' + slikaZaPrikaz;
         }
 
@@ -715,8 +712,6 @@ function osveziZiviPreview() {
         }
 
         const stilKontejnera = `background: ${bojaKontejnera}; padding: 20px; border-radius: 14px; text-align: left; border: 1px solid rgba(255,255,255,0.04); box-shadow: 0 10px 25px rgba(0,0,0,0.35); width: 100%;`;
-
-
 
         if (aktivniIndex === null || aktivniIndex === undefined || aktivniIndex === -1) {
             if (statusTag) statusTag.innerText = "Prikaz: Uvodni ekran";
@@ -907,9 +902,11 @@ async function sacuvajSveNaServer() {
 
     const aktivniSubdomenZaSnimanje = localStorage.getItem('userSubdomain') || 'canvas';
     formData.append('subdomain', aktivniSubdomenZaSnimanje);
+
+    // 🚀 POPRAVLJENO: Ispravljen krivi naziv trenchesEmail varijable
     const trenutniEmail = localStorage.getItem('userEmail');
     if (trenutniEmail) {
-        formData.append('client_email', trenchesEmail);
+        formData.append('client_email', trenutniEmail);
     }
 
     if (fajloviZaUpload && fajloviZaUpload.length > 0) {
@@ -921,7 +918,6 @@ async function sacuvajSveNaServer() {
     try {
         console.log("🚀 Šaljem konfiguraciju i medije na server...");
 
-        // 🚀 PROMENJENO: Eksplicitno gađamo API na shell-u za čuvanje
         const response = await fetch('https://shell.selection.rs/save_data', {
             method: 'POST',
             credentials: "include",
@@ -1097,11 +1093,9 @@ function osveziZoomGalerijuEkran(blokIndex) {
 
     let slikeHtml = '';
 
-    // Provera da li galerija uopšte postoji
     if (blok.galleryImages && blok.galleryImages.length > 0) {
         blok.galleryImages.forEach((imgSrc, imgIndex) => {
             let putanjaZaEkran = imgSrc;
-            // Popravka putanje ako nije apsolutni URL ili Blob
             if (putanjaZaEkran && !putanjaZaEkran.startsWith('blob:') && !putanjaZaEkran.startsWith('http') && !putanjaZaEkran.startsWith('/')) {
                 putanjaZaEkran = '/' + putanjaZaEkran;
             }
@@ -1219,7 +1213,6 @@ async function masterKreirajNovogKorisnika() {
             }
         } catch (e) { }
 
-        // Obavezno osiguravamo da se div vidi na ekranu
         statusPoruka.style.display = "block";
 
         if (response.ok && (jeUspesno || tekstOdgovora.includes('"success":true') || tekstOdgovora.includes('uspešno sačuvao'))) {
@@ -1236,7 +1229,7 @@ async function masterKreirajNovogKorisnika() {
         }
     } catch (error) {
         console.error("Master Error:", error);
-        statusPoruka.style.display = "block"; // I ovde za svaki slučaj
+        statusPoruka.style.display = "block";
         statusPoruka.style.color = "#b81d24";
         statusPoruka.innerText = "❌ Greška: Neuspešna komunikacija sa Cloudflare Shell-om.";
     }
@@ -1286,12 +1279,10 @@ function procitajFajlIUbaciUConfig(file, index) {
     osveziZiviPreview();
 }
 
-
 // ==========================================================================
 // 8. GLOBAL DRAG & DROP HANDLERS (Popunjena verzija)
 // ==========================================================================
 function inicijalizujDragAndDrop() {
-    // Čistimo stare listenere da ne bi duplirali akcije
     window.removeEventListener('dragover', globalDragOver);
     window.removeEventListener('drop', globalDrop);
 
@@ -1306,14 +1297,13 @@ function globalDrop(e) {
 
     const dropPozadina = e.target.closest('#drop-global-pozadina');
     const dropLoaderMuzika = e.target.closest('#drop-global-loader-muzika');
-    const dropSsMuzika = e.target.closest('#drop-global-ss-muzika');
+    const dropSenderMuzika = e.target.closest('#drop-global-ss-muzika');
     const dropFinaleIkona = e.target.closest('#final-icon-drop-zone');
 
     if (e.dataTransfer.files.length > 0) {
         const fajl = e.dataTransfer.files[0];
         const imeFajla = fajl.name;
 
-        // 1. Finale ikona
         if (dropFinaleIkona) {
             const ekstenzija = imeFajla.split('.').pop().toLowerCase();
             if (['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'].includes(ekstenzija)) {
@@ -1328,7 +1318,6 @@ function globalDrop(e) {
             return;
         }
 
-        // 2. Pozadinska slika
         if (dropPozadina) {
             const previewUrl = URL.createObjectURL(fajl);
             document.getElementById('input-slika-pozadina').value = 'images/' + imeFajla;
@@ -1339,7 +1328,6 @@ function globalDrop(e) {
             return;
         }
 
-        // 3. Loader muzika
         if (dropLoaderMuzika) {
             document.getElementById('input-loader-muzika').value = 'audio/' + imeFajla;
             document.getElementById('label-global-loader-muzika').innerText = 'audio/' + imeFajla;
@@ -1348,8 +1336,7 @@ function globalDrop(e) {
             return;
         }
 
-        // 4. Screensaver muzika
-        if (dropSsMuzika) {
+        if (dropSenderMuzika) {
             document.getElementById('input-ss-muzika').value = 'audio/' + imeFajla;
             document.getElementById('label-global-ss-muzika').innerText = 'audio/' + imeFajla;
             fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
@@ -1357,19 +1344,16 @@ function globalDrop(e) {
             return;
         }
 
-        // 5. Drag & drop na blokove (ako nije u zoom editoru)
         const card = e.target.closest('.cms-block-card');
         if (card && !isEditingCore) {
             const idx = parseInt(card.getAttribute('data-index'));
             procitajFajlIUbaciUConfig(fajl, idx);
             renderujTimelineBlokove();
         }
-        // 6. Drag & drop unutar zoom editora
         else if (document.getElementById('zoom-editor-overlay').style.display === 'flex' && aktivniIndex !== null) {
             procitajFajlIUbaciUConfig(fajl, aktivniIndex);
             if (aktivniIndex !== -1) osveziZoomGalerijuEkran(aktivniIndex);
         }
     }
 }
-// Mapiramo lokalni poziv na tvoju postojeću globalnu funkciju
 function okiniLokalniKlikFajla(tip) { okiniGlobalniKlikFajla(tip); }
