@@ -1,5 +1,5 @@
 // ==========================================================================
-// SELECTION CMS PLATFORMA — admin-logic.js (V18.0 - Kernel Sync Edition)
+// SELECTION CMS PLATFORMA — admin-logic.js (V18.5 - Edge Sync Edition)
 // ==========================================================================
 
 let trenutniConfig = null;
@@ -9,7 +9,7 @@ let isEditingCore = false;
 // Globalni niz u koji skladištimo binarne fajlove pre slanja na Edge
 let fajloviZaUpload = [];
 
-// Centralni domen tvog zaštićenog API-ja (Promeni ako je worker na drugom hostu)
+// Centralni domen tvog zaštićenog API-ja
 const API_BASE = "https://shell.selection.rs";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -23,15 +23,15 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
     const masterBlok = document.getElementById('master-admin-blok');
     const badge = document.getElementById('user-session-badge');
 
-    // Prvo sakrij blok dok ne utvrdimo ko je korisnik, ali ga NEMOJ brisati
     if (masterBlok) masterBlok.style.display = "none";
 
     try {
         console.log("🔒 Proveravam mrežni identitet korisnika sa Capability Kernela...");
 
+        // Prva autorizacija ide preko Cf-Access propusnice na Edge-u
         const res = await fetch(`${API_BASE}/get_user`, {
             method: 'GET',
-            credentials: "include" // 🔒 Ovo tera pretraživač da pošalje kolačiće na shell.selection.rs
+            credentials: "include"
         });
 
         if (!res.ok) throw new Error(`Server odgovorio sa statusom: ${res.status}`);
@@ -48,19 +48,18 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         }
 
         localStorage.setItem('userEmail', userData.email);
-        // DODAJ OVO:
+
+        // 🪙 ODMAH MINTUJEMO STATELESS TOKEN ZA SVE BUDUĆE POST/WRITE OPERACIJE
         const token = await mintujSesioniToken();
-        if (!token) console.warn("⚠️ Nismo dobili token, možda sesija nije prošla kroz Access?");
+        if (!token) console.warn("⚠️ Nismo dobili token, proveri JWT_SECRET na radniku.");
 
         if (userData.role === "master") {
-            if (masterBlok) masterBlok.style.display = "block"; // Prikaži master panel
+            if (masterBlok) masterBlok.style.display = "block";
             console.log("👑 Dobrodošao, Master Admin. Sistemi za lansiranje su spremni.");
 
-            // Master po defaultu otvara admin radni prostor
             localStorage.setItem('userSubdomain', 'admin');
             ucitajConfig("admin");
         } else {
-            // Ako je običan klijent, sakrij panel (nemoj ga brisati da se ne lomi DOM)
             if (masterBlok) masterBlok.style.display = "none";
 
             console.log(`🔒 Logovan klijent sa adresom: ${userData.email}`);
@@ -69,36 +68,34 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         }
 
     } catch (err) {
-        console.error("❌ Greška pri proveri korisnika. Aktiviram bezbednosni Master Fallback za lokalni rad...", err);
+        console.error("❌ Greška pri proveri korisnika. Aktiviram bezbednosni Master Fallback...", err);
 
         if (badge) {
             badge.innerHTML = `⚠️ <span style="color: #d4b483; font-weight: 600;">Lokalni Režim (Devel)</span>`;
             badge.style.display = "flex";
         }
 
-        // PALE SE SVA SVETLA: Ako pukne mreža na lokalu, dozvoli Masteru da vidi kontrolu!
         if (masterBlok) masterBlok.style.display = "block";
 
-        // Povuci zadnji poddomen iz memorije ili otvori podrazumevani 'admin'
         const klijentovSubdomain = localStorage.getItem('userSubdomain') || 'admin';
         localStorage.setItem('userSubdomain', klijentovSubdomain);
         ucitajConfig(klijentovSubdomain);
     }
 }
 
+// 📂 SINHRONIZOVANO: Sada gađa čist /api/config endpoint na novom ruteru
 function ucitajConfig(subdomain) {
-    console.log(`📂 Pokrećem učitavanje konfiguracije za poddomen: ${subdomain}...`);
+    console.log(`📂 Pokrećem učitavanje konfiguracije sa Edge API-ja za poddomen: ${subdomain}...`);
 
-    fetch(`${API_BASE}/?subdomain=${subdomain}&nocache=${Date.now()}`, {
+    // Umesto korene rute, gađamo namenski javni endpoint koji je registrovan u polisi
+    fetch(`${API_BASE}/api/config?subdomain=${subdomain}&nocache=${Date.now()}`, {
         credentials: "include"
-        // Uklonili smo suvišne handlere da ne bi dolazilo do konflikta sa CORS-om
     })
         .then(res => {
             if (!res.ok) throw new Error("Server je vratio grešku: " + res.status);
             return res.json();
         })
         .then(data => {
-            // Ako baza vrati pun V18 paket sa draftom, čitamo draft_config
             if (data.draft_config || data.live_config) {
                 trenutniConfig = data.draft_config || data.live_config;
             } else if (data.config) {
@@ -116,9 +113,8 @@ function ucitajConfig(subdomain) {
             promeniRezimSimulatora('mobile');
         })
         .catch(err => {
-            console.error("❌ Greška pri učitavanju konfiguracije sa servera. Pravim stabilan lokalni kostur.", err);
+            console.error("❌ Greška pri učitavanju konfiguracije. Pravim stabilan lokalni kostur.", err);
 
-            // Pravimo tačnu strukturu koja se podudara sa onom u bazi kako se simulator ne bi lomio
             trenutniConfig = {
                 config: {
                     globalSettings: {
@@ -179,12 +175,12 @@ function osveziCoreSummaryTekst() {
         el.innerHTML = `Aktivni projekat: <strong>${name}</strong> — <em>"${sub}"</em>`;
     }
 }
+
 // 🪙 MINTING ENGINE: Razmena Access sesije za statični Bearer Token
 async function mintujSesioniToken() {
     console.log("🪙 Pokrećem token exchange...");
     try {
-        // Pozivamo naš novi endpoint koji radi samo unutar Access granice
-        const res = await fetch("/auth/mint", {
+        const res = await fetch(`${API_BASE}/auth/mint`, {
             method: 'GET',
             credentials: "include"
         });
@@ -194,7 +190,7 @@ async function mintujSesioniToken() {
         const data = await res.json();
         if (data.token) {
             localStorage.setItem('selection_session_token', data.token);
-            console.log("✅ Token uspešno mintovan i sačuvan.");
+            console.log("✅ Token uspešno mintovan i keširan u LocalStorage.");
             return data.token;
         }
     } catch (err) {
@@ -211,7 +207,6 @@ function renderujTimelineBlokove() {
     if (!container) return;
     container.innerHTML = '';
 
-    // Fiksna prva kartica: Splash uvodni ekran
     const coreCard = document.createElement('div');
     coreCard.className = 'cms-block-card';
     coreCard.id = 'splash-config-card';
@@ -683,7 +678,7 @@ function osveziZiviPreview() {
                         <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.2rem; margin-bottom:2px;">${t}</h1>
                         <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 0.85rem; margin-bottom: 10px;">${s}</h2>
                         <p style="font-family: '${fontP}', sans-serif; color: ${bojaP}; font-size: 0.75rem; line-height: 1.4; opacity:0.85;">[ Prvi pasus priče... ]</p>
-                        <button style="background: none; border: 1px solid ${bojaH1}; color: ${bojaH1}; font-family: '${fontP}', sans-serif; padding: 5px 10px; font-size: 0.7rem; border-radius: 6px; margin-top: 10px; font-weight:600;">${btnT}</button>
+                        <button style="background: none; border: 1px solid ${bojaH1}; color: ${bojaH1}; font-family: '${fontP}', sans-serif; padding: 5px 10px; font-size: 0.7 tribe; border-radius: 6px; margin-top: 10px; font-weight:600;">${btnT}</button>
                     </div>
                 `;
             }
@@ -721,7 +716,7 @@ function osveziZiviPreview() {
 function sinhronizujZoomSaPreviewom() { osveziZiviPreview(); }
 
 // ==========================================================================
-// 5. DATA SAVE & EDGE DEPLOYMENT PIPELINE (V18.1 Kernel-Sync Engine)
+// 5. DATA SAVE & EDGE DEPLOYMENT PIPELINE (V18.5 - Bearer Integrated)
 // ==========================================================================
 async function sacuvajSveNaServer(akcija = 'save') {
     const porukaUpozorenja = akcija === 'publish'
@@ -731,7 +726,6 @@ async function sacuvajSveNaServer(akcija = 'save') {
     if (!confirm(porukaUpozorenja)) return;
     if (!trenutniConfig) return;
 
-    // 🧼 Čišćenje privremenih lokalnih blob linkova pre slanja (Baza mora ostati kristalno čista!)
     if (trenutniConfig.timeline) {
         trenutniConfig.timeline.forEach(blok => {
             if (blok.url && blok.url.startsWith('blob:')) blok.url = blok._realName || '';
@@ -747,7 +741,6 @@ async function sacuvajSveNaServer(akcija = 'save') {
         });
     }
 
-    // 🧱 Sinhronizacija objekta sa V18.1 standardom (R2 mapiranje relativnih staza)
     const cistConfigZaExport = {
         config: {
             globalSettings: {
@@ -756,7 +749,7 @@ async function sacuvajSveNaServer(akcija = 'save') {
                 textColor: document.getElementById('color-p').value,
                 backgroundColor: document.getElementById('input-boja-pozadina').value,
                 containerBg: document.getElementById('input-boja-kontejner').value,
-                mainBackgroundImage: document.getElementById('input-slika-pozadina').value.replace(/^\//, ''), // skidamo kofere ako ih ima
+                mainBackgroundImage: document.getElementById('input-slika-pozadina').value.replace(/^\//, ''),
                 fontHeader: document.getElementById('font-h1').value,
                 fontQuote: document.getElementById('font-h2').value,
                 fontBody: document.getElementById('font-p').value,
@@ -777,7 +770,6 @@ async function sacuvajSveNaServer(akcija = 'save') {
     };
 
     const formData = new FormData();
-    // 🔑 Šaljemo čist unificiran JSON koji mrežni ruter pretvara u Draft ili Live u zavisnosti od akcije!
     formData.append('config_data', JSON.stringify(cistConfigZaExport));
     formData.append('action', akcija);
 
@@ -787,7 +779,6 @@ async function sacuvajSveNaServer(akcija = 'save') {
     const trenutniEmail = localStorage.getItem('userEmail');
     if (trenutniEmail) formData.append('client_email', trenutniEmail);
 
-    // 📦 BINARY PIPELINE: Pakujemo sve lokalno ubačene datoteke spremne za strimovanje u Cloudflare R2
     if (fajloviZaUpload && fajloviZaUpload.length > 0) {
         fajloviZaUpload.forEach((item, index) => {
             formData.append(`file_${index}`, item.rawFile, item.putanja);
@@ -797,6 +788,7 @@ async function sacuvajSveNaServer(akcija = 'save') {
     try {
         console.log(`🚀 Strimujem mrežni payload [Akcija: ${akcija.toUpperCase()}] na Edge R2/KV Kernel...`);
 
+        // POVLAČIMO MINTTOVANI TOKEN IZ LOKALNE MEMORIJE
         const token = localStorage.getItem('selection_session_token');
 
         const response = await fetch(`${API_BASE}/save_data`, {
@@ -810,8 +802,8 @@ async function sacuvajSveNaServer(akcija = 'save') {
 
         const tekstOdgovora = await response.text();
         if (response.ok) {
-            fajloviZaUpload = []; // Praznimo lokalni medijski bafer nakon uspešnog R2 urezivanja
-            alert(akcija === 'publish' ? "🎉 USPEŠNO LANSIRANO: Sajt je osvežen i aktivan na globalnoj mreži!" : "💾 USPEŠNO SAČUVANO: Radna verzija je bezbedno zaključana u Draft.");
+            fajloviZaUpload = [];
+            alert(akcija === 'publish' ? "🎉 USPEŠNO LANSIRANO: Sajt je osvežen i aktivan!" : "💾 USPEŠNO SAČUVANO: Radna verzija je bezbedno zaključana u Draft.");
             location.reload();
         } else {
             let porukaZaPrikaz = tekstOdgovora;
@@ -823,7 +815,7 @@ async function sacuvajSveNaServer(akcija = 'save') {
         }
     } catch (error) {
         console.error("❌ Prekid na mrežnoj magistrali:", error);
-        alert("❌ Prekid komunikacije sa Edge serverom. Proverite internet konekciju.");
+        alert("❌ Prekid komunikacije sa Edge serverom.");
     }
 }
 
@@ -831,7 +823,6 @@ async function sacuvajSveNaServer(akcija = 'save') {
 // 5.1 PREVIEW PANEL BUTTON INJECTION (Desno ispod simulatora)
 // ==========================================================================
 function inicijalizujDugmadZaSnimanje() {
-    // 1. Prvo uklanjamo staro dugme iz sidebara (ako postoji) da ne pravi dupli prostor
     const staraDugmad = document.querySelectorAll('.btn-save');
     staraDugmad.forEach(btn => {
         if (btn && btn.innerText.includes("Sačuvaj i Objavi Sve")) {
@@ -839,18 +830,14 @@ function inicijalizujDugmadZaSnimanje() {
         }
     });
 
-    // 2. Pronalazimo globalni desni panel gde stoji Live Preview simulator
     const previewPanel = document.getElementById('global-preview-panel');
     if (!previewPanel) return;
 
-    // Proveravamo da li smo već ubacili našu novu zonu sa dugmićima da je ne dupliramo
     if (document.getElementById('kernel-save-wrapper-right')) return;
 
-    // 3. Pravimo čist, luksuzan kontejner za naša dva V18.1 dugmeta
     const kontrolnaDugmadDesno = document.createElement('div');
     kontrolnaDugmadDesno.id = 'kernel-save-wrapper-right';
 
-    // Luksuzan stil koji se savršeno uklapa u tvoj Selection tamni režim
     kontrolnaDugmadDesno.style.cssText = `
         display: flex;
         flex-direction: column;
@@ -866,12 +853,8 @@ function inicijalizujDugmadZaSnimanje() {
         <button type="button" class="btn-save" onclick="sacuvajSveNaServer('publish')" style="width: 100%; cursor: pointer; padding: 12px; border-radius: 6px; background: var(--admin-accent); color: var(--admin-sidebar); font-family: 'Montserrat', sans-serif; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; border: none;"><i class="fa-solid fa-rocket"></i> Lansiraj i Objavi Uživo</button>
     `;
 
-    // 4. Ubacujemo dugmad na samo dno desnog panela (ispod simulatora)
     previewPanel.appendChild(kontrolnaDugmadDesno);
-    console.log("🎯 Savršeno sinhronizovano: Dugmad za čuvanje prebačena dole desno.");
 }
-
-// Pokreni nakon stabilizacije DOM-a
 setTimeout(inicijalizujDugmadZaSnimanje, 500);
 
 // ==========================================================================
@@ -970,7 +953,6 @@ async function masterKreirajNovogKorisnika() {
     statusPoruka.innerText = "⚡ Pokrećem sisteme i mapiram KV slotove...";
 
     try {
-        // Pozivamo POST /provision_user na našem čistom V18 zaštićenom kontrolnom endpointu
         const response = await fetch(`${API_BASE}/provision_user`, {
             method: 'POST',
             credentials: "include",
@@ -997,7 +979,6 @@ async function masterKreirajNovogKorisnika() {
 // ==========================================================================
 let izvornaSvezaSlikaIndex = null;
 function hendlujDragStart(e) { izvornaSvezaSlikaIndex = e.currentTarget.getAttribute('data-img-index'); e.dataTransfer.effectAllowed = 'move'; e.currentTarget.style.opacity = '0.4'; }
-defineImageFilters = () => false;
 function hendlujDragOver(e) { if (e.preventDefault) e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; }
 
 function hendlujDrop(e, blokIndex) {
@@ -1074,7 +1055,6 @@ function globalDrop(e) {
     e.preventDefault();
     const dropPozadina = e.target.closest('#drop-global-pozadina');
     const dropLoaderMuzika = e.target.closest('#drop-global-loader-muzika');
-    const dropSenderMuzika = e.target.closest('#drop-global-ss-muzika');
 
     if (e.dataTransfer.files.length > 0) {
         const fajl = e.dataTransfer.files[0];
