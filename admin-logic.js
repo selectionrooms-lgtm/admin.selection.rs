@@ -17,11 +17,14 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==========================================================================
-// 1. IDENTITY & KERNEL INITIALIZATION
+// 1. IDENTITY & KERNEL INITIALIZATION (Fixed Race Condition & Fallback)
 // ==========================================================================
 async function proveriKorisnikaIUpravljajInterfejsom() {
     const masterBlok = document.getElementById('master-admin-blok');
     const badge = document.getElementById('user-session-badge');
+
+    // Prvo sakrij blok dok ne utvrdimo ko je korisnik, ali ga NEMOJ brisati
+    if (masterBlok) masterBlok.style.display = "none";
 
     try {
         console.log("🔒 Proveravam mrežni identitet korisnika sa Capability Kernela...");
@@ -47,57 +50,59 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         localStorage.setItem('userEmail', userData.email);
 
         if (userData.role === "master") {
-            if (masterBlok) masterBlok.style.display = "block";
+            if (masterBlok) masterBlok.style.display = "block"; // Prikaži master panel
             console.log("👑 Dobrodošao, Master Admin. Sistemi za lansiranje su spremni.");
 
             // Master po defaultu otvara admin radni prostor
             localStorage.setItem('userSubdomain', 'admin');
             ucitajConfig("admin");
         } else {
-            if (masterBlok) masterBlok.remove();
+            // Ako je običan klijent, sakrij panel (nemoj ga brisati da se ne lomi DOM)
+            if (masterBlok) masterBlok.style.display = "none";
 
             console.log(`🔒 Logovan klijent sa adresom: ${userData.email}`);
-            console.log(`📂 Dodeljeni radni prostor iz baze: ${userData.subdomain}`);
-
             localStorage.setItem('userSubdomain', userData.subdomain);
             ucitajConfig(userData.subdomain);
         }
 
     } catch (err) {
-        console.error("❌ Greška pri proveri korisnika. Koristim bezbednosni fallback.", err);
+        console.error("❌ Greška pri proveri korisnika. Aktiviram bezbednosni Master Fallback za lokalni rad...", err);
 
         if (badge) {
-            badge.innerHTML = `⚠️ <span style="color: #b81d24; font-weight: 600;">Mreža nedostupna</span>`;
+            badge.innerHTML = `⚠️ <span style="color: #d4b483; font-weight: 600;">Lokalni Režim (Devel)</span>`;
             badge.style.display = "flex";
         }
 
-        const proveraBloka = document.getElementById('master-admin-blok');
-        if (proveraBloka) proveraBloka.remove();
+        // PALE SE SVA SVETLA: Ako pukne mreža na lokalu, dozvoli Masteru da vidi kontrolu!
+        if (masterBlok) masterBlok.style.display = "block";
 
-        const klijentovSubdomain = localStorage.getItem('userSubdomain');
-        if (klijentovSubdomain) {
-            ucitajConfig(klijentovSubdomain);
-        } else {
-            console.log("📭 Nema lokalnog poddomena. Sistem čeka autorizaciju.");
-        }
+        // Povuci zadnji poddomen iz memorije ili otvori podrazumevani 'admin'
+        const klijentovSubdomain = localStorage.getItem('userSubdomain') || 'admin';
+        localStorage.setItem('userSubdomain', klijentovSubdomain);
+        ucitajConfig(klijentovSubdomain);
     }
 }
 
 function ucitajConfig(subdomain) {
     console.log(`📂 Pokrećem učitavanje konfiguracije za poddomen: ${subdomain}...`);
 
-    // Gađamo GET / rute sa parametrom kako bismo povukli CEO paket za editor (uključujući draft)
     fetch(`${API_BASE}/?subdomain=${subdomain}&nocache=${Date.now()}`, {
         credentials: "include"
+        // Uklonili smo suvišne handlere da ne bi dolazilo do konflikta sa CORS-om
     })
         .then(res => {
             if (!res.ok) throw new Error("Server je vratio grešku: " + res.status);
             return res.json();
         })
         .then(data => {
-            // Naš zaštićeni V18 paket pakuje podatke u strukturu sa draft_config i live_config
-            // Ako učitavamo sveže provizionisan tenant, uzeće default kostur
-            trenutniConfig = data.draft_config || data.config || data;
+            // Ako baza vrati pun V18 paket sa draftom, čitamo draft_config
+            if (data.draft_config || data.live_config) {
+                trenutniConfig = data.draft_config || data.live_config;
+            } else if (data.config) {
+                trenutniConfig = data.config;
+            } else {
+                trenutniConfig = data;
+            }
 
             console.log(`✅ Config za [${subdomain}] uspešno učitan iz baze:`, trenutniConfig);
 
@@ -108,7 +113,9 @@ function ucitajConfig(subdomain) {
             promeniRezimSimulatora('mobile');
         })
         .catch(err => {
-            console.error("❌ Greška pri učitavanju konfiguracije. Pravim čist kostur.", err);
+            console.error("❌ Greška pri učitavanju konfiguracije sa servera. Pravim stabilan lokalni kostur.", err);
+
+            // Pravimo tačnu strukturu koja se podudara sa onom u bazi kako se simulator ne bi lomio
             trenutniConfig = {
                 config: {
                     globalSettings: {
@@ -135,6 +142,7 @@ function ucitajConfig(subdomain) {
             popuniGlobalneStilove();
             osveziCoreSummaryTekst();
             renderujTimelineBlokove();
+            osveziZiviPreview();
             promeniRezimSimulatora('mobile');
         });
 }
