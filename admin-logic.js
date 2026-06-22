@@ -1,30 +1,34 @@
-// Global CMS State mapping config.json
-let trenutniConfig = null;
-let aktivniIndex = null; // Koristi se i za selekciju i za zoom tracking
-let isEditingCore = false; // Flag ako zumiramo u Core Splash umesto u standardni lego blok
+// ==========================================================================
+// SELECTION CMS PLATFORMA — admin-logic.js (V18.0 - Kernel Sync Edition)
+// ==========================================================================
 
-// Globalni niz u koji skladištimo prave binarne fajlove pre slanja na Cloudflare R2
+let trenutniConfig = null;
+let aktivniIndex = null;
+let isEditingCore = false;
+
+// Globalni niz u koji skladištimo binarne fajlove pre slanja na Edge
 let fajloviZaUpload = [];
 
-// ==========================================================================
-// 1. INITIALIZATION & DATA FETCHING
-// ==========================================================================
+// Centralni domen tvog zaštićenog API-ja (Promeni ako je worker na drugom hostu)
+const API_BASE = "https://shell.selection.rs";
+
 document.addEventListener("DOMContentLoaded", () => {
-    // PRVO: Proveravamo ko je korisnik i krojimo Sidebar (sakrivamo/prikazujemo krunu)
     proveriKorisnikaIUpravljajInterfejsom();
 });
 
+// ==========================================================================
+// 1. IDENTITY & KERNEL INITIALIZATION
+// ==========================================================================
 async function proveriKorisnikaIUpravljajInterfejsom() {
     const masterBlok = document.getElementById('master-admin-blok');
     const badge = document.getElementById('user-session-badge');
 
     try {
-        console.log("🔒 Proveravam mrežni identitet korisnika sa Cloudflare Shell-a...");
+        console.log("🔒 Proveravam mrežni identitet korisnika sa Capability Kernela...");
 
-        // Pitamo naš poddomen ruter ko drži sesiju preko Zero Trust-a
-        const res = await fetch('https://shell.selection.rs/get_user', {
+        const res = await fetch(`${API_BASE}/get_user`, {
             method: 'GET',
-            credentials: "include" // Omogućava prenos Cloudflare Access tokena
+            credentials: "include"
         });
 
         if (!res.ok) throw new Error(`Server odgovorio sa statusom: ${res.status}`);
@@ -32,39 +36,30 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         const userData = await res.json();
         console.log("👤 Podaci o sesiji uspešno povučeni:", userData);
 
-        if (userData.error) {
-            throw new Error(userData.error);
-        }
+        if (userData.error) throw new Error(userData.error);
 
-        // Ispisujemo ulogovanog korisnika u gornji desni ćošak
         if (badge) {
             const ikonica = userData.role === "master" ? "👑" : "🔒";
             badge.innerHTML = `${ikonica} <span style="color: var(--admin-accent); font-weight: 600;">${userData.email}</span>`;
-            badge.style.display = "block";
+            badge.style.display = "flex";
         }
 
-        // Proveravamo ulogu i krojimo interfejs
+        localStorage.setItem('userEmail', userData.email);
+
         if (userData.role === "master") {
             if (masterBlok) masterBlok.style.display = "block";
             console.log("👑 Dobrodošao, Master Admin. Sistemi za lansiranje su spremni.");
 
-            localStorage.setItem('userEmail', userData.email);
-            ucitajConfig("canvas"); // Master po defaultu učitava radni šablon
+            // Master po defaultu otvara admin radni prostor
+            localStorage.setItem('userSubdomain', 'admin');
+            ucitajConfig("admin");
         } else {
-            // OBIČAN KLIJENT -> Striktno i fizički uklanjamo panel iz koda
-            if (masterBlok) {
-                masterBlok.remove();
-            } else {
-                const alternativniBlok = document.querySelector('.master-card');
-                if (alternativniBlok) alternativniBlok.remove();
-            }
+            if (masterBlok) masterBlok.remove();
+
             console.log(`🔒 Logovan klijent sa adresom: ${userData.email}`);
             console.log(`📂 Dodeljeni radni prostor iz baze: ${userData.subdomain}`);
 
-            localStorage.setItem('userEmail', userData.email);
             localStorage.setItem('userSubdomain', userData.subdomain);
-
-            // Učitavamo isključivo njegov namenski sajt iz baze podataka
             ucitajConfig(userData.subdomain);
         }
 
@@ -73,21 +68,17 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 
         if (badge) {
             badge.innerHTML = `⚠️ <span style="color: #b81d24; font-weight: 600;">Mreža nedostupna</span>`;
-            badge.style.display = "block";
+            badge.style.display = "flex";
         }
 
-        // STRIKTNA BEZBEDNOST: Fizički uništavamo master blok sa ekrana
-        const proveraBloka = document.getElementById('master-admin-blok') || document.querySelector('.master-card');
-        if (proveraBloka) {
-            proveraBloka.remove();
-        }
+        const proveraBloka = document.getElementById('master-admin-blok');
+        if (proveraBloka) proveraBloka.remove();
 
-        // Bezbednosni fallback za poddomen
         const klijentovSubdomain = localStorage.getItem('userSubdomain');
         if (klijentovSubdomain) {
             ucitajConfig(klijentovSubdomain);
         } else {
-            console.log("📭 Nema lokalno sačuvanog poddomena. Preusmeravam na glavni login.");
+            console.log("📭 Nema lokalnog poddomena. Sistem čeka autorizaciju.");
         }
     }
 }
@@ -95,8 +86,8 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 function ucitajConfig(subdomain) {
     console.log(`📂 Pokrećem učitavanje konfiguracije za poddomen: ${subdomain}...`);
 
-    // 🚀 POPRAVLJENO: Precizno gađamo Worker ruter na osnovu V14 specifikacije
-    fetch(`https://shell.selection.rs/?subdomain=${subdomain}&nocache=${Date.now()}`, {
+    // Gađamo GET / rute sa parametrom kako bismo povukli CEO paket za editor (uključujući draft)
+    fetch(`${API_BASE}/?subdomain=${subdomain}&nocache=${Date.now()}`, {
         credentials: "include"
     })
         .then(res => {
@@ -104,26 +95,29 @@ function ucitajConfig(subdomain) {
             return res.json();
         })
         .then(data => {
-            trenutniConfig = data;
-            console.log(`✅ Config za [${subdomain}] uspešno učitan iz Cloudflare baze:`, trenutniConfig);
+            // Naš zaštićeni V18 paket pakuje podatke u strukturu sa draft_config i live_config
+            // Ako učitavamo sveže provizionisan tenant, uzeće default kostur
+            trenutniConfig = data.draft_config || data.config || data;
+
+            console.log(`✅ Config za [${subdomain}] uspešno učitan iz baze:`, trenutniConfig);
+
             popuniGlobalneStilove();
             osveziCoreSummaryTekst();
             renderujTimelineBlokove();
-            osveziZiviPreview(); // Osiguravamo preview odmah nakon učitavanja
+            osveziZiviPreview();
             promeniRezimSimulatora('mobile');
         })
         .catch(err => {
-            console.error("❌ Greška pri učitavanju konfiguracije. Pravim prazan šablon.", err);
+            console.error("❌ Greška pri učitavanju konfiguracije. Pravim čist kostur.", err);
             trenutniConfig = {
                 config: {
                     globalSettings: {
                         primaryColor: "#d4b483",
                         secondaryColor: "#d4b483",
                         textColor: "#eeeeee",
-                        metaColor: "#a0acb8",
                         backgroundColor: "#0f171e",
-                        mainBackgroundImage: "",
                         containerBg: "#1c2a39",
+                        mainBackgroundImage: "",
                         fontHeader: "Cinzel",
                         fontQuote: "Cormorant Garamond",
                         fontBody: "Montserrat",
@@ -135,7 +129,7 @@ function ucitajConfig(subdomain) {
                     },
                     hasWarningMessage: true
                 },
-                loader: { warningTitle: "⚠️ UPOZORENJE ⚠️", warningFinalLine: "", warningTexts: [] },
+                loader: { warningTitle: "⚠️ UPOZORENJE ⚠️", warningFinalLine: "", warningTexts: ["Pravilo 1", "Pravilo 2"] },
                 timeline: []
             };
             popuniGlobalneStilove();
@@ -152,22 +146,18 @@ function popuniGlobalneStilove() {
     if (document.getElementById('color-h1')) document.getElementById('color-h1').value = settings.primaryColor || '#d4b483';
     if (document.getElementById('color-h2')) document.getElementById('color-h2').value = settings.secondaryColor || '#d4b483';
     if (document.getElementById('color-p')) document.getElementById('color-p').value = settings.textColor || '#eeeeee';
-
     if (document.getElementById('input-boja-pozadina')) document.getElementById('input-boja-pozadina').value = settings.backgroundColor || '#0f171e';
     if (document.getElementById('input-boja-kontejner')) document.getElementById('input-boja-kontejner').value = settings.containerBg || '#1c2a39';
     if (document.getElementById('input-ss-tajmer')) document.getElementById('input-ss-tajmer').value = settings.screensaverTimeout || 60;
 
-    const slikaPozadine = settings.mainBackgroundImage || '';
-    if (document.getElementById('input-slika-pozadina')) document.getElementById('input-slika-pozadina').value = slikaPozadine;
-    if (document.getElementById('label-global-pozadina')) document.getElementById('label-global-pozadina').innerText = slikaPozadine ? slikaPozadine : 'Klikni ili prevuci sliku ovde';
+    document.getElementById('input-slika-pozadina').value = settings.mainBackgroundImage || '';
+    document.getElementById('label-global-pozadina').innerText = settings.mainBackgroundImage || 'Klikni ili prevuci sliku ovde';
 
-    const loaderMuzika = settings.loaderMusic || '';
-    if (document.getElementById('input-loader-muzika')) document.getElementById('input-loader-muzika').value = loaderMuzika;
-    if (document.getElementById('label-global-loader-muzika')) document.getElementById('label-global-loader-muzika').innerText = loaderMuzika ? loaderMuzika : 'Klikni ili prevuci .mp3 ovde';
+    document.getElementById('input-loader-muzika').value = settings.loaderMusic || '';
+    document.getElementById('label-global-loader-muzika').innerText = settings.loaderMusic || 'Klikni ili prevuci .mp3 ovde';
 
-    const ssMuzika = settings.screensaverMusic || '';
-    if (document.getElementById('input-ss-muzika')) document.getElementById('input-ss-muzika').value = ssMuzika;
-    if (document.getElementById('label-global-ss-muzika')) document.getElementById('label-global-ss-muzika').innerText = ssMuzika ? ssMuzika : 'Klikni ili prevuci .mp3 ovde';
+    document.getElementById('input-ss-muzika').value = settings.screensaverMusic || '';
+    document.getElementById('label-global-ss-muzika').innerText = settings.screensaverMusic || 'Klikni ili prevuci .mp3 ovde';
 }
 
 function osveziCoreSummaryTekst() {
@@ -179,23 +169,18 @@ function osveziCoreSummaryTekst() {
     }
 }
 
-function otvoriSplashConfig() {
-    otvoriCoreZoomEditor();
-}
-
 // ==========================================================================
-// 3. RIGHT WORKSPACE: DYNAMIC COMPACT TIMELINE CARDS RENDER
+// 2. TIMELINE CARDS RENDERING LAYER
 // ==========================================================================
 function renderujTimelineBlokove() {
     const container = document.getElementById('cms-blocks-list');
     if (!container) return;
-
     container.innerHTML = '';
 
+    // Fiksna prva kartica: Splash uvodni ekran
     const coreCard = document.createElement('div');
     coreCard.className = 'cms-block-card';
     coreCard.id = 'splash-config-card';
-
     coreCard.onclick = (e) => {
         if (e.target.closest('.block-actions')) return;
         postaviAktivniBlok(-1);
@@ -204,24 +189,21 @@ function renderujTimelineBlokove() {
     if (aktivniIndex === -1) coreCard.classList.add('active-block');
 
     coreCard.innerHTML = `
-    <div class="block-info-side">
-        <div class="block-num">
-            <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--admin-accent);"></i>
+        <div class="block-info-side">
+            <div class="block-num"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--admin-accent);"></i></div>
+            <div class="block-meta-details">
+                <div class="block-type-tag">UVOĐENJE U APLIKACIJU</div>
+                <div class="block-summary-text" id="summary-core-title">Početni Ekran i Uvodna Pravila</div>
+                <div class="block-media-indicators"><span><i class="fa-solid fa-gear"></i> Naslov, titl i uvodna pravila ekspedicije</span></div>
+            </div>
         </div>
-        <div class="block-meta-details">
-            <div class="block-type-tag">UVOĐENJE U APLIKACIJU</div>
-            <div class="block-summary-text" id="summary-core-title">Početni Ekran i Uvodna Pravila</div>
-            <div class="block-media-indicators"><span><i class="fa-solid fa-gear"></i> Ime projekta, podnaslov i uvodne poruke</span></div>
+        <div class="block-actions">
+            <button class="btn-action btn-edit-zoom" onclick="event.stopPropagation(); otvoriCoreZoomEditor()">
+                <i class="fa-solid fa-expand"></i> Otvori i Uredi
+            </button>
         </div>
-    </div>
-    <div class="block-actions">
-        <button class="btn-action btn-edit-zoom" onclick="event.stopPropagation(); otvoriCoreZoomEditor()">
-            <i class="fa-solid fa-expand"></i> Otvori i Uredi
-        </button>
-    </div>
-`;
+    `;
     container.appendChild(coreCard);
-
     osveziCoreSummaryTekst();
 
     if (!trenutniConfig.timeline || trenutniConfig.timeline.length === 0) {
@@ -243,52 +225,43 @@ function renderujTimelineBlokove() {
 
         let mediaIndicators = '';
         if (blok.type === 'video') {
-            const vName = blok._realVideoName || (blok.url && !blok.url.startsWith('blob:') ? blok.url.split('/').pop() : 'Video je ubačen');
-            if (vName) mediaIndicators += `<span><i class="fa-solid fa-video"></i> ${vName}</span>`;
+            const vName = blok._realVideoName || (blok.url ? blok.url.split('/').pop() : 'Video fajl ubačen');
+            mediaIndicators += `<span><i class="fa-solid fa-video"></i> ${vName}</span>`;
         }
         if (blok.type === 'chapter' && blok.galleryImages && blok.galleryImages.length > 0) {
             mediaIndicators += `<span><i class="fa-solid fa-images"></i> Sadrži ${blok.galleryImages.length} slika</span>`;
         }
-        const aName = blok._realAudioName || (blok.bgMusicUrl && !blok.bgMusicUrl.startsWith('blob:') ? 'Muzika u pozadini' : '');
-        if (aName) mediaIndicators += `<span><i class="fa-solid fa-music"></i> Muzika aktivna</span>`;
+        if (blok.bgMusicUrl) {
+            mediaIndicators += `<span><i class="fa-solid fa-music"></i> Muzika aktivna</span>`;
+        }
         if (blok.sceneEffect && blok.sceneEffect !== 'none') {
             mediaIndicators += `<span><i class="fa-solid fa-sparkles"></i> Efekat: ${blok.sceneEffect}</span>`;
         }
 
-        let srpskiTip = '';
+        let srpskiTip = blok.type.toUpperCase();
         let summaryTekst = '';
 
-        if (blok.type === 'chapter') {
-            srpskiTip = 'POGLAVLJE SA PRIČOM';
-            summaryTekst = blok.title || 'Naslov poglavlja nije postavljen';
-        } else if (blok.type === 'video') {
-            srpskiTip = 'VIDEO SNIMAK';
-            summaryTekst = blok._realVideoName || (blok.url && !blok.url.startsWith('blob:') ? blok.url : 'Video fajl');
-        } else if (blok.type === 'gate') {
-            srpskiTip = 'KAPIJA (ZAGONETKA)';
-            summaryTekst = blok.hint || 'Tekst asocijacije / Pomoć za rešavanje';
-        } else if (blok.type === 'finale') {
-            srpskiTip = 'KRAJ PRIČE (FINALE)';
-            summaryTekst = blok.finalLoveMessage || 'Završna ljubavna poruka';
-        }
+        if (blok.type === 'chapter') { srpskiTip = 'POGLAVLJE SA PRIČOM'; summaryTekst = blok.title || 'Prazan naslov'; }
+        else if (blok.type === 'video') { srpskiTip = 'VIDEO SNIMAK'; summaryTekst = blok._realVideoName || 'Video projekcija'; }
+        else if (blok.type === 'gate') { srpskiTip = 'KAPIJA (ZAGONETKA)'; summaryTekst = blok.hint || 'Lozinka za prolaz'; }
+        else if (blok.type === 'finale') { srpskiTip = 'KRAJ PRIČE (FINALE)'; summaryTekst = blok.finalLoveMessage || 'Završni ekran'; }
 
         card.innerHTML = `
-        <div class="block-info-side">
-            <div class="block-num">KOCKICA #${index + 1}</div>
-            <div class="block-meta-details">
-                <div class="block-type-tag">${srpskiTip}</div>
-                <div class="block-summary-text">${summaryTekst}</div>
-                <div class="block-media-indicators">${mediaIndicators || '<span><i class="fa-solid fa-folder-open"></i> Prazna kockica (ubaci sadržaj)</span>'}</div>
+            <div class="block-info-side">
+                <div class="block-num">KOCKICA #${index + 1}</div>
+                <div class="block-meta-details">
+                    <div class="block-type-tag">${srpskiTip}</div>
+                    <div class="block-summary-text">${summaryTekst}</div>
+                    <div class="block-media-indicators">${mediaIndicators || '<span><i class="fa-solid fa-folder-open"></i> Prazna kockica</span>'}</div>
+                </div>
             </div>
-        </div>
-        <div class="block-actions">
-            <button class="btn-action btn-edit-zoom" onclick="otvoriZoomEditorZaBlok(${index})"><i class="fa-solid fa-expand"></i> Otvori i Uredi</button>
-            <button class="btn-action" onclick="pomeriBlok(${index}, -1)">▲</button>
-            <button class="btn-action" onclick="pomeriBlok(${index}, 1)">▼</button>
-            <button class="btn-action btn-delete" onclick="obrisiBlok(${index})">X</button>
-        </div>
-    `;
-
+            <div class="block-actions">
+                <button class="btn-action btn-edit-zoom" onclick="event.stopPropagation(); otvoriZoomEditorZaBlok(${index})"><i class="fa-solid fa-expand"></i> Uredi</button>
+                <button class="btn-action" onclick="event.stopPropagation(); pomeriBlok(${index}, -1)">▲</button>
+                <button class="btn-action" onclick="event.stopPropagation(); pomeriBlok(${index}, 1)">▼</button>
+                <button class="btn-action btn-delete" onclick="event.stopPropagation(); obrisiBlok(${index})">X</button>
+            </div>
+        `;
         container.appendChild(card);
     });
 
@@ -297,34 +270,30 @@ function renderujTimelineBlokove() {
 
 function postaviAktivniBlok(index) {
     aktivniIndex = index;
-
-    document.querySelectorAll('.cms-block-card, #splash-config-card').forEach(c => {
-        c.classList.remove('active-block');
-    });
+    document.querySelectorAll('.cms-block-card, #splash-config-card').forEach(c => c.classList.remove('active-block'));
 
     if (index === -1) {
         const coreCard = document.getElementById('splash-config-card');
         if (coreCard) coreCard.classList.add('active-block');
-    }
-    else if (index !== null && index !== undefined) {
+    } else if (index !== null) {
         const aktivnaKartica = document.querySelector(`.cms-block-card[data-index="${index}"]`);
         if (aktivnaKartica) aktivnaKartica.classList.add('active-block');
     }
-
     osveziZiviPreview();
 }
 
-// ==========================================================================
-// 4. TIMELINE STATE MODIFICATIONS
-// ==========================================================================
 function dodajNoviBlok(tip) {
     const noviBlok = { type: tip, sceneEffect: 'none' };
     if (tip === 'chapter') {
         noviBlok.title = 'Novo Poglavlje'; noviBlok.subtitle = ''; noviBlok.paragraphs = [];
-        noviBlok.galleryImages = []; noviBlok.nextButtonText = 'Sledeća stranica';
+        noviBlok.galleryImages = []; noviBlok.nextButtonText = 'Dalje →';
+    } else if (tip === 'video') {
+        noviBlok.url = '';
+    } else if (tip === 'gate') {
+        noviBlok.hint = 'Unesite tajnu reč'; noviBlok.placeholder = 'Kucaj ovde...'; noviBlok.buttonText = 'Potvrdi'; noviBlok.errorMessage = 'Netačno, pokušaj ponovo.'; noviBlok.answers = [];
+    } else if (tip === 'finale') {
+        noviBlok.finalLoveMessage = 'Zauvek zajedno'; noviBlok.finalSignature = 'Selection'; noviBlok.endIconLabel = 'Restartuj';
     }
-    if (tip === 'video') { noviBlok.url = ''; }
-    if (tip === 'gate') { noviBlok.hint = ''; noviBlok.placeholder = ''; noviBlok.buttonText = 'Potvrdi'; noviBlok.errorMessage = ''; noviBlok.answers = []; }
 
     trenutniConfig.timeline.push(noviBlok);
     renderujTimelineBlokove();
@@ -334,20 +303,25 @@ function dodajNoviBlok(tip) {
 function obrisiBlok(index) {
     if (confirm("Da li sigurno želiš da obrišeš ovu kockicu iz priče?")) {
         trenutniConfig.timeline.splice(index, 1);
-        if (aktivniIndex === index) aktivniIndex = null;
+        aktivniIndex = null;
         renderujTimelineBlokove();
+        osveziZiviPreview();
     }
 }
 
 function pomeriBlok(index, smer) {
-    const noviIndex = index + smer; if (noviIndex < 0 || noviIndex >= trenutniConfig.timeline.length) return;
-    const privremeni = trenutniConfig.timeline[index]; trenutniConfig.timeline[index] = trenutniConfig.timeline[noviIndex]; trenutniConfig.timeline[noviIndex] = privremeni;
-    if (aktivniIndex === index) aktivniIndex = noviIndex;
+    const noviIndex = index + smer;
+    if (noviIndex < 0 || noviIndex >= trenutniConfig.timeline.length) return;
+    const privremeni = trenutniConfig.timeline[index];
+    trenutniConfig.timeline[index] = trenutniConfig.timeline[noviIndex];
+    trenutniConfig.timeline[noviIndex] = privremeni;
+    aktivniIndex = noviIndex;
     renderujTimelineBlokove();
+    postaviAktivniBlok(noviIndex);
 }
 
 // ==========================================================================
-// 5. THE ADVANCED ZOOM UI ENGINE
+// 3. EXPANDED ZOOM EDITOR ENGINE (Modal Workspace)
 // ==========================================================================
 function otvoriZoomEditorZaBlok(index) {
     aktivniIndex = index;
@@ -360,191 +334,144 @@ function otvoriZoomEditorZaBlok(index) {
     const telo = document.getElementById('zoom-dynamic-body');
 
     naslov.innerText = `REŽIM UREĐIVANJA: ${blok.type.toUpperCase()} KOCKICA (#${index + 1})`;
-
-    const audioName = blok._realAudioName || (blok.bgMusicUrl && !blok.bgMusicUrl.startsWith('blob:') ? blok.bgMusicUrl : 'Nema dodate muzike');
+    const audioName = blok._realAudioName || (blok.bgMusicUrl ? blok.bgMusicUrl.split('/').pop() : 'Nema trake');
     let dynamicHtml = '';
 
     if (blok.type === 'video') {
-        const videoName = blok._realVideoName || (blok.url && !blok.url.startsWith('blob:') ? blok.url : 'Nema selektovanog videa');
+        const videoName = blok._realVideoName || (blok.url ? blok.url.split('/').pop() : 'Klikni za odabir .mp4 fajla');
         dynamicHtml = `
-        <div class="form-group">
-            <label for="zoom-drop-zone-trigger">Video fajl (Prevuci .mp4 direktno u kućicu ili klikni):</label>
-            <div id="zoom-drop-zone-trigger" class="zoom-drop-zone" onclick="okiniLokalniKlikFajla()">
-                <i class="fa-solid fa-circle-play" style="font-size:35px; color:var(--admin-accent); margin-bottom:8px;"></i>
-                <p id="zoom-video-display-name" style="font-weight:600;">${videoName}</p>
-                <span class="hint-text">Spusti fajl ovde</span>
+            <div class="form-group">
+                <label>Video snimak (.mp4 projekcija):</label>
+                <div class="zoom-drop-zone" onclick="okiniLokalniKlikFajla('video-file')">
+                    <i class="fa-solid fa-circle-play" style="font-size:35px; color:var(--admin-accent); margin-bottom:8px;"></i>
+                    <p id="zoom-video-display-name" style="font-weight:600;">${videoName}</p>
+                    <span class="hint-text">Klikni ili spusti fajl ovde</span>
+                </div>
             </div>
-        </div>
-        <div class="form-group" style="margin-top:15px;">
-            <label for="zoom-field-sceneEffect"><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Ambijentalni efekat preko videa:</label>
-            <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()">
-                <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Čist mrak / Bez efekta (Preporučeno za video)</option>
-                <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice ruža)</option>
-                <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Konfete)</option>
-                <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust / Zlatne čestice</option>
-            </select>
-        </div>
-    `;
+        `;
     }
     else if (blok.type === 'chapter') {
         let slikeHtml = '';
         if (blok.galleryImages && blok.galleryImages.length > 0) {
             blok.galleryImages.forEach((imgSrc, imgIndex) => {
                 slikeHtml += `
-                <div class="zoom-thumb" 
-                     draggable="true" 
-                     data-img-index="${imgIndex}"
-                     style="position: relative; cursor: move;"
-                     ondragstart="hendlujDragStart(event)"
-                     ondragover="hendlujDragOver(event)"
-                     ondrop="hendlujDrop(event, ${index})">
-                    <img src="${imgSrc.startsWith('blob:') || imgSrc.startsWith('http') ? imgSrc : '/' + imgSrc}" alt="Galerija slika ${imgIndex}">
-                    <button onclick="ukloniSlikuIzGalerijeZoom(${imgIndex})">X</button>
-                </div>
-            `;
+                    <div class="zoom-thumb" draggable="true" data-img-index="${imgIndex}"
+                         ondragstart="hendlujDragStart(event)" ondragover="hendlujDragOver(event)" ondrop="hendlujDrop(event, ${index})">
+                        <img src="${imgSrc}">
+                        <button onclick="ukloniSlikuIzGalerijeZoom(${imgIndex})">×</button>
+                    </div>
+                `;
             });
         }
 
         dynamicHtml = `
-        <div class="grid-2">
-            <div class="form-group">
-                <label for="zoom-field-title">Naslov Poglavlja:</label>
-                <input type="text" id="zoom-field-title" value="${blok.title || ''}" oninput="sinhronizujZoomSaPreviewom()">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Naslov Poglavlja:</label>
+                    <input type="text" id="zoom-field-title" value="${blok.title || ''}" oninput="sinhronizujZoomSaPreviewom()">
+                </div>
+                <div class="form-group">
+                    <label>Podnaslov / Poruka:</label>
+                    <input type="text" id="zoom-field-subtitle" value="${blok.subtitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
+                </div>
             </div>
             <div class="form-group">
-                <label for="zoom-field-subtitle">Podnaslov / Kratka lepa poruka:</label>
-                <input type="text" id="zoom-field-subtitle" value="${blok.subtitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
+                <label>Tekst priče (Double Enter pravi novi pasus):</label>
+                <textarea id="zoom-field-paragraphs" style="min-height:180px;" oninput="sinhronizujZoomSaPreviewom()">${blok.paragraphs ? blok.paragraphs.join('\n\n') : ''}</textarea>
             </div>
-        </div>
-        <div class="form-group">
-            <label for="zoom-field-paragraphs">Glavni tekst priče poglavlja (Double Enter pravi novi pasus):</label>
-            <textarea id="zoom-field-paragraphs" style="min-height:220px; font-size:0.95rem; line-height:1.5;" oninput="sinhronizujZoomSaPreviewom()">${blok.paragraphs ? blok.paragraphs.join('\n\n') : ''}</textarea>
-        </div>
-        <div class="grid-2" style="align-items: center; margin-top:10px;">
-            <div class="form-group">
-                <label for="zoom-field-nextButtonText">Tekst na dugmetu za nastavak:</label>
-                <input type="text" id="zoom-field-nextButtonText" value="${blok.nextButtonText || 'Sledeća stranica'}" oninput="sinhronizujZoomSaPreviewom()">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Tekst na dugmetu za nastavak:</label>
+                    <input type="text" id="zoom-field-nextButtonText" value="${blok.nextButtonText || 'Dalje →'}" oninput="sinhronizujZoomSaPreviewom()">
+                </div>
             </div>
-            <div class="form-group">
-                <label for="zoom-field-sceneEffect"><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Vizuelni efekat za ovo poglavlje:</label>
-                <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()">
-                    <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Čist mrak / Bez efekta</option>
-                    <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice ruža)</option>
-                    <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Konfete)</option>
-                    <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust / Zlatne čestice</option>
-                </select>
+            <div class="form-group" style="margin-top:15px;">
+                <label>Foto Galerija poglavlja (Spusti slike direktno unutra):</label>
+                <div class="zoom-drop-zone" onclick="okiniLokalniKlikFajla('gallery-images')">
+                    <i class="fa-solid fa-images" style="font-size:30px; color:var(--admin-accent); margin-bottom:5px;"></i>
+                    <p style="font-size:0.85rem; font-weight:600;">Klikni ili prevuci slike za album</p>
+                </div>
+                <div class="zoom-media-grid" id="zoom-gallery-container">${slikeHtml}</div>
             </div>
-        </div>
-        <div class="form-group" style="margin-top:15px;">
-            <label for="zoom-gallery-container-trigger">Galerija slika (Spusti fotografije direktno u kućicu ispod):</label>
-            <div id="zoom-gallery-container-trigger" class="zoom-drop-zone" onclick="okiniLokalniKlikFajla()">
-                <i class="fa-solid fa-images" style="font-size:30px; color:var(--admin-accent); margin-bottom:5px;"></i>
-                <p style="font-size:0.85rem; font-weight:600;">Klikni ili prevuci slike ovde za mini-galeriju</p>
-            </div>
-            <div class="zoom-media-grid" id="zoom-gallery-container">${slikeHtml}</div>
-        </div>
-    `;
+        `;
     }
     else if (blok.type === 'gate') {
         dynamicHtml = `
-        <div class="grid-2">
-            <div class="form-group">
-                <label for="zoom-field-hint">Tekst Zagonetke / Asocijacija (Glavno pitanje):</label>
-                <input type="text" id="zoom-field-hint" value="${blok.hint || ''}" oninput="sinhronizujZoomSaPreviewom()">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Tekst Zagonetke / Glavno Pitanje:</label>
+                    <input type="text" id="zoom-field-hint" value="${blok.hint || ''}" oninput="sinhronizujZoomSaPreviewom()">
+                </div>
+                <div class="form-group">
+                    <label>Smernica unutar polja (Placeholder):</label>
+                    <input type="text" id="zoom-field-placeholder" value="${blok.placeholder || ''}" oninput="sinhronizujZoomSaPreviewom()">
+                </div>
             </div>
-            <div class="form-group">
-                <label for="zoom-field-placeholder">Tekst unutar polja za kucanje (Smernica korisniku):</label>
-                <input type="text" id="zoom-field-placeholder" value="${blok.placeholder || ''}" oninput="sinhronizujZoomSaPreviewom()">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Sve tačne lozinke (odvojene zarezom):</label>
+                    <input type="text" id="zoom-field-answers" value="${blok.answers ? blok.answers.join(', ') : ''}" placeholder="npr. ljubav, 33, sreca">
+                </div>
+                <div class="form-group">
+                    <label>Poruka za pogrešnu lozinku:</label>
+                    <input type="text" id="zoom-field-errorMessage" value="${blok.errorMessage || ''}" oninput="sinhronizujZoomSaPreviewom()">
+                </div>
             </div>
-        </div>
-        <div class="grid-2">
-            <div class="form-group">
-                <label for="zoom-field-answers">Sve tačne lozinke (odvojene zarezom):</label>
-                <input type="text" id="zoom-field-answers" value="${blok.answers ? blok.answers.join(', ') : ''}" placeholder="npr. ljubav, sreća, ljupkost">
-            </div>
-            <div class="form-group">
-                <label for="zoom-field-errorMessage">Poruka koja izlazi ako pogreše lozinku:</label>
-                <input type="text" id="zoom-field-errorMessage" value="${blok.errorMessage || ''}" oninput="sinhronizujZoomSaPreviewom()">
-            </div>
-        </div>
-        <div class="grid-2" style="align-items: center; margin-top:10px;">
-            <div class="form-group">
-                <label for="zoom-field-buttonText">Tekst na dugmetu za proveru:</label>
+            <div class="form-group" style="max-width:50%;">
+                <label>Tekst na dugmetu:</label>
                 <input type="text" id="zoom-field-buttonText" value="${blok.buttonText || 'Potvrdi'}" oninput="sinhronizujZoomSaPreviewom()">
             </div>
-            <div class="form-group">
-                <label for="zoom-field-sceneEffect"><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Vizuelni efekat dok rešavaju kapiju:</label>
-                <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()">
-                    <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Čist mrak / Bez efekta</option>
-                    <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice ruža)</option>
-                    <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Konfete)</option>
-                    <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust / Zlatne čestice</option>
-                </select>
-            </div>
-        </div>
-    `;
+        `;
     }
     else if (blok.type === 'finale') {
-        const iconName = blok._realIconName || (blok.endIconType && !blok.endIconType.startsWith('blob:') ? blok.endIconType : 'Slikica nije izabrana (podrazumevana je ruža)');
+        const iconName = blok._realIconName || 'Podrazumevana ikona (rose.png)';
         dynamicHtml = `
-        <div class="grid-2">
-            <div class="form-group">
-                <label for="zoom-field-finalLoveMessage">Završna ljubavna poruka (Glavni natpis):</label>
-                <input type="text" id="zoom-field-finalLoveMessage" value="${blok.finalLoveMessage || ''}" oninput="sinhronizujZoomSaPreviewom()">
-            </div>
-            <div class="form-group">
-                <label for="zoom-field-finalSignature">Završni potpis na samom kraju:</label>
-                <input type="text" id="zoom-field-finalSignature" value="${blok.finalSignature || ''}" oninput="sinhronizujZoomSaPreviewom()">
-            </div>
-        </div>
-        <div class="grid-2">
-            <div class="form-group">
-                <label for="final-icon-drop-zone">Ikona na dugmetu (Spusti sliku/ikonu direktno u kućicu):</label>
-                <div id="final-icon-drop-zone" class="zoom-drop-zone" onclick="okiniLokalniKlikFajla()">
-                    <i class="fa-solid fa-heart-pulse" style="font-size:30px; color:var(--admin-accent); margin-bottom:5px;"></i>
-                    <p style="font-size:0.85rem; font-weight:600;" id="final-icon-status">${iconName}</p>
-                    <span class="hint-text">Spusti fajl ovde ili klikni</span>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Završna ljubavna poruka:</label>
+                    <input type="text" id="zoom-field-finalLoveMessage" value="${blok.finalLoveMessage || ''}" oninput="sinhronizujZoomSaPreviewom()">
                 </div>
-                <input type="hidden" id="zoom-field-endIconType" value="${blok.endIconType || 'images/rose.png'}">
+                <div class="form-group">
+                    <label>Završni potpis:</label>
+                    <input type="text" id="zoom-field-finalSignature" value="${blok.finalSignature || ''}" oninput="sinhronizujZoomSaPreviewom()">
+                </div>
             </div>
-            <div class="form-group">
-                <label for="zoom-field-endIconLabel">Tekst na finalnom dugmetu (Labela):</label>
-                <input type="text" id="zoom-field-endIconLabel" value="${blok.endIconLabel || 'Restartuj ekspediciju'}" oninput="sinhronizujZoomSaPreviewom()">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Ikona na centralnom dugmetu:</label>
+                    <div class="zoom-drop-zone" id="final-icon-drop-zone" onclick="okiniLokalniKlikFajla('final-icon')">
+                        <i class="fa-solid fa-heart-pulse" style="font-size:25px; color:var(--admin-accent); margin-bottom:5px;"></i>
+                        <p id="final-icon-status" style="font-weight:600; font-size:0.8rem;">${iconName}</p>
+                    </div>
+                    <input type="hidden" id="zoom-field-endIconType" value="${blok.endIconType || 'images/rose.png'}">
+                </div>
+                <div class="form-group">
+                    <label>Tekst na finalnom dugmetu:</label>
+                    <input type="text" id="zoom-field-endIconLabel" value="${blok.endIconLabel || 'Restartuj'}" oninput="sinhronizujZoomSaPreviewom()">
+                </div>
             </div>
-        </div>
-        <div class="grid-2" style="align-items: center; margin-top:10px;">
-            <div class="form-group">
-                <label for="zoom-field-epilogueFinalLabel">Sitno tekstualno pitanje na dnu:</label>
-                <input type="text" id="zoom-field-epilogueFinalLabel" value="${blok.epilogueFinalLabel || ''}" oninput="sinhronizujZoomSaPreviewom()">
-            </div>
-            <div class="form-group">
-                <label for="zoom-field-sceneEffect"><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Vizuelni efekat za finale ekrana:</label>
-                <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()">
-                    <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Čist mrak / Bez efekta</option>
-                    <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice ruža)</option>
-                    <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Konfete)</option>
-                    <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust / Zlatne čestice</option>
-                </select>
-            </div>
-        </div>
-        <div class="form-group" style="margin-top:10px;">
-            <label for="zoom-field-epilogueQuote">Završni mudri citat:</label>
-            <textarea id="zoom-field-epilogueQuote" style="min-height:100px;" oninput="sinhronizujZoomSaPreviewom()">${blok.epilogueQuote || ''}</textarea>
-        </div>
-    `;
+        `;
     }
 
     telo.innerHTML = `
-    ${dynamicHtml}
-    <div class="form-group" style="margin-top:15px;">
-        <label for="zoom-audio-drop-trigger">Pozadinska muzika ove kockice (Spusti .mp3 u polje ispod):</label>
-        <div id="zoom-audio-drop-trigger" class="zoom-drop-zone" style="padding:15px;" onclick="okiniLokalniKlikFajla()">
-            <i class="fa-solid fa-music" style="color:var(--admin-accent); margin-right:5px;"></i>
-            <span id="zoom-audio-display-name" style="font-weight:600; font-size:0.85rem;">Trenutna traka: ${audioName}</span>
-            <span class="hint-text"> (Klikni ili spusti .mp3 ovde za izmenu)</span>
+        ${dynamicHtml}
+        <div class="form-group" style="margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05);">
+            <label><i class="fa-solid fa-sparkles" style="color:var(--admin-accent);"></i> Ambijentalne čestice / Efekat za ovu scenu:</label>
+            <select id="zoom-field-sceneEffect" onchange="sinhronizujZoomSaPreviewom()" style="width:50%; background:#070b0e; color:#fff; padding:8px; border:1px solid rgba(255,255,255,0.1); border-radius:6px;">
+                <option value="none" ${blok.sceneEffect === 'none' ? 'selected' : ''}>Bez čestica (Čist mrak)</option>
+                <option value="rose-petals" ${blok.sceneEffect === 'rose-petals' ? 'selected' : ''}>Rose Petals (Latice crvenih ruža)</option>
+                <option value="confetti" ${blok.sceneEffect === 'confetti' ? 'selected' : ''}>Confetti (Zlatne konfete)</option>
+                <option value="snow" ${blok.sceneEffect === 'snow' ? 'selected' : ''}>Gold Dust (Zlatne čestice prašine)</option>
+            </select>
         </div>
-    </div>
-`;
+        <div class="form-group" style="margin-top:15px;">
+            <label>Namenska audio traka za ovu scenu (.mp3):</label>
+            <div class="zoom-drop-zone" style="padding:12px;" onclick="okiniLokalniKlikFajla('block-audio')">
+                <i class="fa-solid fa-music" style="color:var(--admin-accent); margin-right:8px;"></i>
+                <span id="zoom-audio-display-name" style="font-weight:600;">Traka: ${audioName}</span>
+            </div>
+        </div>
+    `;
 
     overlay.style.display = 'flex';
 }
@@ -563,32 +490,31 @@ function otvoriCoreZoomEditor() {
     const settings = trenutniConfig.config.globalSettings;
 
     telo.innerHTML = `
-    <div class="grid-2">
-        <div class="form-group">
-            <label for="zoom-core-projectName">Glavni Naslov Projekta (Velika slova na sredini)</label>
-            <input type="text" id="zoom-core-projectName" value="${settings.projectName || ''}" oninput="sinhronizujZoomSaPreviewom()">
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Glavni Naslov Projekta (Velika slova)</label>
+                <input type="text" id="zoom-core-projectName" value="${settings.projectName || ''}" oninput="sinhronizujZoomSaPreviewom()">
+            </div>
+            <div class="form-group">
+                <label>Podnaslov / Uvodna rečenica klijentu</label>
+                <input type="text" id="zoom-core-projectSubtitle" value="${settings.projectSubtitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
+            </div>
         </div>
         <div class="form-group">
-            <label for="zoom-core-projectSubtitle">Podnaslov / Kratka lepa poruka ispod naslova</label>
-            <input type="text" id="zoom-core-projectSubtitle" value="${settings.projectSubtitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
+            <label>Uvodna Pravila / Napomene pre ulaska (Jedno pravilo po redu):</label>
+            <textarea id="zoom-core-warningTexts" style="min-height:160px;" oninput="sinhronizujZoomSaPreviewom()">${loader.warningTexts ? loader.warningTexts.join('\n') : ''}</textarea>
         </div>
-    </div>
-    <div class="form-group">
-        <label for="zoom-core-warningTexts">Uvodna Pravila igre / Smernice za ponašanje (Napiši jedno pravilo po redu)</label>
-        <textarea id="zoom-core-warningTexts" style="min-height:180px;" oninput="sinhronizujZoomSaPreviewom()">${loader.warningTexts ? loader.warningTexts.join('\n') : ''}</textarea>
-    </div>
-    <div class="grid-2">
-        <div class="form-group">
-            <label for="zoom-core-warningTitle">Mali gornji naslov iznad pravila (npr. VAŽNA NAPOMENA:)</label>
-            <input type="text" id="zoom-core-warningTitle" value="${loader.warningTitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Naslov iznad pravila:</label>
+                <input type="text" id="zoom-core-warningTitle" value="${loader.warningTitle || '⚠️ NAPOMENA ⚠️'}" oninput="sinhronizujZoomSaPreviewom()">
+            </div>
+            <div class="form-group toggle-group" style="margin-top:25px;">
+                <input type="checkbox" id="zoom-core-hasWarningMessage" ${trenutniConfig.config.hasWarningMessage ? 'checked' : ''} onchange="sinhronizujZoomSaPreviewom()">
+                <label for="zoom-core-hasWarningMessage" style="cursor:pointer; font-size:0.85rem; margin-left:8px;">Prikaži panel sa pravilima pre početka aplikacije</label>
+            </div>
         </div>
-        <div class="form-group toggle-group" style="margin-top:20px;">
-            <input type="checkbox" id="zoom-core-hasWarningMessage" ${trenutniConfig.config.hasWarningMessage ? 'checked' : ''} onchange="sinhronizujZoomSaPreviewom()">
-            <label for="zoom-core-hasWarningMessage" style="cursor:pointer; font-size:0.85rem;">Prikaži ekran sa pravilima pre nego što aplikacija počne</label>
-        </div>
-    </div>
-`;
-
+    `;
     overlay.style.display = 'flex';
 }
 
@@ -598,81 +524,62 @@ function zatvoriZoomEditor() {
     renderujTimelineBlokove();
 }
 
-// ==========================================================================
-// 6. ZOOM IN SAVE & CONFIRM LOGIC
-// ==========================================================================
 function potvrdiIZatvoriZoom() {
-    try {
-        if (isEditingCore) {
-            if (document.getElementById('zoom-core-projectName')) {
-                trenutniConfig.config.globalSettings.projectName = document.getElementById('zoom-core-projectName').value;
-            }
-            if (document.getElementById('zoom-core-projectSubtitle')) {
-                trenutniConfig.config.globalSettings.projectSubtitle = document.getElementById('zoom-core-projectSubtitle').value;
-            }
-            if (document.getElementById('zoom-core-warningTitle')) {
-                trenutniConfig.loader.warningTitle = document.getElementById('zoom-core-warningTitle').value;
-            }
-            if (document.getElementById('zoom-core-hasWarningMessage')) {
-                trenutniConfig.config.hasWarningMessage = document.getElementById('zoom-core-hasWarningMessage').checked;
-            }
+    if (isEditingCore) {
+        trenutniConfig.config.globalSettings.projectName = document.getElementById('zoom-core-projectName').value;
+        trenutniConfig.config.globalSettings.projectSubtitle = document.getElementById('zoom-core-projectSubtitle').value;
+        trenutniConfig.loader.warningTitle = document.getElementById('zoom-core-warningTitle').value;
+        trenutniConfig.config.hasWarningMessage = document.getElementById('zoom-core-hasWarningMessage').checked;
 
-            if (document.getElementById('zoom-core-warningTexts')) {
-                const rawTexts = document.getElementById('zoom-core-warningTexts').value;
-                trenutniConfig.loader.warningTexts = rawTexts.split('\n').filter(r => r.trim() !== '');
-            }
-
-            if (trenutniConfig.loader) {
-                trenutniConfig.loader.warningFinalLine = "";
-            }
-
-            osveziCoreSummaryTekst();
-        }
-        else if (aktivniIndex !== null && aktivniIndex !== -1) {
-            const blok = trenutniConfig.timeline[aktivniIndex];
-
-            if (document.getElementById('zoom-field-sceneEffect')) {
-                blok.sceneEffect = document.getElementById('zoom-field-sceneEffect').value;
-            }
-
-            if (blok.type === 'chapter') {
-                if (document.getElementById('zoom-field-title')) blok.title = document.getElementById('zoom-field-title').value;
-                if (document.getElementById('zoom-field-subtitle')) blok.subtitle = document.getElementById('zoom-field-subtitle').value;
-                if (document.getElementById('zoom-field-nextButtonText')) blok.nextButtonText = document.getElementById('zoom-field-nextButtonText').value;
-
-                if (document.getElementById('zoom-field-paragraphs')) {
-                    const rawBody = document.getElementById('zoom-field-paragraphs').value;
-                    blok.paragraphs = rawBody.split('\n\n').filter(p => p.trim() !== '');
-                }
-            }
-            else if (blok.type === 'gate') {
-                if (document.getElementById('zoom-field-hint')) blok.hint = document.getElementById('zoom-field-hint').value;
-                if (document.getElementById('zoom-field-placeholder')) blok.placeholder = document.getElementById('zoom-field-placeholder').value;
-                if (document.getElementById('zoom-field-errorMessage')) blok.errorMessage = document.getElementById('zoom-field-errorMessage').value;
-                if (document.getElementById('zoom-field-buttonText')) blok.buttonText = document.getElementById('zoom-field-buttonText').value;
-
-                if (document.getElementById('zoom-field-answers')) {
-                    const rawAns = document.getElementById('zoom-field-answers').value;
-                    blok.answers = rawAns.split(',').map(a => a.trim()).filter(a => a !== '');
-                }
-            }
-            else if (blok.type === 'finale') {
-                if (document.getElementById('zoom-field-finalLoveMessage')) blok.finalLoveMessage = document.getElementById('zoom-field-finalLoveMessage').value;
-                if (document.getElementById('zoom-field-finalSignature')) blok.finalSignature = document.getElementById('zoom-field-finalSignature').value;
-                if (document.getElementById('zoom-field-epilogueQuote')) blok.epilogueQuote = document.getElementById('zoom-field-epilogueQuote').value;
-                if (document.getElementById('zoom-field-epilogueFinalLabel')) blok.epilogueFinalLabel = document.getElementById('zoom-field-epilogueFinalLabel').value;
-                if (document.getElementById('zoom-field-endIconType')) blok.endIconType = document.getElementById('zoom-field-endIconType').value;
-                if (document.getElementById('zoom-field-endIconLabel')) blok.endIconLabel = document.getElementById('zoom-field-endIconLabel').value;
-            }
-        }
-    } catch (err) {
-        console.error("Greška pri sinhronizaciji polja unutar Zoom-a:", err);
+        const rawTexts = document.getElementById('zoom-core-warningTexts').value;
+        trenutniConfig.loader.warningTexts = rawTexts.split('\n').filter(r => r.trim() !== '');
+        osveziCoreSummaryTekst();
     }
+    else if (aktivniIndex !== null && aktivniIndex !== -1) {
+        const blok = trenutniConfig.timeline[aktivniIndex];
 
+        if (document.getElementById('zoom-field-sceneEffect')) {
+            blok.sceneEffect = document.getElementById('zoom-field-sceneEffect').value;
+        }
+
+        if (blok.type === 'chapter') {
+            blok.title = document.getElementById('zoom-field-title').value;
+            blok.subtitle = document.getElementById('zoom-field-subtitle').value;
+            blok.nextButtonText = document.getElementById('zoom-field-nextButtonText').value;
+            const rawBody = document.getElementById('zoom-field-paragraphs').value;
+            blok.paragraphs = rawBody.split('\n\n').filter(p => p.trim() !== '');
+        }
+        else if (blok.type === 'gate') {
+            blok.hint = document.getElementById('zoom-field-hint').value;
+            blok.placeholder = document.getElementById('zoom-field-placeholder').value;
+            blok.buttonText = document.getElementById('zoom-field-buttonText').value;
+            blok.errorMessage = document.getElementById('zoom-field-errorMessage').value;
+            const rawAns = document.getElementById('zoom-field-answers').value;
+            blok.answers = rawAns.split(',').map(a => a.trim()).filter(a => a !== '');
+        }
+        else if (blok.type === 'finale') {
+            blok.finalLoveMessage = document.getElementById('zoom-field-finalLoveMessage').value;
+            blok.finalSignature = document.getElementById('zoom-field-finalSignature').value;
+            blok.endIconType = document.getElementById('zoom-field-endIconType').value;
+        }
+    }
     renderujTimelineBlokove();
     zatvoriZoomEditor();
 }
 
+function ukloniSlikuIzGalerijeZoom(imgIndex) {
+    if (aktivniIndex !== null && aktivniIndex !== -1) {
+        const blok = trenutniConfig.timeline[aktivniIndex];
+        blok.galleryImages.splice(imgIndex, 1);
+        if (blok._realGalleryNames) blok._realGalleryNames.splice(imgIndex, 1);
+        osveziZoomGalerijuEkran(aktivniIndex);
+        osveziZiviPreview();
+    }
+}
+
+// ==========================================================================
+// 4. THE LIVE SIMULATOR REAL-TIME PREVIEW ENGINE
+// ==========================================================================
 function osveziZiviPreview() {
     if (!trenutniConfig) return;
 
@@ -694,136 +601,69 @@ function osveziZiviPreview() {
         if (!simulator || !target) return;
 
         simulator.style.backgroundColor = bojaPozadine;
-
-        const tempPutanja = trenutniConfig.config.globalSettings?._tempBgPreview;
-        const inputPozadina = document.getElementById('input-slika-pozadina');
-        let slikaZaPrikaz = tempPutanja || (inputPozadina ? inputPozadina.value : '');
+        let slikaZaPrikaz = trenutniConfig.config.globalSettings?._tempBgPreview || document.getElementById('input-slika-pozadina').value;
 
         if (slikaZaPrikaz && !slikaZaPrikaz.startsWith('blob:') && !slikaZaPrikaz.startsWith('http')) {
             slikaZaPrikaz = '/' + slikaZaPrikaz;
         }
 
-        if (slikaZaPrikaz) {
-            simulator.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('${slikaZaPrikaz}')`;
-            simulator.style.backgroundSize = 'cover';
-            simulator.style.backgroundPosition = 'center';
-        } else {
-            simulator.style.backgroundImage = 'none';
-        }
+        simulator.style.backgroundImage = slikaZaPrikaz ? `linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('${slikaZaPrikaz}')` : 'none';
+        simulator.style.backgroundSize = 'cover'; simulator.style.backgroundPosition = 'center';
 
-        const stilKontejnera = `background: ${bojaKontejnera}; padding: 20px; border-radius: 14px; text-align: left; border: 1px solid rgba(255,255,255,0.04); box-shadow: 0 10px 25px rgba(0,0,0,0.35); width: 100%;`;
+        const stilKontejnera = `background: ${bojaKontejnera}; padding: 22px; border-radius: 14px; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.4); width: 100%;`;
 
-        if (aktivniIndex === null || aktivniIndex === undefined || aktivniIndex === -1) {
+        if (aktivniIndex === null || aktivniIndex === -1) {
             if (statusTag) statusTag.innerText = "Prikaz: Uvodni ekran";
             const pName = document.getElementById('zoom-core-projectName')?.value || trenutniConfig.config.globalSettings.projectName || 'Selection';
             const pSub = document.getElementById('zoom-core-projectSubtitle')?.value || trenutniConfig.config.globalSettings.projectSubtitle || '';
 
-            const inputLoaderMusic = document.getElementById('input-loader-muzika')?.value || trenutniConfig.config.globalSettings.loaderMusic || '';
-            let audioPreviewHtml = '';
-            if (inputLoaderMusic) {
-                audioPreviewHtml = `<div style="margin-top: 15px; font-size: 11px; opacity: 0.5; font-family: '${fontP}', sans-serif; color: ${bojaP};"><i class="fa-solid fa-music"></i> Ambijent: ${inputLoaderMusic.split('/').pop()}</div>`;
-            }
-
             target.innerHTML = `
-            <div style="width: 100%; padding: 10px; text-align:center;">
-                <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 2rem; text-transform: uppercase; letter-spacing:3px; margin-bottom:10px;">${pName}</h1>
-                <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 1.1rem; margin-bottom:25px;">${pSub}</h2>
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 10px;">
-                    <p style="font-family: '${fontP}', sans-serif; color: ${bojaP}; font-size: 0.75rem; opacity: 0.6; line-height:1.4;">[ Uvodna poruka i smernice za igru... ]</p>
+                <div style="width: 100%; text-align:center;">
+                    <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.8rem; text-transform: uppercase; letter-spacing:2px; margin-bottom:5px;">${pName}</h1>
+                    <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 1rem; margin-bottom:20px;">${pSub}</h2>
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 8px;">
+                        <p style="font-family: '${fontP}', sans-serif; color: ${bojaP}; font-size: 0.75rem; opacity: 0.5;">[ Uvodna pravila ekspedicije... ]</p>
+                    </div>
                 </div>
-                ${audioPreviewHtml}
-            </div>
-        `;
+            `;
         } else {
             const blok = trenutniConfig.timeline[aktivniIndex];
             if (statusTag) statusTag.innerText = `Prikaz: Kockica #${aktivniIndex + 1} (${blok.type.toUpperCase()})`;
 
-            let kockicaAudioHtml = '';
-            if (blok.bgMusicUrl) {
-                kockicaAudioHtml = `<span style="font-family: '${fontP}', sans-serif; font-size: 10px; color: ${bojaH1}; display:block; margin-top:10px; opacity:0.5;"><i class="fa-solid fa-music"></i> Audio traka: ${blok._realAudioName || blok.bgMusicUrl.split('/').pop()}</span>`;
-            }
-
             if (blok.type === 'video') {
-                let vSource = blok.url || '';
-                const vName = blok._realVideoName || (vSource ? vSource.split('/').pop() : 'Nema video fajla');
-
-                if (vSource && !vSource.startsWith('blob:') && !vSource.startsWith('http')) {
-                    vSource = '/' + vSource;
-                }
-
-                let videoRenderHtml = `
-                    <div style="background: #000; width: 100%; aspect-ratio: 16/9; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid rgba(255,255,255,0.05); overflow:hidden;">
-                        <i class="fa-solid fa-circle-play" style="font-size: 32px; color: ${bojaH1}; margin-bottom: 6px;"></i>
-                        <span style="font-family: '${fontP}', sans-serif; color: #fff; font-size: 0.75rem; max-width:85%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${vName}</span>
-                    </div>`;
-
-                if (vSource) {
-                    videoRenderHtml = `
-                        <video controls style="width:100%; aspect-ratio:16/9; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:#000;">
-                            <source src="${vSource}">
-                        </video>`;
-                }
-
+                const vName = blok._realVideoName || (blok.url ? blok.url.split('/').pop() : 'Nema fajla');
                 target.innerHTML = `
-                    <div style="${stilKontejnera} text-align: center;">
-                        ${videoRenderHtml}
-                        <span style="font-family: '${fontP}', sans-serif; font-size: 10px; color: var(--admin-muted); display:block; margin-top:8px; opacity:0.6;">[ Automatska video projekcija ]</span>
-                        ${kockicaAudioHtml}
+                    <div style="${stilKontejnera} text-align: center; background:#000;">
+                        <i class="fa-solid fa-circle-play" style="font-size: 30px; color: ${bojaH1}; margin-bottom: 5px;"></i>
+                        <span style="font-family: '${fontP}', sans-serif; color: #fff; font-size: 0.75rem; display:block;">${vName}</span>
                     </div>
                 `;
             }
             else if (blok.type === 'chapter') {
-                const t = document.getElementById('zoom-field-title')?.value || blok.title || 'Naslov Poglavlja';
-                const s = document.getElementById('zoom-field-subtitle')?.value || blok.subtitle || 'Podnaslov / Prevod';
-
-                let pText = 'Tekst priče...';
-                if (document.getElementById('zoom-field-paragraphs')) {
-                    const rawTexts = document.getElementById('zoom-field-paragraphs').value;
-                    if (rawTexts.trim() !== '') pText = rawTexts.split('\n\n')[0];
-                } else if (blok.paragraphs && blok.paragraphs.length > 0) {
-                    pText = blok.paragraphs[0];
-                }
-
-                const btnT = document.getElementById('zoom-field-nextButtonText')?.value || blok.nextButtonText || 'Sledeća stranica';
-
-                let gHtml = '';
-                if (blok.galleryImages && blok.galleryImages.length > 0) {
-                    gHtml = `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px;">`;
-                    blok.galleryImages.slice(0, 3).forEach(src => {
-                        let prImg = src;
-                        if (prImg && !prImg.startsWith('blob:') && !prImg.startsWith('http')) {
-                            prImg = '/' + prImg;
-                        }
-                        gHtml += `<div style="aspect-ratio:1; border-radius:6px; overflow:hidden; background:#000;"><img src="${prImg}" style="width:100%; height:100%; object-fit:cover;" alt="Preview slika"></div>`;
-                    });
-                    gHtml += `</div>`;
-                }
+                const t = document.getElementById('zoom-field-title')?.value || blok.title || 'Naslov';
+                const s = document.getElementById('zoom-field-subtitle')?.value || blok.subtitle || 'Podnaslov';
+                const btnT = document.getElementById('zoom-field-nextButtonText')?.value || blok.nextButtonText || 'Dalje';
 
                 target.innerHTML = `
                     <div style="${stilKontejnera}">
-                        <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.3rem; margin-bottom: 2px; line-height:1.3;">${t}</h1>
-                        <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 0.95rem; margin-bottom: 12px; opacity:0.85;">${s}</h2>
-                        <p style="font-family: '${fontP}', sans-serif; color: ${bojaP}; font-size: 0.78rem; line-height: 1.5; opacity:0.9;">${pText}</p>
-                        ${gHtml}
-                        <button style="background: none; border: 1px solid ${bojaH1}; color: ${bojaH1}; font-family: '${fontP}', sans-serif; padding: 6px 12px; font-size: 0.7rem; border-radius: 6px; margin-top: 15px; font-weight:600;">${btnT} →</button>
-                        ${kockicaAudioHtml}
+                        <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.2rem; margin-bottom:2px;">${t}</h1>
+                        <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 0.85rem; margin-bottom: 10px;">${s}</h2>
+                        <p style="font-family: '${fontP}', sans-serif; color: ${bojaP}; font-size: 0.75rem; line-height: 1.4; opacity:0.85;">[ Prvi pasus priče... ]</p>
+                        <button style="background: none; border: 1px solid ${bojaH1}; color: ${bojaH1}; font-family: '${fontP}', sans-serif; padding: 5px 10px; font-size: 0.7rem; border-radius: 6px; margin-top: 10px; font-weight:600;">${btnT}</button>
                     </div>
                 `;
             }
             else if (blok.type === 'gate') {
-                const hint = document.getElementById('zoom-field-hint')?.value || blok.hint || 'Unesite lozinku za nastavak';
-                const placeholder = document.getElementById('zoom-field-placeholder')?.value || blok.placeholder || 'Tvoja reč...';
+                const hint = document.getElementById('zoom-field-hint')?.value || blok.hint || 'Unesite lozinku';
+                const placeholder = document.getElementById('zoom-field-placeholder')?.value || blok.placeholder || 'Reč...';
                 const btnText = document.getElementById('zoom-field-buttonText')?.value || blok.buttonText || 'Potvrdi';
 
                 target.innerHTML = `
                     <div style="${stilKontejnera} text-align: center;">
-                        <i class="fa-solid fa-key" style="font-size: 20px; color: ${bojaH1}; margin-bottom: 10px; display: block;"></i>
-                        <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.15rem; margin-bottom: 15px; line-height: 1.4;">${hint}</h1>
-                        <div style="display: flex; flex-direction: column; gap: 8px; max-width: 200px; margin: 0 auto; width:100%;">
-                            <input type="text" placeholder="${placeholder}" disabled style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.3); text-align: center; color: #fff; font-size: 0.75rem; font-family: '${fontP}', sans-serif;">
-                            <button style="background: ${bojaH1}; color: ${bojaPozadine}; border: none; padding: 9px; border-radius: 6px; font-family: '${fontP}', sans-serif; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing:0.5px;">${btnText}</button>
-                        </div>
-                        ${kockicaAudioHtml}
+                        <i class="fa-solid fa-key" style="font-size: 18px; color: ${bojaH1}; margin-bottom: 8px; display: block;"></i>
+                        <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.1rem; margin-bottom: 12px;">${hint}</h1>
+                        <input type="text" placeholder="${placeholder}" disabled style="width: 80%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); text-align: center; color: #fff; font-size: 0.7rem; margin-bottom:6px;">
+                        <button style="background: ${bojaH1}; color: ${bojaPozadine}; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.7rem; font-weight:700; display:block; margin:0 auto;">${btnText}</button>
                     </div>
                 `;
             }
@@ -832,26 +672,32 @@ function osveziZiviPreview() {
                 const sig = document.getElementById('zoom-field-finalSignature')?.value || blok.finalSignature || 'Selection';
 
                 target.innerHTML = `
-                    <div style="${stilKontejnera} text-align: center; padding: 30px 20px;">
-                        <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.5rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">${msg}</h1>
-                        <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 1.1rem; opacity: 0.9;">${sig}</h2>
-                        <div style="margin-top: 20px; font-size: 10px; color: ${bojaH1}; opacity: 0.3; letter-spacing: 3px;">✦ ✦ ✦</div>
-                        ${kockicaAudioHtml}
+                    <div style="${stilKontejnera} text-align: center; padding: 25px 15px;">
+                        <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.4rem; margin-bottom: 5px;">${msg}</h1>
+                        <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 1rem;">${sig}</h2>
                     </div>
                 `;
             }
         }
     } catch (err) {
-        console.error("Greška unutar live preview engine-a:", err);
+        console.error("Greška u live preview pogonu:", err);
     }
 }
 
-async function sacuvajSveNaServer() {
-    if (!confirm("⚠️ PAŽNJA: Da li želiš da objaviš izmene na JAVNI sajt?")) {
-        return;
-    }
+function sinhronizujZoomSaPreviewom() { osveziZiviPreview(); }
+
+// ==========================================================================
+// 5. DATA SAVE & EDGE DEPLOYMENT PIPELINE (V18.0 Synchronization Engine)
+// ==========================================================================
+async function sacuvajSveNaServer(akcija = 'save') {
+    const porukaUpozorenja = akcija === 'publish'
+        ? "⚠️ PAŽNJA: Da li želiš momentalno da LANSIRAŠ sve izmene na JAVNI sajt? Klijenti će odmah videti promenu."
+        : "Da li želiš da zaključaš trenutne izmene u privremeni radni Draft?";
+
+    if (!confirm(porukaUpozorenja)) return;
     if (!trenutniConfig) return;
 
+    // Čišćenje privremenih blob linkova pre slanja kako baza ostala kristalno čista
     if (trenutniConfig.timeline) {
         trenutniConfig.timeline.forEach(blok => {
             if (blok.url && blok.url.startsWith('blob:')) blok.url = blok._realName || '';
@@ -895,20 +741,17 @@ async function sacuvajSveNaServer() {
         timeline: trenutniConfig.timeline || []
     };
 
-    const jsonString = JSON.stringify(cistConfigZaExport, null, 2);
-
     const formData = new FormData();
-    formData.append('config_data', jsonString);
+    formData.append('config_data', JSON.stringify(cistConfigZaExport, null, 2));
+    formData.append('action', akcija); // 🔑 Ključno za naš V18 Capability Kernel!
 
     const aktivniSubdomenZaSnimanje = localStorage.getItem('userSubdomain') || 'canvas';
     formData.append('subdomain', aktivniSubdomenZaSnimanje);
 
-    // 🚀 POPRAVLJENO: Ispravljen krivi naziv trenchesEmail varijable
     const trenutniEmail = localStorage.getItem('userEmail');
-    if (trenutniEmail) {
-        formData.append('client_email', trenutniEmail);
-    }
+    if (trenutniEmail) formData.append('client_email', trenutniEmail);
 
+    // Pakujemo sve dodate binarne fajlove u Form Data paket za strimovanje u R2
     if (fajloviZaUpload && fajloviZaUpload.length > 0) {
         fajloviZaUpload.forEach((item, index) => {
             formData.append(`file_${index}`, item.rawFile, item.putanja);
@@ -916,168 +759,186 @@ async function sacuvajSveNaServer() {
     }
 
     try {
-        console.log("🚀 Šaljem konfiguraciju i medije na server...");
+        console.log(`🚀 Šaljem paket [Akcija: ${akcija.toUpperCase()}] na Edge Kernel...`);
 
-        const response = await fetch('https://shell.selection.rs/save_data', {
+        const response = await fetch(`${API_BASE}/save_data`, {
             method: 'POST',
             credentials: "include",
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
             body: formData
         });
 
+        const tekstOdgovora = await response.text();
         if (response.ok) {
-            trenutniConfig = cistConfigZaExport;
-            if (typeof fajloviZaUpload !== 'undefined') fajloviZaUpload = [];
-            alert("✅ USPEŠNO: Izmene i mediji su sačuvani na Cloudflare serveru!");
+            fajloviZaUpload = [];
+            alert(akcija === 'publish' ? "🎉 USPEŠNO LANSERANO: Izmene su aktivne na celom svetu!" : "💾 USPEŠNO SAČUVANO: Draft verzija je bezbedno zaključana.");
             location.reload();
         } else {
-            const tekstGreske = await response.text();
-            console.error("❌ RAW server greška:", tekstGreske);
-
-            let porukaZaPrikaz = tekstGreske;
+            let porukaZaPrikaz = tekstOdgovora;
             try {
-                const jsonGreska = JSON.parse(tekstGreske);
+                const jsonGreska = JSON.parse(tekstOdgovora);
                 if (jsonGreska.error) porukaZaPrikaz = jsonGreska.error;
             } catch (e) { }
-
-            alert("❌ Greška sa servera:\n" + porukaZaPrikaz);
+            alert("❌ Kernel odbio zahtev:\n" + porukaZaPrikaz);
         }
     } catch (error) {
         console.error("❌ Greška u komunikaciji:", error);
-        alert("❌ Greška u komunikaciji sa Cloudflare serverom.");
+        alert("❌ Prekid mrežne komunikacije sa Edge Kernelom.");
     }
 }
 
-function sinhronizujZoomSaPreviewom() {
-    osveziZiviPreview();
+// Preveži staro onclick dugme iz HTML-a da podržava novi dvo-stepeni model
+function inicijalizujDugmadZaSnimanje() {
+    const staraDugmad = document.querySelectorAll('.btn-save');
+    staraDugmad.forEach(btn => {
+        if (btn.innerText.includes("Sačuvaj i Objavi Sve")) {
+            btn.outerHTML = `
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:15px;">
+                    <button class="btn-save" onclick="sacuvajSveNaServer('save')" style="background:#1c2a39; border:1px solid rgba(255,255,255,0.1); color:#fff;"><i class="fa-solid fa-floppy-disk"></i> Snimi u radni Draft</button>
+                    <button class="btn-save" onclick="sacuvajSveNaServer('publish')"><i class="fa-solid fa-rocket"></i> Lansiraj i Objavi Uživo</button>
+                </div>
+            `;
+        }
+    });
 }
+setTimeout(inicijalizujDugmadZaSnimanje, 500);
 
+// ==========================================================================
+// 6. MULTIMEDIA UPLOAD & INTERACTION HANDLERS
+// ==========================================================================
 function okiniGlobalniKlikFajla(tipMetmete) {
     const input = document.createElement('input');
     input.type = 'file';
-    if (tipMetmete === 'slika') input.accept = 'image/*';
-    else input.accept = 'audio/*';
+
+    if (tipMetmete === 'slika' || tipMetmete === 'gallery-images' || tipMetmete === 'final-icon') input.accept = 'image/*';
+    else if (tipMetmete === 'video-file') input.accept = 'video/mp4';
+    else input.accept = 'audio/mp3';
+
+    if (tipMetmete === 'gallery-images') input.multiple = true;
 
     input.onchange = (e) => {
-        if (e.target.files.length > 0) {
-            const fajl = e.target.files[0];
+        if (e.target.files.length === 0) return;
+
+        Array.from(e.target.files).forEach(fajl => {
             const imeFajla = fajl.name;
+            const previewUrl = URL.createObjectURL(fajl);
 
             if (tipMetmete === 'slika') {
-                const previewUrl = URL.createObjectURL(fajl);
                 document.getElementById('input-slika-pozadina').value = 'images/' + imeFajla;
                 document.getElementById('label-global-pozadina').innerText = 'images/' + imeFajla;
-
                 fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
-
-                if (trenutniConfig && trenutniConfig.config.globalSettings) {
-                    trenutniConfig.config.globalSettings._tempBgPreview = previewUrl;
-                }
-            } else if (tipMetmete === 'loader-mp3') {
+                trenutniConfig.config.globalSettings._tempBgPreview = previewUrl;
+            }
+            else if (tipMetmete === 'loader-mp3') {
                 document.getElementById('input-loader-muzika').value = 'audio/' + imeFajla;
                 document.getElementById('label-global-loader-muzika').innerText = 'audio/' + imeFajla;
-
-                fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
-            } else if (tipMetmete === 'ss-mp3') {
-                document.getElementById('input-ss-muzika').value = 'audio/' + imeFajla;
-                document.getElementById('label-global-ss-muzika').innerText = 'audio/' + imeFajla;
-
                 fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
             }
-            osveziZiviPreview();
-        }
+            else if (tipMetmete === 'ss-mp3') {
+                document.getElementById('input-ss-muzika').value = 'audio/' + imeFajla;
+                document.getElementById('label-global-ss-muzika').innerText = 'audio/' + imeFajla;
+                fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
+            }
+            else if (tipMetmete === 'video-file' && aktivniIndex !== null) {
+                const blok = trenutniConfig.timeline[aktivniIndex];
+                blok.url = previewUrl; blok._realVideoName = imeFajla; blok._realName = 'videos/' + imeFajla;
+                fajloviZaUpload.push({ putanja: 'videos/' + imeFajla, rawFile: fajl });
+                document.getElementById('zoom-video-display-name').innerText = imeFajla;
+            }
+            else if (tipMetmete === 'block-audio' && aktivniIndex !== null) {
+                const blok = trenutniConfig.timeline[aktivniIndex];
+                blok.bgMusicUrl = previewUrl; blok._realAudioName = imeFajla; blok._realName = 'audio/' + imeFajla;
+                fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
+                document.getElementById('zoom-audio-display-name').innerText = `Traka: ${imeFajla}`;
+            }
+            else if (tipMetmete === 'final-icon' && aktivniIndex !== null) {
+                document.getElementById('zoom-field-endIconType').value = 'images/' + imeFajla;
+                trenutniConfig.timeline[aktivniIndex]._realIconName = imeFajla;
+                fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
+                document.getElementById('final-icon-status').innerText = `Učitano: ${imeFajla}`;
+            }
+            else if (tipMetmete === 'gallery-images' && aktivniIndex !== null) {
+                const blok = trenutniConfig.timeline[aktivniIndex];
+                if (!blok.galleryImages) blok.galleryImages = [];
+                if (!blok._realGalleryNames) blok._realGalleryNames = [];
+
+                blok.galleryImages.push(previewUrl);
+                blok._realGalleryNames.push('images/' + imeFajla);
+                fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
+                osveziZoomGalerijuEkran(aktivniIndex);
+            }
+        });
+        osveziZiviPreview();
     };
     input.click();
 }
 
-function promeniRezimSimulatora(rezim) {
-    const panel = document.getElementById('global-preview-panel');
-    const ekran = document.getElementById('live-simulator-screen');
-    const btnMobile = document.getElementById('btn-mode-mobile');
-    const btnPc = document.getElementById('btn-mode-pc');
-    const srednjiPanel = document.querySelector('.main-workspace');
+// ==========================================================================
+// 7. CONTROL PLANE: PROVISIONING NEW STANDS (Master Only)
+// ==========================================================================
+async function masterKreirajNovogKorisnika() {
+    const subInput = document.getElementById('master-novi-subdomain');
+    const emailInput = document.getElementById('master-novi-email');
+    const statusPoruka = document.getElementById('master-status-poruka');
 
-    if (!panel || !ekran || !btnMobile || !btnPc) return;
+    if (!subInput || !emailInput || !statusPoruka) return;
 
-    if (rezim === 'pc') {
-        if (srednjiPanel) {
-            srednjiPanel.style.flex = "none";
-            srednjiPanel.style.width = "45%";
-        }
-        panel.style.flex = "none";
-        panel.style.width = "55%";
-        panel.style.maxWidth = "none";
+    const subdomain = subInput.value.trim().toLowerCase();
+    const email = emailInput.value.trim();
 
-        ekran.style.borderRadius = "8px";
-        ekran.style.border = "1px solid var(--admin-border)";
-        ekran.style.width = "100%";
-        ekran.style.maxWidth = "850px";
-
-        btnPc.style.backgroundColor = "var(--admin-accent)";
-        btnPc.style.color = "var(--admin-sidebar)";
-        btnMobile.style.backgroundColor = "transparent";
-        btnMobile.style.color = "var(--admin-muted)";
-    } else {
-        if (srednjiPanel) {
-            srednjiPanel.style.flex = "1";
-            srednjiPanel.style.width = "auto";
-        }
-
-        panel.style.flex = "0.75";
-        panel.style.width = "auto";
-        panel.style.maxWidth = "360px";
-
-        ekran.style.borderRadius = "24px";
-        ekran.style.border = "4px solid #1c2a39";
-        ekran.style.width = "100%";
-        ekran.style.maxWidth = "100%";
-
-        btnMobile.style.backgroundColor = "var(--admin-accent)";
-        btnMobile.style.color = "var(--admin-sidebar)";
-        btnPc.style.backgroundColor = "transparent";
-        btnPc.style.color = "var(--admin-muted)";
+    if (!subdomain || !email) {
+        statusPoruka.style.color = "#b81d24"; statusPoruka.innerText = "❌ Greška: Unesi i poddomen i email!"; return;
+    }
+    if (!/^[a-z0-9-]+$/.test(subdomain)) {
+        statusPoruka.style.color = "#b81d24"; statusPoruka.innerText = "❌ Koristi samo mala slova, brojeve i crticu."; return;
     }
 
-    if (typeof osveziZiviPreview === "function") {
-        osveziZiviPreview();
+    if (!confirm(`Lansiraš novi SaaS prostor na adresi: https://${subdomain}.selection.rs za klijenta ${email}?`)) return;
+
+    statusPoruka.style.color = "#d4b483"; statusPoruka.style.display = "block";
+    statusPoruka.innerText = "⚡ Pokrećem sisteme i mapiram KV slotove...";
+
+    try {
+        // Pozivamo POST /provision_user na našem čistom V18 zaštićenom kontrolnom endpointu
+        const response = await fetch(`${API_BASE}/provision_user`, {
+            method: 'POST',
+            credentials: "include",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, subdomain: subdomain, role: "admin" })
+        });
+
+        const rez = await response.json();
+        if (response.ok && rez.success) {
+            statusPoruka.style.color = "#2ecc71";
+            statusPoruka.innerHTML = `🎉 USPEH: Prostor <strong>${subdomain}</strong> je aktiviran na Edge-u!<br>🔗 Klijentski prostor: <a href="https://${subdomain}.selection.rs" target="_blank" style="color:#2ecc71; text-decoration:underline;">${subdomain}.selection.rs</a>`;
+            subInput.value = ''; emailInput.value = '';
+        } else {
+            statusPoruka.style.color = "#b81d24";
+            statusPoruka.innerText = `❌ Odbijeno od Kernela: ${rez.error || "Nepoznata greška"}`;
+        }
+    } catch (error) {
+        statusPoruka.style.color = "#b81d24"; statusPoruka.innerText = "❌ Komunikacija sa kontrolnom tablom nije uspela.";
     }
 }
 
+// ==========================================================================
+// 8. GRAPHIC GALLERY DRAG & DROP INTERNAL SORTING
+// ==========================================================================
 let izvornaSvezaSlikaIndex = null;
-
-function hendlujDragStart(e) {
-    izvornaSvezaSlikaIndex = e.currentTarget.getAttribute('data-img-index');
-    e.dataTransfer.effectAllowed = 'move';
-    e.currentTarget.style.opacity = '0.4';
-}
-
-function hendlujDragOver(e) {
-    if (e.preventDefault) {
-        e.preventDefault();
-    }
-    e.dataTransfer.dropEffect = 'move';
-    return false;
-}
+function hendlujDragStart(e) { izvornaSvezaSlikaIndex = e.currentTarget.getAttribute('data-img-index'); e.dataTransfer.effectAllowed = 'move'; e.currentTarget.style.opacity = '0.4'; }
+defineImageFilters = () => false;
+function hendlujDragOver(e) { if (e.preventDefault) e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; }
 
 function hendlujDrop(e, blokIndex) {
-    if (e.stopPropagation) {
-        e.stopPropagation();
-    }
-
+    if (e.stopPropagation) e.stopPropagation();
     const ciljniIndex = e.currentTarget.getAttribute('data-img-index');
-
-    if (izvornaSvezaSlikaIndex === ciljniIndex || izvornaSvezaSlikaIndex === null) {
-        return;
-    }
+    if (izvornaSvezaSlikaIndex === ciljniIndex || izvornaSvezaSlikaIndex === null) return;
 
     const blok = trenutniConfig.timeline[blokIndex];
-
     const pomerenaSlika = blok.galleryImages.splice(izvornaSvezaSlikaIndex, 1)[0];
     blok.galleryImages.splice(ciljniIndex, 0, pomerenaSlika);
 
-    if (blok._realGalleryNames && blok._realGalleryNames.length > 0) {
+    if (blok._realGalleryNames) {
         const pomerenoIme = blok._realGalleryNames.splice(izvornaSvezaSlikaIndex, 1)[0];
         blok._realGalleryNames.splice(ciljniIndex, 0, pomerenoIme);
     }
@@ -1092,267 +953,73 @@ function osveziZoomGalerijuEkran(blokIndex) {
     if (!kontejner) return;
 
     let slikeHtml = '';
-
     if (blok.galleryImages && blok.galleryImages.length > 0) {
         blok.galleryImages.forEach((imgSrc, imgIndex) => {
-            let putanjaZaEkran = imgSrc;
-            if (putanjaZaEkran && !putanjaZaEkran.startsWith('blob:') && !putanjaZaEkran.startsWith('http') && !putanjaZaEkran.startsWith('/')) {
-                putanjaZaEkran = '/' + putanjaZaEkran;
-            }
-
             slikeHtml += `
-            <div class="zoom-thumb" 
-                 draggable="true" 
-                 data-img-index="${imgIndex}"
-                 ondragstart="hendlujDragStart(event)"
-                 ondragover="hendlujDragOver(event)"
-                 ondrop="hendlujDrop(event, ${blokIndex})">
-                <img src="${putanjaZaEkran}" alt="Sličica ${imgIndex}" loading="lazy">
-                <button type="button" 
-                        onclick="event.stopPropagation(); ukloniSlikuIzGalerijeZoom(${imgIndex})" 
-                        title="Ukloni sliku">×</button>
-            </div>
+                <div class="zoom-thumb" draggable="true" data-img-index="${imgIndex}"
+                     ondragstart="hendlujDragStart(event)" ondragover="hendlujDragOver(event)" ondrop="hendlujDrop(event, ${blokIndex})">
+                    <img src="${imgSrc}">
+                    <button type="button" onclick="event.stopPropagation(); ukloniSlikuIzGalerijeZoom(${imgIndex})">×</button>
+                </div>
             `;
         });
     } else {
-        slikeHtml = `<p style="font-size: 0.75rem; color: var(--admin-muted); padding: 10px;">Galerija je prazna. Prevucite slike ovde.</p>`;
+        slikeHtml = `<p style="font-size: 0.75rem; color: var(--admin-muted); padding: 10px;">Galerija prazna.</p>`;
     }
-
     kontejner.innerHTML = slikeHtml;
 }
 
-async function masterKreirajNovogKorisnika() {
-    const subInput = document.getElementById('master-novi-subdomain');
-    const emailInput = document.getElementById('master-novi-email');
-    const statusPoruka = document.getElementById('master-status-poruka');
+function promeniRezimSimulatora(rezim) {
+    const panel = document.getElementById('global-preview-panel');
+    const ekran = document.getElementById('live-simulator-screen');
+    const btnMobile = document.getElementById('btn-mode-mobile');
+    const btnPc = document.getElementById('btn-mode-pc');
+    const srednjiPanel = document.querySelector('.main-workspace');
 
-    if (!subInput || !emailInput || !statusPoruka) return;
+    if (!panel || !ekran || !btnMobile || !btnPc) return;
 
-    const subdomain = subInput.value.trim().toLowerCase();
-    const email = emailInput.value.trim();
-
-    if (!subdomain || !email) {
-        statusPoruka.style.color = "#b81d24";
-        statusPoruka.innerText = "❌ Greška: Morate uneti i poddomen i email klijenta!";
-        return;
-    }
-
-    if (!/^[a-z0-9-]+$/.test(subdomain)) {
-        statusPoruka.style.color = "#b81d24";
-        statusPoruka.innerText = "❌ Greška: Poddomen sme da sadrži samo mala slova, brojeve i crticu (-).";
-        return;
-    }
-
-    if (!confirm(`Da li sigurno želiš da lansiraš novi prostor '${subdomain}.selection.rs' za klijenta ${email}?`)) {
-        return;
-    }
-
-    statusPoruka.style.color = "#d4b483";
-    statusPoruka.innerText = "⚡ Pokrećem sisteme... Molimo sačekajte...";
-
-    const noviCistSvemir = {
-        config: {
-            globalSettings: {
-                primaryColor: "#d4b483",
-                secondaryColor: "#d4b483",
-                textColor: "#eeeeee",
-                metaColor: "#a0acb8",
-                backgroundColor: "#0f171e",
-                mainBackgroundImage: "",
-                containerBg: "#1c2a39",
-                fontHeader: "Cinzel",
-                fontQuote: "Cormorant Garamond",
-                fontBody: "Montserrat",
-                projectName: subdomain.toUpperCase(),
-                projectSubtitle: "Dobrodošli u Vaš novi Selection prostor",
-                loaderMusic: "",
-                screensaverMusic: "",
-                screensaverTimeout: 60
-            },
-            hasWarningMessage: true
-        },
-        loader: {
-            warningTitle: "⚠️ UPOZORENJE ⚠️",
-            warningFinalLine: "",
-            warningTexts: ["Pravila korišćenja aplikacije.", "Uživajte u ekspediciji."]
-        },
-        timeline: []
-    };
-
-    const formData = new FormData();
-    formData.append('subdomain', subdomain);
-    formData.append('client_email', email);
-    formData.append('config_data', JSON.stringify(noviCistSvemir, null, 2));
-
-    try {
-        console.log(`🚀 Lansiram novi prostor [${subdomain}] preko Cloudflare Shell-a...`);
-
-        const response = await fetch('https://shell.selection.rs/save_data', {
-            method: 'POST',
-            credentials: "include",
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData
-        });
-
-        const tekstOdgovora = await response.text();
-        console.log("📄 Odgovor sa Cloudflare Shell-a (RAW):", tekstOdgovora);
-
-        let jeUspesno = response.ok;
-        let porukaServera = tekstOdgovora;
-
-        try {
-            const rez = JSON.parse(tekstOdgovora);
-            if (rez.success === true || rez.success === "true") jeUspesno = true;
-            if (rez.error) {
-                jeUspesno = false;
-                porukaServera = rez.error;
-            } else if (rez.message) {
-                porukaServera = rez.message;
-            }
-        } catch (e) { }
-
-        statusPoruka.style.display = "block";
-
-        if (response.ok && (jeUspesno || tekstOdgovora.includes('"success":true') || tekstOdgovora.includes('uspešno sačuvao'))) {
-            statusPoruka.style.color = "#2ecc71";
-            statusPoruka.innerHTML = `🎉 USPEH: Prostor <strong>${subdomain}</strong> je uspešno kreiran u bazi!<br>
-            ℹ️ <em>${porukaServera}</em><br>
-            🔗 Link za klijenta: <a href="https://${subdomain}.selection.rs" target="_blank" style="color:#2ecc71; text-decoration:underline;">${subdomain}.selection.rs</a>`;
-
-            subInput.value = '';
-            emailInput.value = '';
-        } else {
-            statusPoruka.style.color = "#b81d24";
-            statusPoruka.innerText = `❌ Greška servera: ${porukaServera}`;
-        }
-    } catch (error) {
-        console.error("Master Error:", error);
-        statusPoruka.style.display = "block";
-        statusPoruka.style.color = "#b81d24";
-        statusPoruka.innerText = "❌ Greška: Neuspešna komunikacija sa Cloudflare Shell-om.";
-    }
-}
-
-// ==========================================================================
-// 7. SMART DRAG & DROP LOGIC (ZOOM COMPATIBLE)
-// ==========================================================================
-function procitajFajlIUbaciUConfig(file, index) {
-    if (!file || index === null || index === undefined) return;
-    const tip = file.type;
-    const imeFajla = file.name;
-    const previewUrl = URL.createObjectURL(file);
-
-    const finalnaPutanjaSlike = 'images/' + imeFajla;
-    const finalnaPutanjaVideo = 'videos/' + imeFajla;
-    const finalnaPutanjaAudio = 'audio/' + imeFajla;
-
-    const blok = trenutniConfig.timeline[index];
-
-    if (tip.startsWith('image/')) {
-        if (!blok.galleryImages) blok.galleryImages = [];
-        if (!blok._realGalleryNames) blok._realGalleryNames = [];
-        blok.galleryImages.push(previewUrl);
-        blok._realGalleryNames.push(finalnaPutanjaSlike);
-
-        fajloviZaUpload.push({ putanja: finalnaPutanjaSlike, rawFile: file });
-    }
-    else if (tip.startsWith('video/')) {
-        blok.url = previewUrl;
-        blok._realVideoName = imeFajla;
-        blok._realName = finalnaPutanjaVideo;
-
-        fajloviZaUpload.push({ putanja: finalnaPutanjaVideo, rawFile: file });
-    }
-    else if (tip.startsWith('audio/')) {
-        blok.bgMusicUrl = previewUrl;
-        blok._realAudioName = imeFajla;
-        blok._realName = finalnaPutanjaAudio;
-
-        fajloviZaUpload.push({ putanja: finalnaPutanjaAudio, rawFile: file });
-    }
-
-    if (blok.type === 'chapter') {
-        osveziZoomGalerijuEkran(index);
+    if (rezim === 'pc') {
+        if (srednjiPanel) { srednjiPanel.style.flex = "none"; srednjiPanel.style.width = "40%"; }
+        panel.style.flex = "none"; panel.style.width = "60%"; panel.style.maxWidth = "none";
+        ekran.style.borderRadius = "8px"; ekran.style.border = "1px solid var(--admin-border)"; ekran.style.width = "100%"; ekran.style.maxWidth = "800px";
+        btnPc.style.backgroundColor = "var(--admin-accent)"; btnPc.style.color = "var(--admin-sidebar)";
+        btnMobile.style.backgroundColor = "transparent"; btnMobile.style.color = "var(--admin-muted)";
+    } else {
+        if (srednjiPanel) { srednjiPanel.style.flex = "1"; srednjiPanel.style.width = "auto"; }
+        panel.style.flex = "0.75"; panel.style.width = "auto"; panel.style.maxWidth = "360px";
+        ekran.style.borderRadius = "24px"; ekran.style.border = "4px solid #1c2a39"; ekran.style.width = "100%"; ekran.style.maxWidth = "100%";
+        btnMobile.style.backgroundColor = "var(--admin-accent)"; btnMobile.style.color = "var(--admin-sidebar)";
+        btnPc.style.backgroundColor = "transparent"; btnPc.style.color = "var(--admin-muted)";
     }
     osveziZiviPreview();
 }
 
-// ==========================================================================
-// 8. GLOBAL DRAG & DROP HANDLERS (Popunjena verzija)
-// ==========================================================================
 function inicijalizujDragAndDrop() {
-    window.removeEventListener('dragover', globalDragOver);
-    window.removeEventListener('drop', globalDrop);
-
-    window.addEventListener('dragover', globalDragOver);
-    window.addEventListener('drop', globalDrop);
+    window.removeEventListener('dragover', globalDragOver); window.removeEventListener('drop', globalDrop);
+    window.addEventListener('dragover', globalDragOver); window.addEventListener('drop', globalDrop);
 }
-
 function globalDragOver(e) { e.preventDefault(); }
-
 function globalDrop(e) {
     e.preventDefault();
-
     const dropPozadina = e.target.closest('#drop-global-pozadina');
     const dropLoaderMuzika = e.target.closest('#drop-global-loader-muzika');
     const dropSenderMuzika = e.target.closest('#drop-global-ss-muzika');
-    const dropFinaleIkona = e.target.closest('#final-icon-drop-zone');
 
     if (e.dataTransfer.files.length > 0) {
         const fajl = e.dataTransfer.files[0];
         const imeFajla = fajl.name;
 
-        if (dropFinaleIkona) {
-            const ekstenzija = imeFajla.split('.').pop().toLowerCase();
-            if (['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'].includes(ekstenzija)) {
-                document.getElementById('zoom-field-endIconType').value = 'images/' + imeFajla;
-                trenutniConfig.timeline[aktivniIndex]._realIconName = imeFajla;
-                fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
-                document.getElementById('final-icon-status').innerText = `Učitano: ${imeFajla}`;
-                osveziZiviPreview();
-            } else {
-                alert("Molimo te spusti validan slikovni fajl.");
-            }
-            return;
-        }
-
         if (dropPozadina) {
-            const previewUrl = URL.createObjectURL(fajl);
             document.getElementById('input-slika-pozadina').value = 'images/' + imeFajla;
             document.getElementById('label-global-pozadina').innerText = 'images/' + imeFajla;
             fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
-            trenutniConfig.config.globalSettings._tempBgPreview = previewUrl;
+            trenutniConfig.config.globalSettings._tempBgPreview = URL.createObjectURL(fajl);
             osveziZiviPreview();
-            return;
         }
-
-        if (dropLoaderMuzika) {
+        else if (dropLoaderMuzika) {
             document.getElementById('input-loader-muzika').value = 'audio/' + imeFajla;
             document.getElementById('label-global-loader-muzika').innerText = 'audio/' + imeFajla;
             fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
-            osveziZiviPreview();
-            return;
-        }
-
-        if (dropSenderMuzika) {
-            document.getElementById('input-ss-muzika').value = 'audio/' + imeFajla;
-            document.getElementById('label-global-ss-muzika').innerText = 'audio/' + imeFajla;
-            fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
-            osveziZiviPreview();
-            return;
-        }
-
-        const card = e.target.closest('.cms-block-card');
-        if (card && !isEditingCore) {
-            const idx = parseInt(card.getAttribute('data-index'));
-            procitajFajlIUbaciUConfig(fajl, idx);
-            renderujTimelineBlokove();
-        }
-        else if (document.getElementById('zoom-editor-overlay').style.display === 'flex' && aktivniIndex !== null) {
-            procitajFajlIUbaciUConfig(fajl, aktivniIndex);
-            if (aktivniIndex !== -1) osveziZoomGalerijuEkran(aktivniIndex);
         }
     }
 }
