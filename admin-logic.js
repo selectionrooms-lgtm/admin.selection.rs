@@ -19,30 +19,48 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==========================================================================
 // 1. IDENTITY & KERNEL INITIALIZATION (Fixed Race Condition & Fallback)
 // ==========================================================================
+// admin-logic.js — Nova sinhronizovana inicijalizacija
+
 async function proveriKorisnikaIUpravljajInterfejsom() {
     const masterBlok = document.getElementById('master-admin-blok');
     const badge = document.getElementById('user-session-badge');
 
-    // Prvo sakrij blok dok ne utvrdimo ko je korisnik
     if (masterBlok) masterBlok.style.display = "none";
 
     try {
-        console.log("🔒 Proveravam mrežni identitet korisnika sa Capability Kernela...");
+        console.log("🪙 Korak 1: Pokrećem Token Exchange sa lokalnog /issue_session...");
 
-        // 🚀 OVDE IDE ČISTI FETCH SA AKREDITIVIMA (CREDENTIALS: "INCLUDE")
+        // 1. Uzimamo Selection Token sa admin strane (gde je Access aktivan)
+        // Pošto gađamo isti domen, relativna putanja radi bez CORS muka!
+        const tokenRes = await fetch("/issue_session", { credentials: "include" });
+        if (!tokenRes.ok) throw new Error("Cloudflare Access odbio izdavanje lokalne sesije.");
+
+        const tokenData = await tokenRes.json();
+        if (!tokenData.token) throw new Error("Token kovnica je vratila prazan ključ.");
+
+        // Skladištimo ga u LocalStorage pod jedinstvenim imenom
+        localStorage.setItem('selection_session_token', tokenData.token);
+        console.log("✅ Korak 1 uspešan: Selection Token bezbedno zaključan u LocalStorage.");
+
+        console.log("📡 Korak 2: Autentifikujem se na javni shell sa novim Bearer tokenom...");
+
+        // 2. Sada idemo na javni shell, ali u Authorization zaglavlju nosimo naš token!
         const res = await fetch(`${API_BASE}/get_user`, {
             method: 'GET',
-            credentials: "include" // 🔒 Tera pretraživač da prosledi Access sesiju preko poddomena ka shell-u
+            headers: {
+                'Authorization': `Bearer ${tokenData.token}`,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
 
-        if (!res.ok) throw new Error(`Server odgovorio sa statusom: ${res.status}`);
+        if (!res.ok) throw new Error(`Shell odbio Bearer sesiju sa statusom: ${res.status}`);
 
         const userData = await res.json();
-        console.log("👤 Podaci o sesiji uspešno povučeni:", userData);
+        console.log("👤 Korak 2 uspešan! Podaci o korisniku povučeni:", userData);
 
         if (userData.error) throw new Error(userData.error);
 
-        // Postavljanje vizuelnog bedža sa emailom
+        // Renderovanje interfejsa na osnovu podataka iz našeg tokena
         if (badge) {
             const ikonica = userData.role === "master" ? "👑" : "🔒";
             badge.innerHTML = `${ikonica} <span style="color: var(--admin-accent); font-weight: 600;">${userData.email}</span>`;
@@ -51,27 +69,18 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 
         localStorage.setItem('userEmail', userData.email);
 
-        // 🪙 Razmena zaštićene sesije za brzi stateless Selection Bearer Token
-        const token = await mintujSesioniToken();
-        if (!token) console.warn("⚠️ Nismo dobili Selection token, proveri JWT_SECRET na radniku.");
-
-        // Rutiranje interfejsa na osnovu uloge iz baze
         if (userData.role === "master") {
-            if (masterBlok) masterBlok.style.display = "block"; // Prikaži master panel
-            console.log("👑 Dobrodošao, Master Admin. Sistemi za lansiranje su spremni.");
-
+            if (masterBlok) masterBlok.style.display = "block";
             localStorage.setItem('userSubdomain', 'admin');
             ucitajConfig("admin");
         } else {
             if (masterBlok) masterBlok.style.display = "none";
-
-            console.log(`🔒 Logovan klijent sa adresom: ${userData.email}`);
             localStorage.setItem('userSubdomain', userData.subdomain);
             ucitajConfig(userData.subdomain);
         }
 
     } catch (err) {
-        console.error("❌ Greška pri proveri korisnika. Aktiviram bezbednosni Master Fallback za lokalni rad...", err);
+        console.error("❌ Bootstrap krah. Aktiviram lokalni Devel Fallback...", err);
 
         if (badge) {
             badge.innerHTML = `⚠️ <span style="color: #d4b483; font-weight: 600;">Lokalni Režim (Devel)</span>`;
