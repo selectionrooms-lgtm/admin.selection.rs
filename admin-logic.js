@@ -31,7 +31,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 
         const res = await fetch(`${API_BASE}/get_user`, {
             method: 'GET',
-            credentials: "include"
+            credentials: "include" // 🔒 Ovo tera pretraživač da pošalje kolačiće na shell.selection.rs
         });
 
         if (!res.ok) throw new Error(`Server odgovorio sa statusom: ${res.status}`);
