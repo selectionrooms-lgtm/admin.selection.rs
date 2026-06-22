@@ -797,20 +797,51 @@ async function sacuvajSveNaServer(akcija = 'save') {
     }
 }
 
-// Preveži staro onclick dugme iz HTML-a da podržava novi dvo-stepeni model
+// ==========================================================================
+// 5.1 PREVIEW PANEL BUTTON INJECTION (Desno ispod simulatora)
+// ==========================================================================
 function inicijalizujDugmadZaSnimanje() {
+    // 1. Prvo uklanjamo staro dugme iz sidebara (ako postoji) da ne pravi dupli prostor
     const staraDugmad = document.querySelectorAll('.btn-save');
     staraDugmad.forEach(btn => {
-        if (btn.innerText.includes("Sačuvaj i Objavi Sve") || btn.getAttribute('onclick')?.includes('sacuvajSveNaServer')) {
-            btn.parentElement.innerHTML = `
-                <div style="display:flex; flex-direction:column; gap:8px; width:100%; margin-top:15px;">
-                    <button type="button" class="btn-save" onclick="sacuvajSveNaServer('save')" style="background:#1c2a39; border:1px solid rgba(255,255,255,0.1); color:#fff; width:100%; cursor:pointer;"><i class="fa-solid fa-floppy-disk"></i> Sačuvaj u radni Draft</button>
-                    <button type="button" class="btn-save" onclick="sacuvajSveNaServer('publish')" style="width:100%; cursor:pointer;"><i class="fa-solid fa-rocket"></i> Lansiraj i Objavi Uživo</button>
-                </div>
-            `;
+        if (btn && btn.innerText.includes("Sačuvaj i Objavi Sve")) {
+            btn.remove();
         }
     });
+
+    // 2. Pronalazimo globalni desni panel gde stoji Live Preview simulator
+    const previewPanel = document.getElementById('global-preview-panel');
+    if (!previewPanel) return;
+
+    // Proveravamo da li smo već ubacili našu novu zonu sa dugmićima da je ne dupliramo
+    if (document.getElementById('kernel-save-wrapper-right')) return;
+
+    // 3. Pravimo čist, luksuzan kontejner za naša dva V18.1 dugmeta
+    const kontrolnaDugmadDesno = document.createElement('div');
+    kontrolnaDugmadDesno.id = 'kernel-save-wrapper-right';
+
+    // Luksuzan stil koji se savršeno uklapa u tvoj Selection tamni režim
+    kontrolnaDugmadDesno.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    `;
+
+    kontrolnaDugmadDesno.innerHTML = `
+        <button type="button" class="btn-save" onclick="sacuvajSveNaServer('save')" style="background: #1c2a39; border: 1px solid rgba(255,255,255,0.1); color: #fff; width: 100%; cursor: pointer; padding: 12px; border-radius: 6px; font-family: 'Montserrat', sans-serif; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 500;"><i class="fa-solid fa-floppy-disk"></i> Sačuvaj u radni Draft</button>
+        <button type="button" class="btn-save" onclick="sacuvajSveNaServer('publish')" style="width: 100%; cursor: pointer; padding: 12px; border-radius: 6px; background: var(--admin-accent); color: var(--admin-sidebar); font-family: 'Montserrat', sans-serif; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; border: none;"><i class="fa-solid fa-rocket"></i> Lansiraj i Objavi Uživo</button>
+    `;
+
+    // 4. Ubacujemo dugmad na samo dno desnog panela (ispod simulatora)
+    previewPanel.appendChild(kontrolnaDugmadDesno);
+    console.log("🎯 Savršeno sinhronizovano: Dugmad za čuvanje prebačena dole desno.");
 }
+
+// Pokreni nakon stabilizacije DOM-a
 setTimeout(inicijalizujDugmadZaSnimanje, 500);
 
 // ==========================================================================
