@@ -687,7 +687,7 @@ function osveziZiviPreview() {
 function sinhronizujZoomSaPreviewom() { osveziZiviPreview(); }
 
 // ==========================================================================
-// 5. DATA SAVE & EDGE DEPLOYMENT PIPELINE (V18.0 Synchronization Engine)
+// 5. DATA SAVE & EDGE DEPLOYMENT PIPELINE (V18.1 Kernel-Sync Engine)
 // ==========================================================================
 async function sacuvajSveNaServer(akcija = 'save') {
     const porukaUpozorenja = akcija === 'publish'
@@ -697,7 +697,7 @@ async function sacuvajSveNaServer(akcija = 'save') {
     if (!confirm(porukaUpozorenja)) return;
     if (!trenutniConfig) return;
 
-    // Čišćenje privremenih blob linkova pre slanja kako baza ostala kristalno čista
+    // 🧼 Čišćenje privremenih lokalnih blob linkova pre slanja (Baza mora ostati kristalno čista!)
     if (trenutniConfig.timeline) {
         trenutniConfig.timeline.forEach(blok => {
             if (blok.url && blok.url.startsWith('blob:')) blok.url = blok._realName || '';
@@ -713,6 +713,7 @@ async function sacuvajSveNaServer(akcija = 'save') {
         });
     }
 
+    // 🧱 Sinhronizacija objekta sa V18.1 standardom (R2 mapiranje relativnih staza)
     const cistConfigZaExport = {
         config: {
             globalSettings: {
@@ -721,12 +722,12 @@ async function sacuvajSveNaServer(akcija = 'save') {
                 textColor: document.getElementById('color-p').value,
                 backgroundColor: document.getElementById('input-boja-pozadina').value,
                 containerBg: document.getElementById('input-boja-kontejner').value,
-                mainBackgroundImage: document.getElementById('input-slika-pozadina').value,
+                mainBackgroundImage: document.getElementById('input-slika-pozadina').value.replace(/^\//, ''), // skidamo kofere ako ih ima
                 fontHeader: document.getElementById('font-h1').value,
                 fontQuote: document.getElementById('font-h2').value,
                 fontBody: document.getElementById('font-p').value,
-                loaderMusic: document.getElementById('input-loader-muzika').value,
-                screensaverMusic: document.getElementById('input-ss-muzika').value,
+                loaderMusic: document.getElementById('input-loader-muzika').value.replace(/^\//, ''),
+                screensaverMusic: document.getElementById('input-ss-muzika').value.replace(/^\//, ''),
                 screensaverTimeout: parseInt(document.getElementById('input-ss-tajmer').value) || 60,
                 projectName: trenutniConfig.config?.globalSettings?.projectName || "Selection",
                 projectSubtitle: trenutniConfig.config?.globalSettings?.projectSubtitle || ""
@@ -742,8 +743,9 @@ async function sacuvajSveNaServer(akcija = 'save') {
     };
 
     const formData = new FormData();
-    formData.append('config_data', JSON.stringify(cistConfigZaExport, null, 2));
-    formData.append('action', akcija); // 🔑 Ključno za naš V18 Capability Kernel!
+    // 🔑 Šaljemo čist unificiran JSON koji mrežni ruter pretvara u Draft ili Live u zavisnosti od akcije!
+    formData.append('config_data', JSON.stringify(cistConfigZaExport));
+    formData.append('action', akcija);
 
     const aktivniSubdomenZaSnimanje = localStorage.getItem('userSubdomain') || 'canvas';
     formData.append('subdomain', aktivniSubdomenZaSnimanje);
@@ -751,7 +753,7 @@ async function sacuvajSveNaServer(akcija = 'save') {
     const trenutniEmail = localStorage.getItem('userEmail');
     if (trenutniEmail) formData.append('client_email', trenutniEmail);
 
-    // Pakujemo sve dodate binarne fajlove u Form Data paket za strimovanje u R2
+    // 📦 BINARY PIPELINE: Pakujemo sve lokalno ubačene datoteke spremne za strimovanje u Cloudflare R2
     if (fajloviZaUpload && fajloviZaUpload.length > 0) {
         fajloviZaUpload.forEach((item, index) => {
             formData.append(`file_${index}`, item.rawFile, item.putanja);
@@ -759,7 +761,7 @@ async function sacuvajSveNaServer(akcija = 'save') {
     }
 
     try {
-        console.log(`🚀 Šaljem paket [Akcija: ${akcija.toUpperCase()}] na Edge Kernel...`);
+        console.log(`🚀 Strimujem mrežni payload [Akcija: ${akcija.toUpperCase()}] na Edge R2/KV Kernel...`);
 
         const response = await fetch(`${API_BASE}/save_data`, {
             method: 'POST',
@@ -770,8 +772,8 @@ async function sacuvajSveNaServer(akcija = 'save') {
 
         const tekstOdgovora = await response.text();
         if (response.ok) {
-            fajloviZaUpload = [];
-            alert(akcija === 'publish' ? "🎉 USPEŠNO LANSERANO: Izmene su aktivne na celom svetu!" : "💾 USPEŠNO SAČUVANO: Draft verzija je bezbedno zaključana.");
+            fajloviZaUpload = []; // Praznimo lokalni medijski bafer nakon uspešnog R2 urezivanja
+            alert(akcija === 'publish' ? "🎉 USPEŠNO LANSIRANO: Sajt je osvežen i aktivan na globalnoj mreži!" : "💾 USPEŠNO SAČUVANO: Radna verzija je bezbedno zaključana u Draft.");
             location.reload();
         } else {
             let porukaZaPrikaz = tekstOdgovora;
@@ -779,11 +781,11 @@ async function sacuvajSveNaServer(akcija = 'save') {
                 const jsonGreska = JSON.parse(tekstOdgovora);
                 if (jsonGreska.error) porukaZaPrikaz = jsonGreska.error;
             } catch (e) { }
-            alert("❌ Kernel odbio zahtev:\n" + porukaZaPrikaz);
+            alert("🔒 Gvozdeni Kernel odbio zahtev:\n" + porukaZaPrikaz);
         }
     } catch (error) {
-        console.error("❌ Greška u komunikaciji:", error);
-        alert("❌ Prekid mrežne komunikacije sa Edge Kernelom.");
+        console.error("❌ Prekid na mrežnoj magistrali:", error);
+        alert("❌ Prekid komunikacije sa Edge serverom. Proverite internet konekciju.");
     }
 }
 
@@ -791,11 +793,11 @@ async function sacuvajSveNaServer(akcija = 'save') {
 function inicijalizujDugmadZaSnimanje() {
     const staraDugmad = document.querySelectorAll('.btn-save');
     staraDugmad.forEach(btn => {
-        if (btn.innerText.includes("Sačuvaj i Objavi Sve")) {
-            btn.outerHTML = `
-                <div style="display:flex; flex-direction:column; gap:8px; margin-top:15px;">
-                    <button class="btn-save" onclick="sacuvajSveNaServer('save')" style="background:#1c2a39; border:1px solid rgba(255,255,255,0.1); color:#fff;"><i class="fa-solid fa-floppy-disk"></i> Snimi u radni Draft</button>
-                    <button class="btn-save" onclick="sacuvajSveNaServer('publish')"><i class="fa-solid fa-rocket"></i> Lansiraj i Objavi Uživo</button>
+        if (btn.innerText.includes("Sačuvaj i Objavi Sve") || btn.getAttribute('onclick')?.includes('sacuvajSveNaServer')) {
+            btn.parentElement.innerHTML = `
+                <div style="display:flex; flex-direction:column; gap:8px; width:100%; margin-top:15px;">
+                    <button type="button" class="btn-save" onclick="sacuvajSveNaServer('save')" style="background:#1c2a39; border:1px solid rgba(255,255,255,0.1); color:#fff; width:100%; cursor:pointer;"><i class="fa-solid fa-floppy-disk"></i> Sačuvaj u radni Draft</button>
+                    <button type="button" class="btn-save" onclick="sacuvajSveNaServer('publish')" style="width:100%; cursor:pointer;"><i class="fa-solid fa-rocket"></i> Lansiraj i Objavi Uživo</button>
                 </div>
             `;
         }
