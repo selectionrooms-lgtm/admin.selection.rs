@@ -48,6 +48,9 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         }
 
         localStorage.setItem('userEmail', userData.email);
+        // DODAJ OVO:
+        const token = await mintujSesioniToken();
+        if (!token) console.warn("⚠️ Nismo dobili token, možda sesija nije prošla kroz Access?");
 
         if (userData.role === "master") {
             if (masterBlok) masterBlok.style.display = "block"; // Prikaži master panel
@@ -175,6 +178,29 @@ function osveziCoreSummaryTekst() {
         const sub = trenutniConfig.config.globalSettings.projectSubtitle || '';
         el.innerHTML = `Aktivni projekat: <strong>${name}</strong> — <em>"${sub}"</em>`;
     }
+}
+// 🪙 MINTING ENGINE: Razmena Access sesije za statični Bearer Token
+async function mintujSesioniToken() {
+    console.log("🪙 Pokrećem token exchange...");
+    try {
+        // Pozivamo naš novi endpoint koji radi samo unutar Access granice
+        const res = await fetch("/auth/mint", {
+            method: 'GET',
+            credentials: "include"
+        });
+
+        if (!res.ok) throw new Error("Neuspešan mint tokena");
+
+        const data = await res.json();
+        if (data.token) {
+            localStorage.setItem('selection_session_token', data.token);
+            console.log("✅ Token uspešno mintovan i sačuvan.");
+            return data.token;
+        }
+    } catch (err) {
+        console.error("❌ Greška pri mintovanju:", err);
+    }
+    return null;
 }
 
 // ==========================================================================
@@ -771,10 +797,14 @@ async function sacuvajSveNaServer(akcija = 'save') {
     try {
         console.log(`🚀 Strimujem mrežni payload [Akcija: ${akcija.toUpperCase()}] na Edge R2/KV Kernel...`);
 
+        const token = localStorage.getItem('selection_session_token');
+
         const response = await fetch(`${API_BASE}/save_data`, {
             method: 'POST',
-            credentials: "include",
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            headers: {
+                'Authorization': token ? `Bearer ${token}` : '',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
             body: formData
         });
 
