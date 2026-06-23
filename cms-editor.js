@@ -6,6 +6,63 @@ let trenutniConfig = null;
 let fajloviZaUpload = [];
 window.isEditingCore = false;
 
+// 👑 STRUČNI FIX: Deklarišemo funkciju odmah na vrhu modula da bude stopostotno bezbedna i vidljiva
+export function okiniLokalniKlikFajla(tipMetmete) {
+    const input = document.createElement('input');
+    input.type = 'file';
+
+    if (tipMetmete === 'slika' || tipMetmete === 'gallery-images') input.accept = 'image/*';
+    else if (tipMetmete === 'video-file') input.accept = 'video/mp4';
+    else input.accept = 'audio/mp3';
+
+    if (tipMetmete === 'gallery-images') input.multiple = true;
+
+    input.onchange = (e) => {
+        if (e.target.files.length === 0) return;
+        Array.from(e.target.files).forEach(fajl => {
+            const imeFajla = fajl.name;
+            const previewUrl = URL.createObjectURL(fajl);
+
+            if (tipMetmete === 'slika') {
+                document.getElementById('input-slika-pozadina').value = 'images/' + imeFajla;
+                document.getElementById('label-global-pozadina').innerText = 'images/' + imeFajla;
+                fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
+                trenutniConfig.config.globalSettings._tempBgPreview = previewUrl;
+            } else if (tipMetmete === 'loader-mp3') {
+                document.getElementById('input-loader-muzika').value = 'audio/' + imeFajla;
+                document.getElementById('label-global-loader-muzika').innerText = 'audio/' + imeFajla;
+                fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
+            } else if (tipMetmete === 'ss-mp3') {
+                document.getElementById('input-ss-muzika').value = 'audio/' + imeFajla;
+                document.getElementById('label-global-ss-muzika').innerText = 'audio/' + imeFajla;
+                fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
+            } else if (tipMetmete === 'video-file' && window.aktivniIndex !== null) {
+                const blok = trenutniConfig.timeline[window.aktivniIndex];
+                blok.url = previewUrl;
+                blok._realVideoName = imeFajla;
+                blok._realName = 'videos/' + imeFajla;
+                fajloviZaUpload.push({ putanja: 'videos/' + imeFajla, rawFile: fajl });
+                if (document.getElementById('zoom-video-display-name')) document.getElementById('zoom-video-display-name').innerText = imeFajla;
+            } else if (tipMetmete === 'block-audio' && window.aktivniIndex !== null) {
+                const blok = trenutniConfig.timeline[window.aktivniIndex];
+                blok.bgMusicUrl = previewUrl;
+                blok._realAudioName = imeFajla;
+                blok._realName = 'audio/' + imeFajla;
+                fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
+                if (document.getElementById('zoom-audio-display-name')) document.getElementById('zoom-audio-display-name').innerText = `Track: ${imeFajla}`;
+            } else if (tipMetmete === 'gallery-images' && window.aktivniIndex !== null) {
+                const blok = trenutniConfig.timeline[window.aktivniIndex];
+                if (!blok.galleryImages) blok.galleryImages = [];
+                blok.galleryImages.push(previewUrl);
+                fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
+                ukloniSlikuIzGalerijeZoom(-1);
+            }
+        });
+        osveziZiviPreview(trenutniConfig);
+    };
+    input.click();
+}
+
 export function initCmsEditor(configData) {
     trenutniConfig = configData;
     window.trenutniConfig = configData;
@@ -21,7 +78,9 @@ export function initCmsEditor(configData) {
     window.getAktivniIndex = () => window.aktivniIndex;
     window.okiniPreviewUpdate = () => osveziZiviPreview(trenutniConfig);
     window.sinhronizujZoomSaPreviewom = () => osveziZiviPreview(trenutniConfig);
-    window.okiniLokalniKlikFajla = okiniLokalniKlikFajla;
+
+    // 🛡️ TVOJA ABSOLUTNA ZAŠTITA: Osiguravamo prozor
+    window.okiniLokalniKlikFajla = typeof okiniLokalniKlikFajla === 'function' ? okiniLokalniKlikFajla : () => { };
 
     renderujTimelineBlokove();
     popuniGlobalneStilove();
@@ -320,7 +379,6 @@ export function otvoriZoomEditorZaBlok(index) {
     overlay.style.display = 'flex';
 }
 
-export function otvoriCoreZoomEditor() { otvoriZoomEditorZaBlok(0); }
 export function zatvoriZoomEditor() { document.getElementById('zoom-editor-overlay').style.display = 'none'; window.isEditingCore = false; renderujTimelineBlokove(); }
 
 export function potvrdiIZatvoriZoom() {
@@ -376,7 +434,6 @@ export function inicijalizujDragAndDrop() {
 
     let dragIzvorIndex = null;
 
-    // 🔥 GVOZDENO RAZDVAJANJE OD KLIKOVA KROZ stopPropagation()
     container.addEventListener('dragstart', (e) => {
         e.stopPropagation();
         const card = e.target.closest('.cms-block-card');
@@ -407,7 +464,7 @@ export function inicijalizujDragAndDrop() {
 
     container.addEventListener('drop', (e) => {
         e.preventDefault();
-        e.stopPropagation(); // Stopiramo curenje događaja u ruter klikova
+        e.stopPropagation();
 
         const card = e.target.closest('.cms-block-card');
         if (!card) return;
@@ -439,5 +496,122 @@ export function inicijalizujDragAndDrop() {
     });
 }
 
-export function ukloniSlikuIzGalerijeZoom(imgIndex) { if (window.aktivniIndex !== null && window.aktivniIndex !== -1) { const blok = trenutniConfig.timeline[window.aktivniIndex]; if (imgIndex !== -1) { blok.galleryImages.splice(imgIndex, 1); } let slikeHtml = ''; blok.galleryImages.forEach((imgSrc, i) => { slikeHtml += `<div class="zoom-thumb" style="display:inline-block; position:relative; margin:5px; width:80px; height:80px; border:1px solid var(--admin-border); border-radius:6px; overflow:hidden;"><img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover;"><button type="button" onclick="ukloniSlikuIzGalerijeZoom(${i})" style="position:absolute; top:2px; right:2px; background:#b81d24; color:#fff; border:none; border-radius:50%; width:18px; height:18px; cursor:pointer; font-size:10px; font-weight:700;">×</button></div>`; }); if (document.getElementById('zoom-gallery-container')) { document.getElementById('zoom-gallery-container').innerHTML = slikeHtml; } osveziZiviPreview(trenutniConfig); } }
-export async function sacuvajSveNaServer(akcija = 'save') { const poruka = akcija === 'publish' ? "Launch CHANGES LIVE?" : "Commit alterations to Draft?"; if (!confirm(poruka)) return; if (trenutniConfig.timeline) { trenutniConfig.timeline.forEach(blok => { if (blok.url && blok.url.startsWith('blob:')) blok.url = blok._realName || ''; if (blok.bgMusicUrl && blok.bgMusicUrl.startsWith('blob:')) blok.bgMusicUrl = blok._realName || ''; }); } const cistConfigZaExport = { config: { globalSettings: { primaryColor: document.getElementById('color-h1').value, secondaryColor: document.getElementById('color-h2').value, textColor: document.getElementById('color-p').value, backgroundColor: document.getElementById('input-boja-pozadina').value, containerBg: document.getElementById('input-boja-kontejner').value, mainBackgroundImage: document.getElementById('input-slika-pozadina').value.replace(/^\//, ''), fontHeader: document.getElementById('font-h1').value, fontQuote: document.getElementById('font-h2').value, fontBody: document.getElementById('font-p').value, loaderMusic: document.getElementById('input-loader-muzika').value.replace(/^\//, ''), screensaverMusic: document.getElementById('input-ss-muzika').value.replace(/^\//, ''), screensaverTimeout: parseInt(document.getElementById('input-ss-tajmer').value) || 60, projectName: trenutniConfig.config?.globalSettings?.projectName || "Selection", projectSubtitle: trenutniConfig.config?.globalSettings?.projectSubtitle || "" }, hasWarningMessage: trenutniConfig.config?.hasWarningMessage ?? true }, loader: { warningTitle: document.getElementById('zoom-core-warningTitle')?.value || "⚠️ NOTICE ⚠️", warningFinalLine: "", warningTexts: trenutniConfig.loader?.warningTexts || [] }, timeline: trenutniConfig.timeline || [] }; const formData = new FormData(); formData.append('config_data', JSON.stringify(cistConfigZaExport)); formData.append('action', akcija); formData.append('subdomain', window.currentSubdomain); if (fajloviZaUpload.length > 0) { fajloviZaUpload.forEach((item, idx) => { formData.append(`file_${idx}`, item.rawFile, item.putanja); }); } try { const token = localStorage.getItem('selection_session_token'); const response = await fetch(`${API_BASE}/save_data`, { method: 'POST', headers: { 'Authorization': token ? `Bearer ${token}` : '' }, body: formData }); if (response.ok) { alert("🎉 System Synced to Edge!"); location.reload(); } else { alert("🔒 Sync Denied."); } } catch (e) { alert("❌ Network connection lost."); } }
+/* ==========================================================================
+   💾 SYSTEM PERSISTENCE & MEDIA RECONCILIATION LAYER (Structured)
+   ========================================================================== */
+
+/**
+ * Hirurško uklanjanje specifične slike iz galerijskog albuma unutar Zoom prozora
+ */
+export function ukloniSlikuIzGalerijeZoom(imgIndex) {
+    if (window.aktivniIndex === null || window.aktivniIndex === -1) return;
+
+    const blok = trenutniConfig.timeline[window.aktivniIndex];
+    if (!blok || !blok.galleryImages) return;
+
+    // Ako indeks nije sistemski osvežavajući marker (-1), vršimo brisanje iz niza
+    if (imgIndex !== -1) {
+        blok.galleryImages.splice(imgIndex, 1);
+    }
+
+    // Ponovno generisanje i renderovanje čistog HTML-a za thumbnail galeriju
+    let slikeHtml = '';
+    blok.galleryImages.forEach((imgSrc, i) => {
+        slikeHtml += `
+            <div class="zoom-thumb" style="display:inline-block; position:relative; margin:5px; width:80px; height:80px; border:1px solid var(--admin-border); border-radius:6px; overflow:hidden;">
+                <img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover;">
+                <button type="button" onclick="ukloniSlikuIzGalerijeZoom(${i})" style="position:absolute; top:2px; right:2px; background:#b81d24; color:#fff; border:none; border-radius:50%; width:18px; height:18px; cursor:pointer; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;">×</button>
+            </div>
+        `;
+    });
+
+    const galleryContainer = document.getElementById('zoom-gallery-container');
+    if (galleryContainer) {
+        galleryContainer.innerHTML = slikeHtml;
+    }
+
+    // Instantna sinhronizacija i osvežavanje živog preview panela sa desne strane
+    osveziZiviPreview(trenutniConfig);
+}
+
+/**
+ * Glavna asinhrona magistrala za pakovanje i slanje celokupne konfiguracije na Cloudflare Edge
+ */
+export async function sacuvajSveNaServer(akcija = 'save') {
+    const poruka = akcija === 'publish' ? "Launch CHANGES LIVE?" : "Commit alterations to Draft?";
+    if (!confirm(poruka)) return;
+
+    // Čišćenje lokalnih blob url-ova pre slanja kako baza na serveru ne bi čuvala privremene linkove
+    if (trenutniConfig.timeline) {
+        trenutniConfig.timeline.forEach(blok => {
+            if (blok.url && blok.url.startsWith('blob:')) {
+                blok.url = blok._realName || '';
+            }
+            if (blok.bgMusicUrl && blok.bgMusicUrl.startsWith('blob:')) {
+                blok.bgMusicUrl = blok._realName || '';
+            }
+        });
+    }
+
+    // Formiranje čistog eksportnog objekta prema strogoj šemi sistema
+    const cistConfigZaExport = {
+        config: {
+            globalSettings: {
+                primaryColor: document.getElementById('color-h1').value,
+                secondaryColor: document.getElementById('color-h2').value,
+                textColor: document.getElementById('color-p').value,
+                backgroundColor: document.getElementById('input-boja-pozadina').value,
+                containerBg: document.getElementById('input-boja-kontejner').value,
+                mainBackgroundImage: document.getElementById('input-slika-pozadina').value.replace(/^\//, ''),
+                fontHeader: document.getElementById('font-h1').value,
+                fontQuote: document.getElementById('font-h2').value,
+                fontBody: document.getElementById('font-p').value,
+                loaderMusic: document.getElementById('input-loader-muzika').value.replace(/^\//, ''),
+                screensaverMusic: document.getElementById('input-ss-muzika').value.replace(/^\//, ''),
+                screensaverTimeout: parseInt(document.getElementById('input-ss-tajmer').value) || 60,
+                projectName: trenutniConfig.config?.globalSettings?.projectName || "Selection",
+                projectSubtitle: trenutniConfig.config?.globalSettings?.projectSubtitle || ""
+            },
+            hasWarningMessage: trenutniConfig.config?.hasWarningMessage ?? true
+        },
+        loader: {
+            warningTitle: document.getElementById('zoom-core-warningTitle')?.value || "⚠️ NOTICE ⚠️",
+            warningFinalLine: "",
+            warningTexts: trenutniConfig.loader?.warningTexts || []
+        },
+        timeline: trenutniConfig.timeline || []
+    };
+
+    // Pakovanje podataka i sirovih fajlova u višenamenski FormData paket
+    const formData = new FormData();
+    formData.append('config_data', JSON.stringify(cistConfigZaExport));
+    formData.append('action', akcija);
+    formData.append('subdomain', window.currentSubdomain);
+
+    if (fajloviZaUpload.length > 0) {
+        fajloviZaUpload.forEach((item, idx) => {
+            formData.append(`file_${idx}`, item.rawFile, item.putanja);
+        });
+    }
+
+    try {
+        const token = localStorage.getItem('selection_session_token');
+        const response = await fetch(`${API_BASE}/save_data`, {
+            method: 'POST',
+            headers: {
+                'Authorization': token ? `Bearer ${token}` : ''
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            alert("🎉 System Synced to Edge!");
+            location.reload();
+        } else {
+            alert("🔒 Sync Denied.");
+        }
+    } catch (e) {
+        console.error("⛔ Slanje na server je prekinuto:", e);
+        alert("❌ Network connection lost.");
+    }
+}
