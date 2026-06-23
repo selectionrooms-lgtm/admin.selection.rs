@@ -1009,6 +1009,9 @@ function okiniGlobalniKlikFajla(tipMetmete) {
 // ==========================================================================
 // 7. CONTROL PLANE: PROVISIONING NEW STANDS (Master Only - Fixed Auth)
 // ==========================================================================
+// ==========================================================================
+// 7. CONTROL PLANE: PROVISIONING NEW STANDS (Master Only - English + Auth Fix)
+// ==========================================================================
 async function masterKreirajNovogKorisnika() {
     const subInput = document.getElementById('master-novi-subdomain');
     const emailInput = document.getElementById('master-novi-email');
@@ -1037,15 +1040,14 @@ async function masterKreirajNovogKorisnika() {
     statusPoruka.innerText = "⚡ Booting systems and mapping Edge slots...";
 
     try {
-        // 🎯 GVOZDENI POPRAVAK: Izvlačimo tvoj potpisani token iz lokalne memorije
+        // 🎯 GVOZDENI FIX: Izvlačimo tvoj potpisani master token iz lokalne memorije
         const token = localStorage.getItem('selection_session_token');
 
         const response = await fetch(`${API_BASE}/provision_user`, {
             method: 'POST',
-            // Privremeni bypass za unakrsne sesije—čistimo kolačiće, idemo isključivo preko Bearera
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': token ? `Bearer ${token}` : '' // <-- OVDE JE BIO KVAR! Sada šaljemo tvoj identitet
+                'Authorization': token ? `Bearer ${token}` : '' // Šaljemo tvoj identitet na Edge!
             },
             body: JSON.stringify({ email: email, subdomain: subdomain, role: "admin" })
         });
