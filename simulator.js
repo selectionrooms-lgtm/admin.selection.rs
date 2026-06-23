@@ -1,5 +1,5 @@
 /* ==========================================================================
-   📺 SELECTION CANVAS — REAL-TIME PREVIEW ENGINE (Isolated Container V2)
+   📺 SELECTION CANVAS — REAL-TIME PREVIEW ENGINE (Original Core V1)
    ========================================================================== */
 
 export function osveziZiviPreview(trenutniConfigParam) {
@@ -7,53 +7,55 @@ export function osveziZiviPreview(trenutniConfigParam) {
     if (!trenutniConfig) return;
 
     try {
-        // 🎨 Povlačenje aktivne palete boja iz administrativne konzole
+        // 🎨 Dinamičke boje iz konzole sa gvozdenim fallback-om na tvoju paletu
         const bojaPozadine = document.getElementById('input-boja-pozadina')?.value || '#0f171e';
         const bojaKontejnera = document.getElementById('input-boja-kontejner')?.value || '#1c2a39';
         const bojaH1 = document.getElementById('color-h1')?.value || '#d4b483';
         const bojaH2 = document.getElementById('color-h2')?.value || '#d4b483';
         const bojaP = document.getElementById('color-p')?.value || '#eeeeee';
 
-        // ✍️ Povlačenje tipografskih matrica
+        // ✍️ Tipografija
         const fontH1 = document.getElementById('font-h1')?.value || 'Cinzel';
         const fontH2 = document.getElementById('font-h2')?.value || 'Cormorant Garamond';
         const fontP = document.getElementById('font-p')?.value || 'Montserrat';
 
-        // 🎯 TARGET SELEKTORI: Selektujemo izolovanu kapsulu ekrana
-        const simulatorScreen = document.getElementById('live-simulator-screen');
-        const targetViewport = document.getElementById('simulator-content-target');
+        const simulator = document.getElementById('live-simulator-screen');
+        const target = document.getElementById('simulator-content-target');
 
-        if (!simulatorScreen || !targetViewport) return;
+        if (!simulator || !target) return;
 
-        // 🛡️ IZOLACIJA STILOVA: Pozadina i slika se nanose isključivo unutar kapsule ekrana
-        simulatorScreen.style.backgroundColor = bojaPozadine;
+        // 🛡️ Zakucavanje pozadine unutar mobilnog ekrana
+        simulator.style.backgroundColor = bojaPozadine;
         let slikaZaPrikaz = trenutniConfig.config?.globalSettings?._tempBgPreview || document.getElementById('input-slika-pozadina')?.value;
 
         if (slikaZaPrikaz && !slikaZaPrikaz.startsWith('blob:') && !slikaZaPrikaz.startsWith('http')) {
             slikaZaPrikaz = '/' + slikaZaPrikaz;
         }
 
-        simulatorScreen.style.backgroundImage = slikaZaPrikaz ? `linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('${slikaZaPrikaz}')` : 'none';
-        simulatorScreen.style.backgroundSize = 'cover';
-        simulatorScreen.style.backgroundPosition = 'center';
+        if (slikaZaPrikaz) {
+            simulator.style.backgroundImage = `linear-gradient(rgba(15,23,30,0.6), rgba(15,23,30,0.7)), url('${slikaZaPrikaz}')`;
+        } else {
+            simulator.style.backgroundImage = 'none';
+        }
+        simulator.style.backgroundSize = 'cover';
+        simulator.style.backgroundPosition = 'center';
 
-        // Strukturna definicija unutrašnjeg kontejnera kockice unutar ekrana
-        // ✨ GVOZDENA POPRAVKA: Kontejner sada puni 100% širine i 100% visine ekrana, brišući crni prazan prostor!
-        const stilKontejnera = `background: ${bojaKontejnera}; padding: 30px 25px; border-radius: 0px; text-align: left; box-shadow: none; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; color: #fff; box-sizing: border-box;`;
+        // Estetika unutrašnjih kartica
+        const stilKontejnera = `background: ${bojaKontejnera}; padding: 22px; border-radius: 14px; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.4); width: 100%; color: #fff; border: 1px solid rgba(255,255,255,0.02); box-sizing: border-box;`;
         const ziviPoddomen = (window.currentSubdomain || "ADMIN").toUpperCase();
         const aktivniIndex = window.aktivniIndex !== undefined ? window.aktivniIndex : 0;
 
-        // 🧭 RENDER LOGIKA PO ČVOROVIMA
-        if (aktivniIndex === null || aktivniIndex === -1) {
+        // 🧭 RENDER PO ČVOROVIMA
+        if (aktivniIndex === null || aktivniIndex === -1 || !trenutniConfig.timeline || trenutniConfig.timeline.length === 0) {
             const pName = document.getElementById('zoom-core-projectName')?.value || trenutniConfig.config?.globalSettings?.projectName || ziviPoddomen;
             const pSub = document.getElementById('zoom-core-projectSubtitle')?.value || trenutniConfig.config?.globalSettings?.projectSubtitle || '';
 
-            targetViewport.innerHTML = `
-                <div style="width: 100%; text-align:center;">
-                    <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.6rem; text-transform: uppercase; letter-spacing:2px; margin-bottom:5px;">${pName}</h1>
-                    <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 0.95rem; margin-bottom:20px;">${pSub}</h2>
+            target.innerHTML = `
+                <div style="width: 100%; text-align:center; box-sizing: border-box;">
+                    <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.6rem; text-transform: uppercase; letter-spacing:2px; margin: 0 0 5px 0;">${pName}</h1>
+                    <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 0.95rem; margin: 0 0 20px 0; font-weight:400;">${pSub}</h2>
                     <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 8px;">
-                        <p style="font-family: '${fontP}', sans-serif; color: ${bojaP}; font-size: 0.75rem; opacity: 0.5;">[ Expedition rules stream matrix display zone... ]</p>
+                        <p style="font-family: '${fontP}', sans-serif; color: ${bojaP}; font-size: 0.75rem; opacity: 0.5; margin:0;">[ Expedition rules stream matrix display zone... ]</p>
                     </div>
                 </div>
             `;
@@ -61,55 +63,48 @@ export function osveziZiviPreview(trenutniConfigParam) {
             const blok = trenutniConfig.timeline[aktivniIndex];
             if (!blok) return;
 
-            // A. Video čvor / Intro čvor
             if (blok.type === 'intro' || blok.type === 'video') {
-                const vName = blok._realVideoName || (blok.url ? blok.url.split('/').pop() : 'Cinematic Stream Projection Active');
-                const pName = trenutniConfig.config?.globalSettings?.projectName || ziviPoddomen;
-
-                targetViewport.innerHTML = `
-                    <div style="${stilKontejnera} text-align: center; background: rgba(7, 11, 14, 0.85); border: 1px solid rgba(212, 180, 131, 0.15);">
-                        <span style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; display: block; margin-bottom: 10px;">${pName}</span>
-                        <i class="fa-solid fa-circle-play" style="font-size: 36px; color: ${bojaH1}; margin-bottom: 8px; display: block;"></i>
-                        <span style="font-family: '${fontP}', sans-serif; color: #fff; font-size: 0.75rem; opacity: 0.7; display:block; word-break: break-all;">${vName}</span>
+                const vName = blok._realVideoName || (blok.url ? blok.url.split('/').pop() : 'Cinematic Video Loaded');
+                target.innerHTML = `
+                    <div style="${stilKontejnera} text-align: center; background: rgba(7,11,14,0.95); border: 1px solid rgba(212,180,131,0.15);">
+                        <i class="fa-solid fa-circle-play" style="font-size: 32px; color: ${bojaH1}; margin-bottom: 8px; display:block;"></i>
+                        <span style="font-family: '${fontP}', sans-serif; color: #fff; font-size: 0.75rem; display:block; word-break: break-all;">${vName}</span>
                     </div>
                 `;
             }
-            // B. Chapter (Narativni) čvor
             else if (blok.type === 'chapter') {
-                targetViewport.innerHTML = `
+                target.innerHTML = `
                     <div style="${stilKontejnera}">
-                        <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.15rem; margin-bottom:2px; letter-spacing: 0.5px;">${blok.title || 'Header String'}</h1>
-                        <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 0.85rem; margin-bottom: 12px;">${blok.subtitle || ''}</h2>
-                        <p style="font-family: '${fontP}', sans-serif; color: ${bojaP}; font-size: 0.75rem; line-height: 1.4; opacity:0.85; margin-bottom: 5px;">[ Staged chapter narrative text viewport ]</p>
-                        <button type="button" style="background: none; border: 1px solid ${bojaH1}; color: ${bojaH1}; font-family: '${fontP}', sans-serif; padding: 6px 14px; font-size: 0.7rem; border-radius: 6px; margin-top: 10px; font-weight:600; cursor: default;">${blok.nextButtonText || 'Continue →'}</button>
+                        <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.1rem; margin: 0 0 2px 0; font-weight:700;">${blok.title || 'Header String'}</h1>
+                        <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 0.85rem; margin: 0 0 10px 0; font-weight:400;">${blok.subtitle || ''}</h2>
+                        <p style="font-family: '${fontP}', sans-serif; color: ${bojaP}; font-size: 0.75rem; line-height: 1.4; opacity:0.85; margin: 0 0 10px 0;">[ Staged chapter text viewport ]</p>
+                        <button type="button" style="background: none; border: 1px solid ${bojaH1}; color: ${bojaH1}; font-family: '${fontP}', sans-serif; padding: 5px 12px; font-size: 0.7rem; border-radius: 6px; font-weight:600; cursor: default; outline:none;">${blok.nextButtonText || 'Continue →'}</button>
                     </div>
                 `;
             }
-            // C. Gate (Verifikacioni) čvor
             else if (blok.type === 'gate') {
-                targetViewport.innerHTML = `
+                target.innerHTML = `
                     <div style="${stilKontejnera} text-align: center;">
                         <i class="fa-solid fa-key" style="font-size: 18px; color: ${bojaH1}; margin-bottom: 8px; display: block;"></i>
-                        <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.05rem; margin-bottom: 12px;">${blok.hint || 'Passphrase required'}</h1>
-                        <input type="text" placeholder="${blok.placeholder || 'Type credentials...'}" disabled style="width: 85%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.4); text-align: center; color: #fff; font-size: 0.75rem; margin-bottom:10px; outline: none;">
-                        <button type="button" style="background: ${bojaH1}; color: #0a1015; border: none; padding: 6px 16px; border-radius: 6px; font-size: 0.7rem; font-weight:700; display:block; margin:0 auto; cursor: default;">${blok.buttonText || 'Verify'}</button>
+                        <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.05rem; margin: 0 0 12px 0; font-weight:700;">${blok.hint || 'Passphrase required'}</h1>
+                        <input type="text" placeholder="${blok.placeholder || 'Type here...'}" disabled style="width: 85%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.4); text-align: center; color: #fff; font-size: 0.75rem; margin-bottom:10px; outline:none; box-sizing: border-box;">
+                        <button type="button" style="background: ${bojaH1}; color: #0a1015; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.75rem; font-weight:700; display:block; margin:0 auto; cursor: default; outline:none;">${blok.buttonText || 'Verify'}</button>
                     </div>
                 `;
             }
-            // D. Outro (Finale) čvor
             else if (blok.type === 'finale') {
-                targetViewport.innerHTML = `
-                    <div style="${stilKontejnera} text-align: center; padding: 30px 15px; border: 1px solid rgba(212,180,131,0.15);">
-                        <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.3rem; margin-bottom: 6px; letter-spacing: 1px;">${blok.finalLoveMessage || 'End Matrix'}</h1>
-                        <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 0.95rem; opacity: 0.9;">${blok.finalSignature || ''}</h2>
+                target.innerHTML = `
+                    <div style="${stilKontejnera} text-align: center; padding: 25px 15px; border: 1px solid rgba(212,180,131,0.15);">
+                        <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.3rem; margin: 0 0 5px 0; font-weight:700;">${blok.finalLoveMessage || 'End Matrix'}</h1>
+                        <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 0.95rem; margin:0; font-weight:400; opacity: 0.9;">${blok.finalSignature || ''}</h2>
                     </div>
                 `;
             }
         }
     } catch (err) {
-        console.error("Crash in live canvas layout engine preview:", err);
+        console.error("Crash in live simulator pipeline preview:", err);
     }
 }
 
-// Globalno izlaganje funkcije za prozor
+// Izlaganje na globalni nivo prozora
 window.osveziZiviPreview = osveziZiviPreview;

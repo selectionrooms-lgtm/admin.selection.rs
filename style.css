@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SELECTION CANVAS ARCHITECTURE — style.css (Production Stable Layer V6.1)
+   SELECTION CANVAS ARCHITECTURE — style.css (Production Stable V7.0)
    ========================================================================== */
 
 :root {
@@ -21,10 +21,10 @@
 
 html,
 body {
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
-    max-height: 100%;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
     overflow: hidden !important;
     background-color: var(--admin-bg);
     font-family: 'Segoe UI', Roboto, sans-serif;
@@ -181,11 +181,10 @@ body {
     font-size: 0.8rem;
 }
 
-/* --- 🧱 SREDNJI PANEL: RADNI PROSTOR (Uzima tačno 50% monitorskog prostora) --- */
+/* --- 🧱 SREDNJI PANEL: RADNI PROSTOR (Ravnopravna polovina monitorskog ekrana) --- */
 .main-workspace {
     flex: 1 !important;
     width: 50% !important;
-    /* Gvozdeno diktiramo polovinu ekrana */
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -251,14 +250,12 @@ body {
     transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
     width: 100%;
     user-select: none;
-    /* Sprečava selektovanje teksta dok se kockica vuče */
 }
 
 .cms-block-card:active {
     cursor: grabbing;
 }
 
-/* 🔥 POPRAVKA: Koristimo senku umesto top bordera da ne pomera visinu kockica unutar liste */
 .cms-block-card.drag-over-active {
     box-shadow: 0 -4px 0 0 var(--admin-accent), 0 8px 20px rgba(0, 0, 0, 0.4) !important;
     transform: scale(1.005);
@@ -340,11 +337,10 @@ body {
     color: #b81d24;
 }
 
-/* --- 📺 DESNI PANEL: PREVIEW AREA (Uzima preostalih 50% monitorskog prostora i širi se) --- */
+/* --- 📺 DESNI PANEL: PREVIEW AREA --- */
 .preview-panel {
     flex: 1 !important;
     width: 50% !important;
-    /* Savršena simetrija sa srednjim panelom */
     background-color: #070b0e;
     height: 100%;
     max-height: 100vh;
@@ -354,7 +350,32 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Centriramo sadržaj unutar ove ogromne polovine */
+}
+
+/* 📱 ORIGINALNA MOBILNA KAPSULA (Fiksirana širina, naša modra podloga) */
+#live-simulator-screen {
+    width: 360px !important;
+    height: 82vh !important;
+    border-radius: 24px;
+    background-color: #0f171e;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+#simulator-content-target {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+    box-sizing: border-box;
+    overflow-y: auto;
 }
 
 /* 🎯 PLUTAJUĆI HOLDER ZA EDGE DUGMAD (Dole desno na ekranu) */
@@ -455,7 +476,7 @@ body {
     gap: 15px;
 }
 
-/* --- 👑 CLEAN MASTER CARD (Centrirano i pročišćeno) --- */
+/* --- 👑 CLEAN MASTER CARD --- */
 .master-card {
     background: rgba(212, 180, 131, 0.02) !important;
     border: 1px solid #d4b483 !important;
@@ -488,69 +509,4 @@ body {
     z-index: 99999 !important;
     overflow-y: auto !important;
     padding: 40px !important;
-}
-
-/* --- ⛔ TOTAL STOP HORIZONTAL SCROLLBAR --- */
-html,
-body {
-    width: 100% !important;
-    height: 100% !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
-}
-
-/* --- 📺 PROČIŠĆEN I CENTRIRAN PREVIEW PANEL --- */
-.preview-panel {
-    flex: 1.2 !important;
-    background-color: #070b0e;
-    height: 100%;
-    max-height: 100vh;
-    overflow: hidden;
-    position: relative;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* Savršeno centriranje kapsule na desnoj polovini */
-}
-
-/* 📱 Unutrašnja kapsula (Sada možeš da je pustiš da bude široka koliko god želiš) */
-#live-simulator-screen {
-    width: 90%;
-    /* Sada puni 90% te cele desne polovine monitorskog ekrana! */
-    height: 90vh;
-    /* Puni visinu elegantno */
-    border-radius: 12px;
-    background-color: #0f171e;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-}
-
-#simulator-content-target {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 25px;
-    overflow-y: auto;
-}
-
-/* 🎯 PLUTAJUĆI HOLDER ZA EDGE DUGMAD (Dole desno na ekranu, ne smeta kapsuli) */
-#floating-action-holder {
-    position: fixed;
-    bottom: 25px;
-    right: 25px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    width: 280px;
-    pointer-events: auto;
 }
