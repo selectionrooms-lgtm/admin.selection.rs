@@ -21,28 +21,25 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==========================================================================
 
 async function proveriKorisnikaIUpravljajInterfejsom() {
+    const rootShield = document.getElementById('selection-saas-root-shield');
     const masterBlok = document.getElementById('master-admin-blok');
     const badge = document.getElementById('user-session-badge');
-
-    if (masterBlok) masterBlok.style.display = "none";
 
     try {
         console.log("🪙 Korak 1: Pokrećem Token Exchange sa lokalnog /issue_session...");
 
-        // Uzimamo Selection Token sa admin strane (gde je Access aktivan)
+        // Uzimamo Selection Token sa admin strane
         const tokenRes = await fetch("/issue_session", { credentials: "include" });
         if (!tokenRes.ok) throw new Error("Cloudflare Access odbio izdavanje lokalne sesije.");
 
         const tokenData = await tokenRes.json();
         if (!tokenData.token) throw new Error("Token kovnica je vratila prazan ključ.");
 
-        // Skladištimo ga u LocalStorage pod jedinstvenim imenom
         localStorage.setItem('selection_session_token', tokenData.token);
         console.log("✅ Korak 1 uspešan: Selection Token bezbedno zaključan u LocalStorage.");
 
         console.log("📡 Korak 2: Autentifikujem se na javni shell sa novim Bearer tokenom...");
 
-        // Idemo na javni shell sa hirurški očišćenim zaglavljem bez X-Requested-With!
         const res = await fetch(`${API_BASE}/get_user`, {
             method: 'GET',
             headers: {
@@ -57,57 +54,52 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 
         if (userData.error) throw new Error(userData.error);
 
-        // UI Ekstraktor: Prilagođavanje shape-u podataka (user objekat ili koren)
         const profil = userData.user || userData;
         const korisnickiEmail = profil.email || localStorage.getItem('userEmail') || "selectionrooms@gmail.com";
         const korisnickaUloga = profil.role || "client";
-        const korisnickiStatus = profil.status || "pending"; // Čitamo status vize sa Edge-a!
+        const korisnickiStatus = profil.status || "pending";
 
-        // Gvozdeni guard protiv undefined poddomena
         let aktivniSubdomain = profil.tenant || profil.subdomain || "admin";
         if (!aktivniSubdomain || aktivniSubdomain === "undefined") {
-            console.warn("⚠️ Subdomain detektovan kao nepostojeći, fallback na 'admin'");
             aktivniSubdomain = "admin";
         }
 
-        // 🧱 BOOKING.COM STYLE SPLASH GATE (Korisnik je na čekanju)
+        // 🧱 RASKRSNICA 1: KORISNIK JE NA ČEKANJU (PENDING)
         if (korisnickaUloga !== "master" && korisnickiStatus !== "approved") {
-            console.warn(`🔒 Korisnik na čekanju [Status: ${korisnickiStatus}]. Blokiram radni prostor.`);
+            console.warn(`🔒 Korisnik na čekanju [Status: ${korisnickiStatus}]. Aktiviram splash čekaonicu.`);
 
-            // Hvata glavni kontejner koji je u startu sakriven sa display: none
-            const glavniCMSWorkspace = document.getElementById('main-saas-workspace') || document.querySelector('.main-workspace-container') || document.body;
+            if (rootShield) {
+                // Skidamo !important barijeru i pretvaramo ceo koren u Booking splash ekran
+                rootShield.style.setProperty('display', 'flex', 'important');
+                rootShield.className = "global-splash-lockout";
 
-            // Pretvaramo ga direktno u splash čekaonicu i tek ga SAD prikazujemo!
-            glavniCMSWorkspace.className = "global-splash-lockout";
-            glavniCMSWorkspace.style.display = "flex"; // Otvaramo samo čekaonicu!
-
-            glavniCMSWorkspace.innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-family: 'Montserrat', sans-serif; color: #fff;">
-                    <div style="font-size: 60px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(214,180,131,0.2));">🔒</div>
-                    <h1 style="font-family: 'Cinzel', serif; color: var(--admin-accent); font-size: 2.2rem; margin: 0 0 12px 0; letter-spacing: 1px; text-transform: uppercase;">Account Review in Progress</h1>
-                    <p style="color: #eeeeee; max-width: 480px; font-size: 0.95rem; line-height: 1.6; opacity: 0.85; margin: 0 0 25px 0;">
-                        Hello <strong style="color:var(--admin-accent); font-weight: 600;">${korisnickiEmail}</strong>. Your Selection SaaS space has been successfully reserved and provisioned on the Edge node, but it is currently awaiting administration approval.
-                    </p>
-                    <div style="background: rgba(212, 180, 131, 0.03); border: 1px dashed var(--admin-accent); padding: 14px 24px; border-radius: 6px; font-size: 0.85rem; color: var(--admin-accent); font-weight: 500; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                        <i class="fa-solid fa-clock-rotate-left"></i> Administration is verifying your metrics and will activate your panel shortly.
+                rootShield.innerHTML = `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-family: 'Montserrat', sans-serif; color: #fff;">
+                        <div style="font-size: 60px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(214,180,131,0.2));">🔒</div>
+                        <h1 style="font-family: 'Cinzel', serif; color: var(--admin-accent); font-size: 2.2rem; margin: 0 0 12px 0; letter-spacing: 1px; text-transform: uppercase;">Account Review in Progress</h1>
+                        <p style="color: #eeeeee; max-width: 480px; font-size: 0.95rem; line-height: 1.6; opacity: 0.85; margin: 0 0 25px 0;">
+                            Hello <strong style="color:var(--admin-accent); font-weight: 600;">${korisnickiEmail}</strong>. Your Selection SaaS space has been successfully reserved and provisioned on the Edge node, but it is currently awaiting administration approval.
+                        </p>
+                        <div style="background: rgba(212, 180, 131, 0.03); border: 1px dashed var(--admin-accent); padding: 14px 24px; border-radius: 6px; font-size: 0.85rem; color: var(--admin-accent); font-weight: 500; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                            <i class="fa-solid fa-clock-rotate-left"></i> Administration is verifying your metrics and will activate your panel shortly.
+                        </div>
+                        <span style="font-size: 0.75rem; margin-top: 50px; opacity: 0.25; letter-spacing: 0.5px;">Selection SaaS Engine • Identity Verified at Edge</span>
                     </div>
-                    <span style="font-size: 0.75rem; margin-top: 50px; opacity: 0.25; letter-spacing: 0.5px;">Selection SaaS Engine • Identity Verified at Edge</span>
-                </div>
-            `;
+                `;
+            }
 
             if (badge) {
                 badge.innerHTML = `⏳ <span style="color: #d4b483; font-weight: 600;">Awaiting Approval</span>`;
                 badge.style.display = "flex";
             }
 
-            return; // ⛔ STOP! Klijent ostaje zaključan u splash-u, panel se nikada ne pali.
+            return; // STOP! Klijent ostaje u mraku čekaonice.
         }
 
-        // --- PROLAZ ODOBREN (Korisnik je APPROVED ili si ti SYSTEM MASTER) ---
-        // Tek ovde hvatamo kontejner i skidamo mu display: none!
-        const glavniCMSWorkspace = document.getElementById('main-saas-workspace') || document.querySelector('.main-workspace-container');
-        if (glavniCMSWorkspace) {
-            glavniCMSWorkspace.style.display = "block"; // 🔓 PANEL SE ODSECAN UKLJUČUJE TEK OVDE!
+        // 🔓 RASKRSNICA 2: PROLAZ ODOBREN (APPROVED KLIJENT ILI MASTER)
+        if (rootShield) {
+            // Potpuno uklanjamo inline display: none kako bi originalni CSS (flex, grid...) preuzeo kontrolu nad celim sajtom
+            rootShield.style.removeProperty('display');
         }
 
         if (badge) {
@@ -120,23 +112,29 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         localStorage.setItem('userSubdomain', aktivniSubdomain);
         window.currentSubdomain = aktivniSubdomain;
 
-        // 👑 INTERFEJS RASKRSNICA: Master vs Klijent Guard (Isto kao maločas...)
         if (korisnickaUloga === "master") {
-            console.log(`👑 Access Granted [System Master]. Deploying Core Control Plane...`);
+            console.log(`👑 Access Granted [System Master]. deploying Control Plane...`);
             if (masterBlok) masterBlok.style.display = "block";
             ucitajConfig("admin");
         } else {
             console.log(`🛡️ Access Granted [Tenant Client]. Bootstrapping workspace for: ${aktivniSubdomain}`);
-            if (masterBlok) masterBlok.remove(); // Čupanje iz memorije za klijenta!
 
-            // Sabotaža konzole...
+            // Hirurški čupamo master komande iz DOM-a za klijenta
+            if (masterBlok) {
+                masterBlok.remove();
+            }
+
+            // Sabotaža konzole
             window.otvoriMasterControlPlane = function () { return false; };
+            window.promeniStatusKlijentaMaster = null;
+            window.osveziMasterTabeluKorisnika = null;
 
             ucitajConfig(aktivniSubdomain);
         }
 
     } catch (err) {
         console.error("❌ Bootstrap krah. Aktiviram lokalni Devel Fallback...", err);
+        if (rootShield) rootShield.style.removeProperty('display'); // Upali panel u slučaju kvara
 
         if (badge) {
             badge.innerHTML = `⚠️ <span style="color: #d4b483; font-weight: 600;">Local Sandbox (Devel)</span>`;
@@ -144,7 +142,6 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         }
 
         if (masterBlok) masterBlok.style.display = "block";
-
         const klijentovSubdomain = localStorage.getItem('userSubdomain') || 'admin';
         window.currentSubdomain = klijentovSubdomain;
         ucitajConfig(klijentovSubdomain);

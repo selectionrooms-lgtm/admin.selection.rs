@@ -11,222 +11,204 @@
 
 <body>
 
-    <div class="sidebar">
-        <div class="admin-brand">
-            <span class="brand-main">SELECTION</span>
-            <span class="brand-sub">Kreativni Radni Prostor</span>
-            <div id="user-session-badge"
-                style="display: none; display: flex; align-items: center; justify-content: center; gap: 6px; margin: 8px auto 15px auto; font-family: 'Montserrat', sans-serif; font-size: 0.8rem; color: var(--admin-muted); background: rgba(255,255,255,0.03); padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); width: fit-content; text-align: center;">
-            </div>
-        </div>
+    <div class="main-workspace-container" id="selection-saas-root-shield" style="display: none !important;">
 
-        <div id="master-admin-blok" class="master-card"
-            style="margin: 10px 0 20px 0; border: 1px solid rgba(214, 180, 131, 0.3); padding: 15px; border-radius: 12px; background: rgba(255, 255, 255, 0.02); display: none;">
-            <h3
-                style="color: #d4b483; font-family: 'Segoe UI', sans-serif; font-size: 0.85rem; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 1px;">
-                <i class="fa-solid fa-crown" style="color: #d4b483;"></i> Master Admin
-            </h3>
-            <p style="font-size: 10px; color: #888; margin-bottom: 12px;">Kreiraj novog klijenta u bazi:</p>
-
-            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;">
-                <div>
-                    <label
-                        style="font-size: 9px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 4px;">Novi
-                        poddomen</label>
-                    <input type="text" id="master-novi-subdomain" placeholder="npr. luksuzni-apartman"
-                        style="width: 100%; padding: 8px; background: #070b0e; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px;">
-                </div>
-                <div>
-                    <label
-                        style="font-size: 9px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 4px;">Email
-                        klijenta</label>
-                    <input type="email" id="master-novi-email" placeholder="klijent@gmail.com"
-                        style="width: 100%; padding: 8px; background: #070b0e; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px;">
+        <div class="sidebar">
+            <div class="admin-brand">
+                <span class="brand-main">SELECTION</span>
+                <span class="brand-sub">Kreativni Radni Prostor</span>
+                <div id="user-session-badge"
+                    style="display: none; align-items: center; justify-content: center; gap: 6px; margin: 8px auto 15px auto; font-family: 'Montserrat', sans-serif; font-size: 0.8rem; color: var(--admin-muted); background: rgba(255,255,255,0.03); padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); width: fit-content; text-align: center;">
                 </div>
             </div>
 
-            <button onclick="masterKreirajNovogKorisnika()"
-                style="width: 100%; padding: 10px; background: #d4b483; color: #0f171e; border: none; border-radius: 6px; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; cursor: pointer;">
-                <i class="fa-solid fa-rocket"></i> Lansiraj Korisnika
-            </button>
+            <div id="master-admin-blok" class="master-card"
+                style="margin: 10px 0 20px 0; border: 1px solid rgba(214, 180, 131, 0.3); padding: 15px; border-radius: 12px; background: rgba(255, 255, 255, 0.02); display: none;">
+                <h3
+                    style="color: #d4b483; font-family: 'Segoe UI', sans-serif; font-size: 0.85rem; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 1px;">
+                    <i class="fa-solid fa-crown" style="color: #d4b483;"></i> Master Admin
+                </h3>
+                <p style="font-size: 10px; color: #888; margin-bottom: 12px;">Kreiraj novog klijenta u bazi:</p>
 
-            <div id="master-status-poruka"
-                style="margin-top: 10px; font-weight: 600; font-size: 11px; text-align: center; display: none;"></div>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label
+                            style="font-size: 9px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 4px;">Novi
+                            poddomen</label>
+                        <input type="text" id="master-novi-subdomain" placeholder="npr. luksuzni-apartman"
+                            style="width: 100%; padding: 8px; background: #070b0e; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px;">
+                    </div>
+                    <div>
+                        <label
+                            style="font-size: 9px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 4px;">Email
+                            klijenta</label>
+                        <input type="email" id="master-novi-email" placeholder="klijent@gmail.com"
+                            style="width: 100%; padding: 8px; background: #070b0e; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px;">
+                    </div>
+                </div>
 
-            <button type="button" onclick="otvoriMasterControlPlane()"
-                style="background: var(--admin-accent); color: var(--admin-sidebar); border: none; padding: 12px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-top: 15px; font-family:'Montserrat',sans-serif; text-transform:uppercase; font-size:0.75rem; letter-spacing:0.5px;">
-                <i class="fa-solid fa-sliders"></i> Launch Control Plane Console
-            </button>
-        </div>
+                <button onclick="masterKreirajNovogKorisnika()"
+                    style="width: 100%; padding: 10px; background: #d4b483; color: #0f171e; border: none; border-radius: 6px; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; cursor: pointer; margin-bottom: 10px;">
+                    <i class="fa-solid fa-rocket"></i> Lansiraj Korisnika
+                </button>
 
-        <h2>Stilovi i Fontovi</h2>
-        <div class="form-group">
-            <label>Boja i stil za GLAVNE NASLOVE</label>
-            <div class="color-picker-wrapper">
-                <input type="color" id="color-h1" value="#d4b483" oninput="osveziZiviPreview()">
-                <select id="font-h1" style="flex: 1;" onchange="osveziZiviPreview()">
-                    <option value="Cinzel">Cinzel (Elegantan akademik)</option>
-                    <option value="Playfair Display">Playfair Display (Moderan žurnal)</option>
-                    <option value="Cormorant Garamond">Cormorant Garamond (Klasičan roman)</option>
-                </select>
+                <div id="master-status-poruka"
+                    style="margin-top: 10px; font-weight: 600; font-size: 11px; text-align: center; display: none;">
+                </div>
+
+                <button type="button" onclick="otvoriMasterControlPlane()"
+                    style="width: 100%; background: var(--admin-accent); color: var(--admin-sidebar); border: none; padding: 12px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family:'Montserrat',sans-serif; text-transform:uppercase; font-size:0.75rem; letter-spacing:0.5px;">
+                    <i class="fa-solid fa-sliders"></i> Control Plane Console
+                </button>
+            </div>
+
+            <h2>Stilovi i Fontovi</h2>
+            <div class="form-group">
+                <label>Boja i stil za GLAVNE NASLOVE</label>
+                <div class="color-picker-wrapper">
+                    <input type="color" id="color-h1" value="#d4b483" oninput="osveziZiviPreview()">
+                    <select id="font-h1" style="flex: 1;" onchange="osveziZiviPreview()">
+                        <option value="Cinzel">Cinzel (Elegantan akademik)</option>
+                        <option value="Playfair Display">Playfair Display (Moderan žurnal)</option>
+                        <option value="Cormorant Garamond">Cormorant Garamond (Klasičan roman)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Boja i stil za PODNASLOVE i CITATE</label>
+                <div class="color-picker-wrapper">
+                    <input type="color" id="color-h2" value="#d4b483" oninput="osveziZiviPreview()">
+                    <select id="font-h2" style="flex: 1;" onchange="osveziZiviPreview()">
+                        <option value="Cormorant Garamond">Cormorant Garamond (Ukošena slova)</option>
+                        <option value="Cinzel">Cinzel</option>
+                        <option value="Playfair Display">Playfair Display</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Boja i stil za GLAVNI TEKST priče</label>
+                <div class="color-picker-wrapper">
+                    <input type="color" id="color-p" value="#eeeeee" oninput="osveziZiviPreview()">
+                    <select id="font-p" style="flex: 1;" onchange="osveziZiviPreview()">
+                        <option value="Montserrat">Montserrat (Čist i jasan)</option>
+                        <option value="Inter">Inter (Prefinjen i tanak)</option>
+                        <option value="Open Sans">Open Sans (Prirodan i čitljiv)</option>
+                    </select>
+                </div>
+            </div>
+
+            <h2>Okruženje Ekrana</h2>
+            <div class="form-group">
+                <label>Boja pozadine ekrana</label>
+                <input type="color" id="input-boja-pozadina" value="#0f171e" oninput="osveziZiviPreview()">
+            </div>
+
+            <div class="form-group">
+                <label>Pozadinska slika ekrana</label>
+                <div class="zoom-drop-zone" id="drop-global-pozadina" style="padding: 12px; font-size: 0.8rem;"
+                    onclick="okiniGlobalniKlikFajla('slika')">
+                    <i class="fa-solid fa-image"
+                        style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
+                    <span id="label-global-pozadina"
+                        style="font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Klikni
+                        ili prevuci sliku ovde</span>
+                </div>
+                <input type="hidden" id="input-slika-pozadina" value="">
+            </div>
+
+            <div class="form-group">
+                <label>Boja unutrašnjih tekstualnih kutija</label>
+                <input type="color" id="input-boja-kontejner" value="#1c2a39" oninput="osveziZiviPreview()">
+            </div>
+
+            <h2>Muzika i Automatski Sistemi</h2>
+            <div class="form-group">
+                <label>Muzika na uvodnom ekranu</label>
+                <div class="zoom-drop-zone" id="drop-global-loader-muzika" style="padding: 12px; font-size: 0.8rem;"
+                    onclick="okiniGlobalniKlikFajla('loader-mp3')">
+                    <i class="fa-solid fa-music"
+                        style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
+                    <span id="label-global-loader-muzika"
+                        style="font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Klikni
+                        ili prevuci .mp3 ovde</span>
+                </div>
+                <input type="hidden" id="input-loader-muzika" value="">
+            </div>
+
+            <div class="form-group">
+                <label>Muzika kada se ekran zaključa</label>
+                <div class="zoom-drop-zone" id="drop-global-ss-muzika" style="padding: 12px; font-size: 0.8rem;"
+                    onclick="okiniGlobalniKlikFajla('ss-mp3')">
+                    <i class="fa-solid fa-lock"
+                        style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
+                    <span id="label-global-ss-muzika"
+                        style="font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Klikni
+                        ili prevuci .mp3 ovde</span>
+                </div>
+                <input type="hidden" id="input-ss-muzika" value="">
+            </div>
+
+            <div class="form-group">
+                <label>Vreme do zaključavanja ekrana (u sekundama)</label>
+                <input type="number" id="input-ss-tajmer" min="5" max="600" value="60">
             </div>
         </div>
 
-        <div class="form-group">
-            <label>Boja i stil za PODNASLOVE i CITATE</label>
-            <div class="color-picker-wrapper">
-                <input type="color" id="color-h2" value="#d4b483" oninput="osveziZiviPreview()">
-                <select id="font-h2" style="flex: 1;" onchange="osveziZiviPreview()">
-                    <option value="Cormorant Garamond">Cormorant Garamond (Ukošena slova)</option>
-                    <option value="Cinzel">Cinzel</option>
-                    <option value="Playfair Display">Playfair Display</option>
-                </select>
+        <div class="main-workspace" id="main-saas-workspace"
+            style="flex: 1.2; border-right: 1px solid var(--admin-border);">
+            <div class="toolbar">
+                <span class="toolbar-title">Prečica:</span>
+                <button class="btn-add btn-splash-trigger" onclick="postaviAktivniBlok(-1)">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Idi na Uvodni Ekran
+                </button>
+
+                <span class="toolbar-title" style="margin-left: 20px;">Dodaj novu kockicu:</span>
+                <button class="btn-add" onclick="dodajNoviBlok('video')"><i class="fa-solid fa-circle-play"></i> +
+                    Video</button>
+                <button class="btn-add" onclick="dodajNoviBlok('chapter')"><i class="fa-solid fa-book-open"></i> +
+                    Poglavlje</button>
+                <button class="btn-add" onclick="dodajNoviBlok('gate')"><i class="fa-solid fa-key"></i> +
+                    Kapija</button>
+                <button class="btn-add" onclick="dodajNoviBlok('quiz')"><i class="fa-solid fa-list-check"></i> +
+                    Kviz</button>
+                <button class="btn-add" onclick="dodajNoviBlok('finale')"><i class="fa-solid fa-crown"></i> + Kraj
+                    Priče</button>
             </div>
+
+            <div class="blocks-container" id="cms-blocks-list"></div>
         </div>
 
-        <div class="form-group">
-            <label>Boja i stil za GLAVNI TEKST priče</label>
-            <div class="color-picker-wrapper">
-                <input type="color" id="color-p" value="#eeeeee" oninput="osveziZiviPreview()">
-                <select id="font-p" style="flex: 1;" onchange="osveziZiviPreview()">
-                    <option value="Montserrat">Montserrat (Čist i jasan)</option>
-                    <option value="Inter">Inter (Prefinjen i tanak)</option>
-                    <option value="Open Sans">Open Sans (Prirodan i čitljiv)</option>
-                </select>
-            </div>
-        </div>
-
-        <h2>Okruženje Ekrana</h2>
-        <div class="form-group">
-            <label>Boja pozadine ekrana</label>
-            <input type="color" id="input-boja-pozadina" value="#0f171e" oninput="osveziZiviPreview()">
-        </div>
-
-        <div class="form-group">
-            <label>Pozadinska slika ekrana</label>
-            <div class="zoom-drop-zone" id="drop-global-pozadina" style="padding: 12px; font-size: 0.8rem;"
-                onclick="okiniGlobalniKlikFajla('slika')">
-                <i class="fa-solid fa-image"
-                    style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
-                <span id="label-global-pozadina"
-                    style="font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Klikni
-                    ili prevuci sliku ovde</span>
-            </div>
-            <input type="hidden" id="input-slika-pozadina" value="">
-        </div>
-
-        <div class="form-group">
-            <label>Boja unutrašnjih tekstualnih kutija</label>
-            <input type="color" id="input-boja-kontejner" value="#1c2a39" oninput="osveziZiviPreview()">
-        </div>
-
-        <h2>Muzika i Automatski Sistemi</h2>
-
-        <div class="form-group">
-            <label>Muzika na uvodnom ekranu</label>
-            <div class="zoom-drop-zone" id="drop-global-loader-muzika" style="padding: 12px; font-size: 0.8rem;"
-                onclick="okiniGlobalniKlikFajla('loader-mp3')">
-                <i class="fa-solid fa-music"
-                    style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
-                <span id="label-global-loader-muzika"
-                    style="font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Klikni
-                    ili prevuci .mp3 ovde</span>
-            </div>
-            <input type="hidden" id="input-loader-muzika" value="">
-        </div>
-
-        <div class="form-group">
-            <label>Muzika kada se ekran zaključa</label>
-            <div class="zoom-drop-zone" id="drop-global-ss-muzika" style="padding: 12px; font-size: 0.8rem;"
-                onclick="okiniGlobalniKlikFajla('ss-mp3')">
-                <i class="fa-solid fa-lock"
-                    style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
-                <span id="label-global-ss-muzika"
-                    style="font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Klikni
-                    ili prevuci .mp3 ovde</span>
-            </div>
-            <input type="hidden" id="input-ss-muzika" value="">
-        </div>
-
-        <div class="form-group">
-            <label>Vreme do zaključavanja ekrana (u sekundama)</label>
-            <input type="number" id="input-ss-tajmer" min="5" max="600" value="60">
-        </div>
-
-    </div>
-
-    <div class="main-workspace" id="main-saas-workspace"
-        style="flex: 1.2; border-right: 1px solid var(--admin-border); display: none !important;">
-
-        <div class="toolbar">
-            <span class="toolbar-title">Prečica:</span>
-            <button class="btn-add btn-splash-trigger" onclick="postaviAktivniBlok(-1)">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Idi na Uvodni Ekran
-            </button>
-
-            <span class="toolbar-title" style="margin-left: 20px;">Dodaj novu kockicu:</span>
-            <button class="btn-add" onclick="dodajNoviBlok('video')"><i class="fa-solid fa-circle-play"></i> +
-                Video</button>
-            <button class="btn-add" onclick="dodajNoviBlok('chapter')"><i class="fa-solid fa-book-open"></i> +
-                Poglavlje</button>
-            <button class="btn-add" onclick="dodajNoviBlok('gate')"><i class="fa-solid fa-key"></i> + Kapija</button>
-            <button class="btn-add" onclick="dodajNoviBlok('quiz')"><i class="fa-solid fa-list-check"></i> +
-                Kviz</button>
-            <button class="btn-add" onclick="dodajNoviBlok('finale')"><i class="fa-solid fa-crown"></i> + Kraj
-                Priče</button>
-        </div>
-
-        <div class="blocks-container" id="cms-blocks-list"></div>
-    </div>
-
-    <div class="preview-panel" id="global-preview-panel"
-        style="flex: 0.75; min-width: 320px; background-color: #070b0e; padding: 20px; display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden; border-left: 1px solid var(--admin-border); transition: flex 0.3s ease;">
-
-        <div
-            style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--admin-border); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+        <div class="preview-panel" id="global-preview-panel"
+            style="flex: 0.75; min-width: 320px; background-color: #070b0e; padding: 20px; display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden; transition: flex 0.3s ease;">
             <div
-                style="display: flex; gap: 6px; background: rgba(255,255,255,0.03); padding: 4px; border-radius: 8px; border: 1px solid var(--admin-border);">
-                <button id="btn-mode-mobile" onclick="promeniRezimSimulatora('mobile')"
-                    style="background: var(--admin-accent); color: var(--admin-sidebar); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                    <i class="fa-solid fa-mobile-screen-button"></i> Telefon
-                </button>
-                <button id="btn-mode-pc" onclick="promeniRezimSimulatora('pc')"
-                    style="background: transparent; color: var(--admin-muted); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                    <i class="fa-solid fa-desktop"></i> Izgled na PC-u
-                </button>
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--admin-border); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                <div
+                    style="display: flex; gap: 6px; background: rgba(255,255,255,0.03); padding: 4px; border-radius: 8px; border: 1px solid var(--admin-border);">
+                    <button id="btn-mode-mobile" onclick="promeniRezimSimulatora('mobile')"
+                        style="background: var(--admin-accent); color: var(--admin-sidebar); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                        <i class="fa-solid fa-mobile-screen-button"></i> Telefon
+                    </button>
+                    <button id="btn-mode-pc" onclick="promeniRezimSimulatora('pc')"
+                        style="background: transparent; color: var(--admin-muted); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                        <i class="fa-solid fa-desktop"></i> Izgled na PC-u
+                    </button>
+                </div>
+                <span id="preview-status-tag"
+                    style="font-size: 9px; background: rgba(212,180,131,0.1); color: var(--admin-accent); padding: 3px 6px; border-radius: 4px;">Prikaz:
+                    Uvodni ekran</span>
             </div>
-            <span id="preview-status-tag"
-                style="font-size: 9px; background: rgba(212,180,131,0.1); color: var(--admin-accent); padding: 3px 6px; border-radius: 4px;">Prikaz:
-                Uvodni ekran</span>
+
+            <div class="device-simulator" id="live-simulator-screen"
+                style="flex: 1; width: 100%; background-color: #0f171e; border: 4px solid #1c2a39; border-radius: 24px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); position: relative; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 25px; transition: all 0.3s ease;">
+                <div id="simulator-content-target" style="width: 100%; text-align: center; transition: all 0.3s ease;">
+                </div>
+            </div>
         </div>
 
-        <div class="device-simulator" id="live-simulator-screen"
-            style="flex: 1; width: 100%; background-color: #0f171e; border: 4px solid #1c2a39; border-radius: 24px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); position: relative; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 25px; transition: all 0.3s ease;">
-            <div id="simulator-content-target" style="width: 100%; text-align: center; transition: all 0.3s ease;">
-            </div>
-        </div>
-
-    </div>
-
-    <div id="zoom-editor-overlay">
-        <div class="zoom-window">
-            <div class="zoom-header">
-                <h3 id="zoom-module-title"
-                    style="color: var(--admin-accent); font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">
-                    UREĐIVANJE KOCKICE Sadržaj</h3>
-                <button onclick="zatvoriZoomEditor()" class="btn-action"
-                    style="border-color:#b81d24; color:#b81d24; font-weight:700;">X ZATVORI PROZOR</button>
-            </div>
-            <div class="zoom-body" id="zoom-dynamic-body"></div>
-            <div class="zoom-footer">
-                <button class="btn-action" onclick="zatvoriZoomEditor()" style="padding:10px 20px;">Poništi</button>
-                <button class="btn-save" onclick="potvrdiIZatvoriZoom()" style="margin:0; padding:10px 25px;"><i
-                        class="fa-solid fa-check"></i> Završi i Primeni Izmene</button>
-            </div>
-        </div>
     </div>
     <div id="master-control-plane-overlay" class="master-control-plane-overlay" style="display: none;">
-
         <div
             style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--admin-border); padding-bottom: 20px; margin-bottom: 30px;">
             <div>
@@ -283,12 +265,31 @@
                         <th style="padding: 14px; text-align: right;">Authorization Link</th>
                     </tr>
                 </thead>
-                <tbody id="master-users-table-body">
-                </tbody>
+                <tbody id="master-users-table-body"></tbody>
             </table>
         </div>
     </div>
-    <script src="admin-logic.js?v=1.5.7"></script>
+
+
+    <div id="zoom-editor-overlay">
+        <div class="zoom-window">
+            <div class="zoom-header">
+                <h3 id="zoom-module-title"
+                    style="color: var(--admin-accent); font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">
+                    UREĐIVANJE KOCKICE Sadržaj</h3>
+                <button onclick="zatvoriZoomEditor()" class="btn-action"
+                    style="border-color:#b81d24; color:#b81d24; font-weight:700;">X ZATVORI PROZOR</button>
+            </div>
+            <div class="zoom-body" id="zoom-dynamic-body"></div>
+            <div class="zoom-footer">
+                <button class="btn-action" onclick="zatvoriZoomEditor()" style="padding:10px 20px;">Poništi</button>
+                <button class="btn-save" onclick="potvrdiIZatvoriZoom()" style="margin:0; padding:10px 25px;"><i
+                        class="fa-solid fa-check"></i> Završi i Primeni Izmene</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin-logic.js?v=1.5.8"></script>
 </body>
 
 </html>
