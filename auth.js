@@ -6,26 +6,24 @@ export async function verifyIdentityAndGetProfile() {
     const badge = document.getElementById('user-session-badge');
 
     try {
-        console.log("🪙 Phase 1: Initiating Token Exchange via local /issue_session...");
+        console.log("🪙 Phase 1: Initiating Token Exchange...");
         const tokenRes = await fetch("/issue_session", { credentials: "include" });
         if (!tokenRes.ok) throw new Error("Cloudflare Access rejected local session issuance.");
 
         const tokenData = await tokenRes.json();
-        if (!tokenData.token) throw new Error("Token mint returned an empty signature.");
+        if (!tokenData.token) throw new Error("Token mint returned empty.");
 
         localStorage.setItem('selection_session_token', tokenData.token);
-        console.log("✅ Phase 1 Successful: Selection Token secured in LocalStorage.");
 
-        console.log("📡 Phase 2: Authenticating to public gateway with Bearer token...");
+        console.log("📡 Phase 2: Authenticating to public gateway...");
         const res = await fetch(`${API_BASE}/get_user`, {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${tokenData.token}` }
         });
 
-        if (!res.ok) throw new Error(`Shell gateway rejected Bearer session with status: ${res.status}`);
+        if (!res.ok) throw new Error(`Shell gateway error status: ${res.status}`);
 
         const userData = await res.json();
-        console.log("👤 Phase 2 Successful! Raw kernel response payload:", userData);
         if (userData.error) throw new Error(userData.error);
 
         const profil = userData.user || userData;
@@ -36,23 +34,25 @@ export async function verifyIdentityAndGetProfile() {
 
         if (!activeSubdomain || activeSubdomain === "undefined") activeSubdomain = "admin";
 
-        // 🧱 CHECK THROUGH THE WAITING ROOM GATE
+        // 🧱 PROVERA ULJEZA ILI KLIJENTA NA ČEKANJU (WAITING ROOM ENGINE)
         if (userRole !== "master" && userStatus !== "approved") {
             console.warn(`🔒 Identity parked in waiting room [Status: ${userStatus}].`);
             if (rootShield) {
                 rootShield.setAttribute('data-status', 'pending');
-                rootShield.className = "global-splash-lockout";
+                rootShield.className = "global-splash-lockout"; // Aktivira fiksiran mrak preko celog ekrana
+
+                // Čist, centriran HTML bez okvira koji guše sredinu
                 rootShield.innerHTML = `
-                    <div>
-                        <div style="font-size: 60px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(214,180,131,0.2)); line-height: 1;">🔒</div>
-                        <h1 style="font-family: 'Cinzel', serif; color: #d4b483; font-size: 2.2rem; margin: 0 0 12px 0; letter-spacing: 1px; text-transform: uppercase;">Account Review in Progress</h1>
-                        <p style="color: #eeeeee; max-width: 480px; font-size: 0.95rem; line-height: 1.6; opacity: 0.85; margin: 0 0 25px 0;">
+                    <div class="global-splash-wrapper">
+                        <div style="font-size: 55px; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(214,180,131,0.15));">🔒</div>
+                        <h1 style="font-family: 'Cinzel', serif; color: #d4b483; font-size: 2.1rem; margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase;">Account Review in Progress</h1>
+                        <p style="color: #eeeeee; font-size: 0.95rem; line-height: 1.6; opacity: 0.85; margin-bottom: 20px;">
                             Hello <strong style="color:#d4b483; font-weight: 600;">${userEmail}</strong>. Your Selection SaaS space has been successfully reserved and provisioned on the Edge node, but it is currently awaiting administration approval.
                         </p>
-                        <div style="background: rgba(212, 180, 131, 0.03); border: 1px dashed #d4b483; padding: 14px 24px; border-radius: 6px; font-size: 0.85rem; color: #d4b483; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: fit-content; margin: 0 auto;">
-                            <i class="fa-solid fa-clock-rotate-left"></i> Administration is verifying your metrics and will activate your panel shortly.
-                        </div>
-                        <span style="font-size: 0.75rem; margin-top: 50px; opacity: 0.25; letter-spacing: 0.5px; display: block;">Selection SaaS Engine • Identity Verified at Edge</span>
+                        <p style="font-size: 0.9rem; color: #d4b483; font-weight: 500; letter-spacing: 0.5px; opacity: 0.95; line-height: 1.5;">
+                            <i class="fa-solid fa-clock-rotate-left" style="margin-right: 6px;"></i> Administration is verifying your metrics and will activate your panel shortly.
+                        </p>
+                        <span style="font-size: 0.75rem; margin-top: 60px; opacity: 0.2; letter-spacing: 0.5px; display: block;">Selection SaaS Engine • Identity Verified at Edge</span>
                     </div>
                 `;
             }
@@ -60,10 +60,10 @@ export async function verifyIdentityAndGetProfile() {
                 badge.innerHTML = `⏳ <span style="color: #d4b483; font-weight: 600;">Awaiting Approval</span>`;
                 badge.style.display = "flex";
             }
-            return null; // Halt process
+            return null; // Stopira učitavanje ostatka aplikacije
         }
 
-        // 🔓 IDENTITY APPROVED OVER THE GATE
+        // 🔓 USPEŠNO ODOBREN PROLAZ
         if (rootShield) rootShield.setAttribute('data-status', 'approved');
         if (badge) {
             const icon = userRole === "master" ? "👑" : "🔒";
@@ -78,12 +78,8 @@ export async function verifyIdentityAndGetProfile() {
         return { userEmail, userRole, userStatus, activeSubdomain };
 
     } catch (err) {
-        console.error("❌ Core bootstrap failure. Activating local Devel Fallback...", err);
+        console.error("❌ Gateway failure. Sandbox recovery...", err);
         if (rootShield) rootShield.setAttribute('data-status', 'approved');
-        if (badge) {
-            badge.innerHTML = `⚠️ <span style="color: #d4b483; font-weight: 600;">Local Sandbox (Devel)</span>`;
-            badge.style.display = "flex";
-        }
         const fallbackSubdomain = localStorage.getItem('userSubdomain') || 'admin';
         window.currentSubdomain = fallbackSubdomain;
         return { userEmail: "fallback@selection.rs", userRole: "master", userStatus: "approved", activeSubdomain: fallbackSubdomain };
