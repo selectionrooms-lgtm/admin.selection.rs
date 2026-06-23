@@ -17,9 +17,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==========================================================================
-// 1. IDENTITY & KERNEL INITIALIZATION (Fixed Race Condition & Fallback)
+// 1. IDENTITY & KERNEL INITIALIZATION (Fixed Race Condition & Mapping)
 // ==========================================================================
-// admin-logic.js — Nova sinhronizovana inicijalizacija
 
 async function proveriKorisnikaIUpravljajInterfejsom() {
     const masterBlok = document.getElementById('master-admin-blok');
@@ -30,8 +29,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
     try {
         console.log("🪙 Korak 1: Pokrećem Token Exchange sa lokalnog /issue_session...");
 
-        // 1. Uzimamo Selection Token sa admin strane (gde je Access aktivan)
-        // Pošto gađamo isti domen, relativna putanja radi bez CORS muka!
+        // Uzimamo Selection Token sa admin strane (gde je Access aktivan)
         const tokenRes = await fetch("/issue_session", { credentials: "include" });
         if (!tokenRes.ok) throw new Error("Cloudflare Access odbio izdavanje lokalne sesije.");
 
@@ -44,7 +42,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 
         console.log("📡 Korak 2: Autentifikujem se na javni shell sa novim Bearer tokenom...");
 
-        // 🚀 Sada idemo na javni shell sa hirurški očišćenim zaglavljem!
+        // Idemo na javni shell sa hirurški očišćenim zaglavljem bez X-Requested-With!
         const res = await fetch(`${API_BASE}/get_user`, {
             method: 'GET',
             headers: {
@@ -55,28 +53,41 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         if (!res.ok) throw new Error(`Shell odbio Bearer sesiju sa statusom: ${res.status}`);
 
         const userData = await res.json();
-        console.log("👤 Korak 2 uspešan! Podaci o korisniku povučeni:", userData);
+        console.log("👤 Korak 2 uspešan! Sirovi podaci sa servera:", userData);
 
         if (userData.error) throw new Error(userData.error);
 
-        // Renderovanje interfejsa na osnovu podataka iz našeg tokena
+        // UI Ekstraktor: Prilagođavanje shape-u podataka (user objekat ili koren)
+        const profil = userData.user || userData;
+        const korisnickiEmail = profil.email || localStorage.getItem('userEmail') || "selectionrooms@gmail.com";
+        const korisnickaUloga = profil.role || "client";
+
+        // Gvozdeni guard protiv undefined poddomena
+        let aktivniSubdomain = profil.tenant || profil.subdomain || "admin";
+        if (!aktivniSubdomain || aktivniSubdomain === "undefined") {
+            console.warn("⚠️ Subdomain detektovan kao nepostojeći, fallback na 'admin'");
+            aktivniSubdomain = "admin";
+        }
+
+        // Renderovanje interfejsa na osnovu bezbedno izvučenih podataka
         if (badge) {
-            const ikonica = userData.role === "master" ? "👑" : "🔒";
-            badge.innerHTML = `${ikonica} <span style="color: var(--admin-accent); font-weight: 600;">${userData.email}</span>`;
+            const ikonica = korisnickaUloga === "master" ? "👑" : "🔒";
+            badge.innerHTML = `${ikonica} <span style="color: var(--admin-accent); font-weight: 600;">${korisnickiEmail}</span>`;
             badge.style.display = "flex";
         }
 
-        localStorage.setItem('userEmail', userData.email);
+        localStorage.setItem('userEmail', korisnickiEmail);
+        localStorage.setItem('userSubdomain', aktivniSubdomain);
+        window.currentSubdomain = aktivniSubdomain;
 
-        if (userData.role === "master") {
+        if (korisnickaUloga === "master") {
             if (masterBlok) masterBlok.style.display = "block";
-            localStorage.setItem('userSubdomain', 'admin');
-            ucitajConfig("admin");
         } else {
             if (masterBlok) masterBlok.style.display = "none";
-            localStorage.setItem('userSubdomain', userData.subdomain);
-            ucitajConfig(userData.subdomain);
         }
+
+        console.log(`📂 Žičenje završeno. Pokrećem učitavanje za poddomen: ${aktivniSubdomain}`);
+        ucitajConfig(aktivniSubdomain);
 
     } catch (err) {
         console.error("❌ Bootstrap krah. Aktiviram lokalni Devel Fallback...", err);
@@ -89,17 +100,17 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         if (masterBlok) masterBlok.style.display = "block";
 
         const klijentovSubdomain = localStorage.getItem('userSubdomain') || 'admin';
-        localStorage.setItem('userSubdomain', klijentovSubdomain);
+        window.currentSubdomain = klijentovSubdomain;
         ucitajConfig(klijentovSubdomain);
     }
 }
 
-// 📂 SINHRONIZOVANO: Sada gađa čist /api/config endpoint na novom ruteru
+// 📂 SINHRONIZOVANO: Povlačenje konfiguracije sa Edge baze podataka
 function ucitajConfig(subdomain) {
-    console.log(`📂 Pokrećem učitavanje konfiguracije sa Edge API-ja za poddomen: ${subdomain}...`);
+    const cisceniSubdomain = subdomain || "admin";
+    console.log(`📂 Pokrećem učitavanje konfiguracije sa Edge API-ja za poddomen: ${cisceniSubdomain}...`);
 
-    // Umesto korene rute, gađamo namenski javni endpoint koji je registrovan u polisi
-    fetch(`${API_BASE}/api/config?subdomain=${subdomain}&nocache=${Date.now()}`, {
+    fetch(`${API_BASE}/api/config?subdomain=${cisceniSubdomain}&nocache=${Date.now()}`, {
         credentials: "include"
     })
         .then(res => {
@@ -115,7 +126,7 @@ function ucitajConfig(subdomain) {
                 trenutniConfig = data;
             }
 
-            console.log(`✅ Config za [${subdomain}] uspešno učitan iz baze:`, trenutniConfig);
+            console.log(`✅ Config za [${cisceniSubdomain}] uspešno učitan iz baze:`, trenutniConfig);
 
             popuniGlobalneStilove();
             osveziCoreSummaryTekst();
@@ -125,6 +136,9 @@ function ucitajConfig(subdomain) {
         })
         .catch(err => {
             console.error("❌ Greška pri učitavanju konfiguracije. Pravim stabilan lokalni kostur.", err);
+
+            // 🎯 POPRAVLJENO: Spojeno u camelCase naziv varijable bez razmaka!
+            const siguranNazivProjekta = (cisceniSubdomain || "ADMIN").toUpperCase();
 
             trenutniConfig = {
                 config: {
@@ -138,7 +152,7 @@ function ucitajConfig(subdomain) {
                         fontHeader: "Cinzel",
                         fontQuote: "Cormorant Garamond",
                         fontBody: "Montserrat",
-                        projectName: subdomain.toUpperCase(),
+                        projectName: siguranNazivProjekta, // <-- Ovde se lepo mapira
                         projectSubtitle: "Dobrodošli u Vaš Selection prostor",
                         loaderMusic: "",
                         screensaverMusic: "",
@@ -168,14 +182,14 @@ function popuniGlobalneStilove() {
     if (document.getElementById('input-boja-kontejner')) document.getElementById('input-boja-kontejner').value = settings.containerBg || '#1c2a39';
     if (document.getElementById('input-ss-tajmer')) document.getElementById('input-ss-tajmer').value = settings.screensaverTimeout || 60;
 
-    document.getElementById('input-slika-pozadina').value = settings.mainBackgroundImage || '';
-    document.getElementById('label-global-pozadina').innerText = settings.mainBackgroundImage || 'Klikni ili prevuci sliku ovde';
+    if (document.getElementById('input-slika-pozadina')) document.getElementById('input-slika-pozadina').value = settings.mainBackgroundImage || '';
+    if (document.getElementById('label-global-pozadina')) document.getElementById('label-global-pozadina').innerText = settings.mainBackgroundImage || 'Klikni ili prevuci sliku ovde';
 
-    document.getElementById('input-loader-muzika').value = settings.loaderMusic || '';
-    document.getElementById('label-global-loader-muzika').innerText = settings.loaderMusic || 'Klikni ili prevuci .mp3 ovde';
+    if (document.getElementById('input-loader-muzika')) document.getElementById('input-loader-muzika').value = settings.loaderMusic || '';
+    if (document.getElementById('label-global-loader-muzika')) document.getElementById('label-global-loader-muzika').innerText = settings.loaderMusic || 'Klikni ili prevuci .mp3 ovde';
 
-    document.getElementById('input-ss-muzika').value = settings.screensaverMusic || '';
-    document.getElementById('label-global-ss-muzika').innerText = settings.screensaverMusic || 'Klikni ili prevuci .mp3 ovde';
+    if (document.getElementById('input-ss-muzika')) document.getElementById('input-ss-muzika').value = settings.screensaverMusic || '';
+    if (document.getElementById('label-global-ss-muzika')) document.getElementById('label-global-ss-muzika').innerText = settings.screensaverMusic || 'Klikni ili prevuci .mp3 ovde';
 }
 
 function osveziCoreSummaryTekst() {
@@ -641,7 +655,7 @@ function osveziZiviPreview() {
         if (!simulator || !target) return;
 
         simulator.style.backgroundColor = bojaPozadine;
-        let slikaZaPrikaz = trenutniConfig.config.globalSettings?._tempBgPreview || document.getElementById('input-slika-pozadina').value;
+        let slikaZaPrikaz = trenutniConfig.config?.globalSettings?._tempBgPreview || document.getElementById('input-slika-pozadina').value;
 
         if (slikaZaPrikaz && !slikaZaPrikaz.startsWith('blob:') && !slikaZaPrikaz.startsWith('http')) {
             slikaZaPrikaz = '/' + slikaZaPrikaz;
@@ -652,10 +666,13 @@ function osveziZiviPreview() {
 
         const stilKontejnera = `background: ${bojaKontejnera}; padding: 22px; border-radius: 14px; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.4); width: 100%;`;
 
+        // Sigurna toUpperCase eksploatacija za simulator
+        const ziviPoddomen = (window.currentSubdomain || "ADMIN").toUpperCase();
+
         if (aktivniIndex === null || aktivniIndex === -1) {
             if (statusTag) statusTag.innerText = "Prikaz: Uvodni ekran";
-            const pName = document.getElementById('zoom-core-projectName')?.value || trenutniConfig.config.globalSettings.projectName || 'Selection';
-            const pSub = document.getElementById('zoom-core-projectSubtitle')?.value || trenutniConfig.config.globalSettings.projectSubtitle || '';
+            const pName = document.getElementById('zoom-core-projectName')?.value || trenutniConfig.config?.globalSettings?.projectName || ziviPoddomen;
+            const pSub = document.getElementById('zoom-core-projectSubtitle')?.value || trenutniConfig.config?.globalSettings?.projectSubtitle || '';
 
             target.innerHTML = `
                 <div style="width: 100%; text-align:center;">
@@ -689,7 +706,7 @@ function osveziZiviPreview() {
                         <h1 style="font-family: '${fontH1}', serif; color: ${bojaH1}; font-size: 1.2rem; margin-bottom:2px;">${t}</h1>
                         <h2 style="font-family: '${fontH2}', serif; color: ${bojaH2}; font-style: italic; font-size: 0.85rem; margin-bottom: 10px;">${s}</h2>
                         <p style="font-family: '${fontP}', sans-serif; color: ${bojaP}; font-size: 0.75rem; line-height: 1.4; opacity:0.85;">[ Prvi pasus priče... ]</p>
-                        <button style="background: none; border: 1px solid ${bojaH1}; color: ${bojaH1}; font-family: '${fontP}', sans-serif; padding: 5px 10px; font-size: 0.7 tribe; border-radius: 6px; margin-top: 10px; font-weight:600;">${btnT}</button>
+                        <button style="background: none; border: 1px solid ${bojaH1}; color: ${bojaH1}; font-family: '${fontP}', sans-serif; padding: 5px 10px; font-size: 0.75rem; border-radius: 6px; margin-top: 10px; font-weight:600;">${btnT}</button>
                     </div>
                 `;
             }
@@ -752,6 +769,9 @@ async function sacuvajSveNaServer(akcija = 'save') {
         });
     }
 
+    // Siguran guard za toUpperCase iznad naziva projekta
+    const sigurniSubdomenZaTekst = (window.currentSubdomain || "Selection").toUpperCase();
+
     const cistConfigZaExport = {
         config: {
             globalSettings: {
@@ -767,7 +787,7 @@ async function sacuvajSveNaServer(akcija = 'save') {
                 loaderMusic: document.getElementById('input-loader-muzika').value.replace(/^\//, ''),
                 screensaverMusic: document.getElementById('input-ss-muzika').value.replace(/^\//, ''),
                 screensaverTimeout: parseInt(document.getElementById('input-ss-tajmer').value) || 60,
-                projectName: trenutniConfig.config?.globalSettings?.projectName || "Selection",
+                projectName: trenutniConfig.config?.globalSettings?.projectName || sigurniSubdomenZaTekst,
                 projectSubtitle: trenutniConfig.config?.globalSettings?.projectSubtitle || ""
             },
             hasWarningMessage: trenutniConfig.config?.hasWarningMessage ?? true
@@ -784,7 +804,7 @@ async function sacuvajSveNaServer(akcija = 'save') {
     formData.append('config_data', JSON.stringify(cistConfigZaExport));
     formData.append('action', akcija);
 
-    const aktivniSubdomenZaSnimanje = localStorage.getItem('userSubdomain') || 'canvas';
+    const aktivniSubdomenZaSnimanje = window.currentSubdomain || localStorage.getItem('userSubdomain') || 'admin';
     formData.append('subdomain', aktivniSubdomenZaSnimanje);
 
     const trenutniEmail = localStorage.getItem('userEmail');
@@ -799,14 +819,14 @@ async function sacuvajSveNaServer(akcija = 'save') {
     try {
         console.log(`🚀 Strimujem mrežni payload [Akcija: ${akcija.toUpperCase()}] na Edge R2/KV Kernel...`);
 
-        // POVLAČIMO MINTTOVANI TOKEN IZ LOKALNE MEMORIJE
+        // Povlačimo iskovani Selection Bearer token iz memorije
         const token = localStorage.getItem('selection_session_token');
 
+        // 🧱 HIRURŠKI POPRAVLJENO: Izbačeno "X-Requested-With" da preflight propusti POST!
         const response = await fetch(`${API_BASE}/save_data`, {
             method: 'POST',
             headers: {
-                'Authorization': token ? `Bearer ${token}` : '',
-                'X-Requested-With': 'XMLHttpRequest'
+                'Authorization': token ? `Bearer ${token}` : ''
             },
             body: formData
         });
@@ -892,7 +912,9 @@ function okiniGlobalniKlikFajla(tipMetmete) {
                 document.getElementById('input-slika-pozadina').value = 'images/' + imeFajla;
                 document.getElementById('label-global-pozadina').innerText = 'images/' + imeFajla;
                 fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
-                trenutniConfig.config.globalSettings._tempBgPreview = previewUrl;
+                if (trenutniConfig && trenutniConfig.config && trenutniConfig.config.globalSettings) {
+                    trenutniConfig.config.globalSettings._tempBgPreview = previewUrl;
+                }
             }
             else if (tipMetmete === 'loader-mp3') {
                 document.getElementById('input-loader-muzika').value = 'audio/' + imeFajla;
@@ -908,19 +930,25 @@ function okiniGlobalniKlikFajla(tipMetmete) {
                 const blok = trenutniConfig.timeline[aktivniIndex];
                 blok.url = previewUrl; blok._realVideoName = imeFajla; blok._realName = 'videos/' + imeFajla;
                 fajloviZaUpload.push({ putanja: 'videos/' + imeFajla, rawFile: fajl });
-                document.getElementById('zoom-video-display-name').innerText = imeFajla;
+                if (document.getElementById('zoom-video-display-name')) {
+                    document.getElementById('zoom-video-display-name').innerText = imeFajla;
+                }
             }
             else if (tipMetmete === 'block-audio' && aktivniIndex !== null) {
                 const blok = trenutniConfig.timeline[aktivniIndex];
                 blok.bgMusicUrl = previewUrl; blok._realAudioName = imeFajla; blok._realName = 'audio/' + imeFajla;
                 fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl });
-                document.getElementById('zoom-audio-display-name').innerText = `Traka: ${imeFajla}`;
+                if (document.getElementById('zoom-audio-display-name')) {
+                    document.getElementById('zoom-audio-display-name').innerText = `Traka: ${imeFajla}`;
+                }
             }
             else if (tipMetmete === 'final-icon' && aktivniIndex !== null) {
                 document.getElementById('zoom-field-endIconType').value = 'images/' + imeFajla;
                 trenutniConfig.timeline[aktivniIndex]._realIconName = imeFajla;
                 fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
-                document.getElementById('final-icon-status').innerText = `Učitano: ${imeFajla}`;
+                if (document.getElementById('final-icon-status')) {
+                    document.getElementById('final-icon-status').innerText = `Učitano: ${imeFajla}`;
+                }
             }
             else if (tipMetmete === 'gallery-images' && aktivniIndex !== null) {
                 const blok = trenutniConfig.timeline[aktivniIndex];
@@ -1075,7 +1103,9 @@ function globalDrop(e) {
             document.getElementById('input-slika-pozadina').value = 'images/' + imeFajla;
             document.getElementById('label-global-pozadina').innerText = 'images/' + imeFajla;
             fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl });
-            trenutniConfig.config.globalSettings._tempBgPreview = URL.createObjectURL(fajl);
+            if (trenutniConfig && trenutniConfig.config && trenutniConfig.config.globalSettings) {
+                trenutniConfig.config.globalSettings._tempBgPreview = URL.createObjectURL(fajl);
+            }
             osveziZiviPreview();
         }
         else if (dropLoaderMuzika) {
