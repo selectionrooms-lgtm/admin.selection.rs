@@ -43,7 +43,7 @@ export async function verifyIdentityAndGetProfile() {
                 rootShield.setAttribute('data-status', 'pending');
                 rootShield.className = "global-splash-lockout";
                 rootShield.innerHTML = `
-                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-family: 'Montserrat', sans-serif; color: #fff; background-color: #0f171e;">
+                    <div>
                         <div style="font-size: 60px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(214,180,131,0.2)); line-height: 1;">🔒</div>
                         <h1 style="font-family: 'Cinzel', serif; color: #d4b483; font-size: 2.2rem; margin: 0 0 12px 0; letter-spacing: 1px; text-transform: uppercase;">Account Review in Progress</h1>
                         <p style="color: #eeeeee; max-width: 480px; font-size: 0.95rem; line-height: 1.6; opacity: 0.85; margin: 0 0 25px 0;">

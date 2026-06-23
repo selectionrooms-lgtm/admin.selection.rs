@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SELECTION CANVAS ARCHITECTURE — style.css (Unified Production Fix)
+   SELECTION CANVAS ARCHITECTURE — style.css (Unified Production Fix V2)
    ========================================================================== */
 
 :root {
@@ -29,12 +29,45 @@ body {
     display: flex;
 }
 
-/* --- 🛡️ GVOZDENI KORENSKI ŠTIT --- */
-.main-workspace-container {
+/* --- 🛡️ SHIELD SYSTEM: INITIAL DARKNESS LAYER --- */
+/* Na F5 dok se proverava token, aplikacija je u mraku. Sprečava blicanje klijentima. */
+.main-workspace-container[data-status="loading"] {
+    display: none !important;
+}
+
+/* Kada JS odobri vizu, otključava se troslojna arhitektura */
+.main-workspace-container[data-status="approved"] {
     display: flex !important;
     width: 100vw;
     height: 100vh;
     overflow: hidden;
+}
+
+/* --- ⏳ GLOBAL SPLASH LOCK SCREEN (Mrtav Centar Arhitektura) --- */
+.global-splash-lockout {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: #0f171e !important;
+    z-index: 999999 !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+}
+
+/* Svi unutrašnji elementi u splash-u prate centar */
+.global-splash-lockout>div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 /* --- LEVI PANEL: KONTROLNA TABLA (FIKSNO 320px) --- */
@@ -140,7 +173,7 @@ body {
     background-color: var(--admin-sidebar);
 }
 
-/* 🎯 STRUKTURNI FIX: Posebna drop-zona za levi panel koja ne puca */
+/* 🎯 STRUKTURNI FIX: Izolovana drop-zona za levi panel */
 .sidebar-drop-zone {
     border: 1px dashed var(--admin-border);
     padding: 12px;
@@ -219,7 +252,7 @@ body {
     gap: 12px;
 }
 
-/* --- LEGO KOCKICE SOLIDAN PANEL SYSTEM --- */
+/* --- LEGO KOCKICE PANEL SYSTEM --- */
 .cms-block-card {
     background-color: var(--admin-card);
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -436,12 +469,27 @@ body {
     gap: 15px;
 }
 
+/* --- 👑 PREMIUM GOLD MASTER CARD --- */
 .master-card {
-    background: rgba(255, 255, 255, 0.02) !important;
-    border: 1px solid rgba(214, 180, 131, 0.25) !important;
+    background: rgba(212, 180, 131, 0.03) !important;
+    border: 1px solid #d4b483 !important;
     border-radius: 12px;
-    padding: 15px;
+    padding: 18px;
     margin: 10px 0 20px 0;
+    box-shadow: 0 0 20px rgba(212, 180, 131, 0.1), inset 0 0 10px rgba(212, 180, 131, 0.05);
+}
+
+.master-card h3 {
+    color: #d4b483 !important;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 0 8px rgba(212, 180, 131, 0.3);
 }
 
 .master-control-plane-overlay {
