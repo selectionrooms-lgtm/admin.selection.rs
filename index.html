@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Selection Canvas - Workspace Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.7.0">
+    <link rel="stylesheet" href="style.css?v=2.8.0">
     <style>
         #selection-saas-root-shield[data-status="loading"] {
             display: none !important;
@@ -34,10 +34,8 @@
 
             <div id="master-admin-blok" class="master-card" style="display: none;">
                 <h3><i class="fa-solid fa-crown"></i> Master Engine</h3>
-                <p style="font-size: 10px; color: #a0acb8; margin-bottom: 15px;">System cleared at clearance level 1.
-                </p>
                 <button type="button" id="btn-master-console-trigger"
-                    style="width: 100%; background: linear-gradient(135deg, #d4b483 0%, #aa8c5e 100%); color: #0a1015; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family:'Montserrat',sans-serif; text-transform:uppercase; font-size:0.75rem; letter-spacing:1px; box-shadow: 0 4px 15px rgba(212, 180, 131, 0.2);">
+                    style="width: 100%; background: linear-gradient(135deg, #d4b483 0%, #aa8c5e 100%); color: #0a1015; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family:'Montserrat',sans-serif; text-transform:uppercase; font-size:0.75rem; letter-spacing:1px; box-shadow: 0 4px 15px rgba(212, 180, 131, 0.2); margin-top: 5px;">
                     <i class="fa-solid fa-sliders"></i> Control Plane Console
                 </button>
             </div>
@@ -135,27 +133,10 @@
         </div>
 
         <div class="preview-panel" id="global-preview-panel">
-            <div
-                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--admin-border); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-                <div
-                    style="display: flex; gap: 6px; background: rgba(255,255,255,0.03); padding: 4px; border-radius: 8px; border: 1px solid var(--admin-border);">
-                    <button id="btn-mode-mobile"
-                        style="background: var(--admin-accent); color: var(--admin-sidebar); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer;">
-                        <i class="fa-solid fa-mobile-screen-button"></i> Mobile View
-                    </button>
-                    <button id="btn-mode-pc"
-                        style="background: transparent; color: var(--admin-muted); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer;">
-                        <i class="fa-solid fa-desktop"></i> Desktop View
-                    </button>
-                </div>
-                <span id="preview-status-tag"
-                    style="font-size: 9px; background: rgba(212,180,131,0.1); color: var(--admin-accent); padding: 3px 6px; border-radius: 4px;">Stage:
-                    Intro</span>
-            </div>
-            <div class="device-simulator" id="live-simulator-screen">
-                <div id="simulator-content-target"></div>
-            </div>
+            <div id="simulator-content-target" style="width: 100%; height: 100%;"></div>
         </div>
+
+        <div id="floating-action-holder"></div>
 
         <div id="zoom-editor-overlay">
             <div class="zoom-window">
@@ -221,7 +202,7 @@
                     0</h3>
             </div>
             <div
-                style="background: var(--admin-sidebar); padding: 20px; border-radius: 12px; border: 1px solid var(--admin-border);">
+                style="background: var(--admin-sidebar); padding: 20px; border-radius: 12px; border: 1px solid var(--admin-accent);">
                 <span
                     style="font-size: 0.8rem; color: var(--admin-accent); text-transform: uppercase; letter-spacing: 0.5px;">Pending
                     Queue</span>
@@ -257,7 +238,7 @@
         </div>
     </div>
 
-    <script type="module" src="shell-core.js?v=2.7.0"></script>
+    <script type="module" src="shell-core.js?v=2.8.0"></script>
 </body>
 
 </html>

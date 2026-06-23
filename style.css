@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SELECTION CANVAS ARCHITECTURE — style.css (Production Stable Layer V5)
+   SELECTION CANVAS ARCHITECTURE — style.css (Production Stable Layer V6)
    ========================================================================== */
 
 :root {
@@ -31,7 +31,7 @@ body {
     color: var(--admin-text);
 }
 
-/* --- 🛡️ SHIELD SYSTEM: KORENSKI STRUKTURNI RASPORED --- */
+/* --- 🛡️ SHIELD SYSTEM --- */
 .main-workspace-container {
     display: none;
     width: 100vw;
@@ -181,12 +181,7 @@ body {
     font-size: 0.8rem;
 }
 
-.sidebar-drop-zone:hover {
-    border-color: var(--admin-accent);
-    background: rgba(212, 180, 131, 0.03);
-}
-
-/* --- SREDNJI PANEL: RADNI PROSTOR SA KOCKICAMA --- */
+/* --- SREDNJI PANEL: RADNI PROSTOR --- */
 .main-workspace {
     flex: 1 !important;
     display: flex;
@@ -229,16 +224,6 @@ body {
     transition: all 0.2s;
 }
 
-.btn-add:hover {
-    border-color: var(--admin-accent);
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.btn-splash-trigger {
-    border: 1px dashed var(--admin-accent) !important;
-    background: rgba(212, 180, 131, 0.03);
-}
-
 .blocks-container {
     flex: 1;
     padding: 30px;
@@ -248,7 +233,7 @@ body {
     gap: 12px;
 }
 
-/* --- LEGO KOCKICE SOLIDAN PANEL SYSTEM --- */
+/* --- 📦 LEGO KOCKICE SISTEM SA DRAG INDIKATOROM --- */
 .cms-block-card {
     background-color: var(--admin-card);
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -258,13 +243,20 @@ body {
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    cursor: pointer;
-    transition: all 0.2s ease;
+    cursor: grab;
+    /* Ruka za hvatanje */
+    transition: transform 0.15s ease, border-color 0.15s ease;
     width: 100%;
 }
 
-.cms-block-card:hover {
-    border-color: rgba(212, 180, 131, 0.4);
+.cms-block-card:active {
+    cursor: grabbing;
+}
+
+/* Stanje kada prevlačimo kockicu preko druge */
+.cms-block-card.drag-over-active {
+    border-top: 2px dashed var(--admin-accent) !important;
+    transform: scale(1.01);
 }
 
 .cms-block-card.active-block {
@@ -336,13 +328,6 @@ body {
     font-size: 0.8rem;
     border-radius: 8px;
     font-weight: 700;
-    transition: 0.2s;
-}
-
-.btn-action:hover {
-    color: white;
-    border-color: var(--admin-accent);
-    background: rgba(255, 255, 255, 0.08);
 }
 
 .btn-delete {
@@ -350,42 +335,32 @@ body {
     color: #b81d24;
 }
 
-.btn-delete:hover {
-    background: #b81d24;
-    color: #fff;
-    border-color: #b81d24;
-}
-
-/* --- DESNI PANEL & SIMULATOR --- */
+/* --- 📺 POTPUNO SLOBODAN PREVIEW PANEL --- */
 .preview-panel {
-    flex: 0.75 !important;
-    min-width: 320px;
+    flex: 1.2 !important;
+    /* Širi se i uzima udoban prostor */
     background-color: #070b0e;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
     height: 100%;
     overflow: hidden;
+    position: relative;
+    padding: 0;
+    /* Leti spoljno punjenje da sajt popuni ivice */
 }
 
-.device-simulator {
-    flex: 1;
-    width: 100%;
-    background-color: #0f171e;
-    border: 4px solid #1c2a39;
-    border-radius: 24px;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
-    position: relative;
-    overflow-y: auto;
+/* 🎯 PLUTAJUĆI HOLDER ZA EDGE DUGMAD (Dole desno na ekranu) */
+#floating-action-holder {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    z-index: 9999;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 25px;
+    gap: 10px;
+    width: 280px;
+    pointer-events: auto;
 }
 
-/* --- 🔍 GVOZDENI ZOOM ENGINE SA FILTRIRANIM UNUTRAŠNJIM STILOM --- */
+/* --- 🔍 ZOOM ENGINE --- */
 #zoom-editor-overlay {
     position: fixed !important;
     top: 0 !important;
@@ -394,7 +369,7 @@ body {
     height: 100vh !important;
     background: rgba(10, 16, 21, 0.98) !important;
     backdrop-filter: blur(15px) !important;
-    z-index: 9999 !important;
+    z-index: 10000 !important;
     display: none !important;
     justify-content: center !important;
     align-items: center !important;
@@ -412,7 +387,6 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }
 
 .zoom-header {
@@ -421,14 +395,6 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(255, 255, 255, 0.01);
-}
-
-.zoom-header h3 {
-    color: var(--admin-accent);
-    font-size: 1.1rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
 }
 
 .zoom-body {
@@ -438,10 +404,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 18px;
-    /* Stabilan razmak unutra */
 }
 
-/* 🔒 ZAŠTITA ZA INPUT FORME UNUTAR ZOOMA (Da stil ne puca!) */
 .zoom-body .form-group select,
 .zoom-body .form-group input[type="text"],
 .zoom-body .form-group input[type="email"],
@@ -457,13 +421,6 @@ body {
     outline: none !important;
 }
 
-.zoom-body .form-group select:focus,
-.zoom-body .form-group input:focus,
-.zoom-body .form-group textarea:focus {
-    border-color: var(--admin-accent) !important;
-    background-color: #070b0e !important;
-}
-
 .zoom-footer {
     padding: 18px 25px;
     border-top: 1px solid var(--admin-border);
@@ -471,7 +428,6 @@ body {
     justify-content: flex-end;
     align-items: center;
     gap: 12px;
-    background: rgba(255, 255, 255, 0.01);
 }
 
 .zoom-drop-zone {
@@ -481,12 +437,6 @@ body {
     border-radius: 10px;
     cursor: pointer;
     background: rgba(255, 255, 255, 0.01);
-    transition: 0.2s;
-}
-
-.zoom-drop-zone:hover {
-    border-color: var(--admin-accent);
-    background: rgba(212, 180, 131, 0.02);
 }
 
 .grid-2 {
@@ -495,26 +445,28 @@ body {
     gap: 15px;
 }
 
-/* --- 👑 PREMIUM GOLD MASTER CARD --- */
+/* --- 👑 CLEAN MASTER CARD (Centrirano i pročišćeno) --- */
 .master-card {
-    background: rgba(212, 180, 131, 0.03) !important;
+    background: rgba(212, 180, 131, 0.02) !important;
     border: 1px solid #d4b483 !important;
     border-radius: 12px;
     padding: 18px;
     margin: 10px 0 20px 0;
-    box-shadow: 0 0 20px rgba(212, 180, 131, 0.15), inset 0 0 10px rgba(212, 180, 131, 0.05) !important;
+    text-align: center !important;
+    box-shadow: 0 0 20px rgba(212, 180, 131, 0.12);
 }
 
 .master-card h3 {
     color: #d4b483 !important;
-    font-size: 0.9rem;
-    margin-bottom: 6px;
+    font-size: 0.95rem;
+    margin-bottom: 5px;
     display: flex;
     align-items: center;
+    justify-content: center !important;
+    /* Centriranje naslova unutra */
     gap: 8px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    text-shadow: 0 0 8px rgba(212, 180, 131, 0.3);
 }
 
 .master-control-plane-overlay {

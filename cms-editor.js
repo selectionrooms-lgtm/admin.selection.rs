@@ -8,15 +8,12 @@ window.isEditingCore = false;
 
 export function initCmsEditor(configData) {
     trenutniConfig = configData;
-    window.trenutniConfig = configData; // Izlažemo globalno za simulator
+    window.trenutniConfig = configData;
 
-    // Vezivanje svih funkcija na window nivo za HTML i ruter drajvere
     window.postaviAktivniBlok = postaviAktivniBlok;
     window.dodajNoviBlok = dodajNoviBlok;
     window.obrisiBlok = obrisiBlok;
     window.pomeriBlok = pomeriBlok;
-    window.otvoriCoreZoomEditor = otvoriCoreZoomEditor;
-    window.otvoriZoomEditorZaBlok = otvoriZoomEditorZaBlok;
     window.zatvoriZoomEditor = zatvoriZoomEditor;
     window.potvrdiIZatvoriZoom = potvrdiIZatvoriZoom;
     window.ukloniSlikuIzGalerijeZoom = ukloniSlikuIzGalerijeZoom;
@@ -31,7 +28,6 @@ export function initCmsEditor(configData) {
     inicijalizujDugmadZaSnimanje();
     inicijalizujDragAndDrop();
 
-    // Početni preview postavi na intro ili prvi blok
     window.aktivniIndex = 0;
     osveziZiviPreview(trenutniConfig);
 }
@@ -39,20 +35,16 @@ export function initCmsEditor(configData) {
 export function popuniGlobalneStilove() {
     if (!trenutniConfig || !trenutniConfig.config || !trenutniConfig.config.globalSettings) return;
     const settings = trenutniConfig.config.globalSettings;
-
     if (document.getElementById('color-h1')) document.getElementById('color-h1').value = settings.primaryColor || '#d4b483';
     if (document.getElementById('color-h2')) document.getElementById('color-h2').value = settings.secondaryColor || '#d4b483';
     if (document.getElementById('color-p')) document.getElementById('color-p').value = settings.textColor || '#eeeeee';
     if (document.getElementById('input-boja-pozadina')) document.getElementById('input-boja-pozadina').value = settings.backgroundColor || '#0f171e';
     if (document.getElementById('input-boja-kontejner')) document.getElementById('input-boja-kontejner').value = settings.containerBg || '#1c2a39';
     if (document.getElementById('input-ss-tajmer')) document.getElementById('input-ss-tajmer').value = settings.screensaverTimeout || 60;
-
     if (document.getElementById('input-slika-pozadina')) document.getElementById('input-slika-pozadina').value = settings.mainBackgroundImage || '';
     if (document.getElementById('label-global-pozadina')) document.getElementById('label-global-pozadina').innerText = settings.mainBackgroundImage || 'Click or drag image here';
-
     if (document.getElementById('input-loader-muzika')) document.getElementById('input-loader-muzika').value = settings.loaderMusic || '';
     if (document.getElementById('label-global-loader-muzika')) document.getElementById('label-global-loader-muzika').innerText = settings.loaderMusic || 'Click or drag .mp3 file';
-
     if (document.getElementById('input-ss-muzika')) document.getElementById('input-ss-muzika').value = settings.screensaverMusic || '';
     if (document.getElementById('label-global-ss-muzika')) document.getElementById('label-global-ss-muzika').innerText = settings.screensaverMusic || 'Click or drag .mp3 file';
 }
@@ -68,9 +60,9 @@ export function renderujTimelineBlokove() {
         const card = document.createElement('div');
         card.className = 'cms-block-card';
         card.setAttribute('data-index', index);
+        card.setAttribute('draggable', 'true'); // 🧲 Oklopljen Drag parametar
         if (index === window.aktivniIndex) card.classList.add('active-block');
 
-        // Određivanje naziva i tipa oznake (Intro ima prepoznatljiv stil ali ista svojstva)
         let tipTag = `${blok.type.toUpperCase()} NODE`;
         let numLabel = `MATRIX BLOCK #${index + 1}`;
         let sumText = blok.title || blok.hint || 'Staged Node';
@@ -89,7 +81,6 @@ export function renderujTimelineBlokove() {
         if (blok.type === 'intro') mediaIndicators += `<span><i class="fa-solid fa-gear"></i> Title, Subtitle, and Rules Matrix</span>`;
         if (blok.bgMusicUrl) mediaIndicators += `<span><i class="fa-solid fa-music"></i> Audio active</span>`;
 
-        // Sve kockice bez izuzetka dobijaju identičan arsenal dugmića
         card.innerHTML = `
             <div class="block-info-side">
                 <div class="block-num">${numLabel}</div>
@@ -134,8 +125,6 @@ export function dodajNoviBlok(tip) {
     }
 
     trenutniConfig.timeline.push(noviBlok);
-
-    // 🏁 FINI PODESNIK: Samo tiho osvežavamo listu, bez otvaranja Zooma na silu!
     renderujTimelineBlokove();
     postaviAktivniBlok(trenutniConfig.timeline.length - 1);
 }
@@ -233,7 +222,6 @@ export function otvoriZoomEditorZaBlok(index) {
                 `;
             });
         }
-
         dynamicHtml = `
             <div class="grid-2">
                 <div class="form-group">
@@ -332,16 +320,8 @@ export function otvoriZoomEditorZaBlok(index) {
     overlay.style.display = 'flex';
 }
 
-export function otvoriCoreZoomEditor() {
-    // Ova funkcija se sada preslikava kroz otvoriZoomEditorZaBlok kada je tip 'intro'
-    otvoriZoomEditorZaBlok(0);
-}
-
-export function zatvoriZoomEditor() {
-    document.getElementById('zoom-editor-overlay').style.display = 'none';
-    window.isEditingCore = false;
-    renderujTimelineBlokove();
-}
+export function otvoriCoreZoomEditor() { otvoriZoomEditorZaBlok(0); }
+export function zatvoriZoomEditor() { document.getElementById('zoom-editor-overlay').style.display = 'none'; window.isEditingCore = false; renderujTimelineBlokove(); }
 
 export function potvrdiIZatvoriZoom() {
     const blok = trenutniConfig.timeline[window.aktivniIndex];
@@ -352,14 +332,10 @@ export function potvrdiIZatvoriZoom() {
         trenutniConfig.config.globalSettings.projectSubtitle = document.getElementById('zoom-core-projectSubtitle').value;
         trenutniConfig.loader.warningTitle = document.getElementById('zoom-core-warningTitle').value;
         trenutniConfig.config.hasWarningMessage = document.getElementById('zoom-core-hasWarningMessage').checked;
-
         const rawTexts = document.getElementById('zoom-core-warningTexts').value;
         trenutniConfig.loader.warningTexts = rawTexts.split('\n').filter(r => r.trim() !== '');
     } else {
-        if (document.getElementById('zoom-field-sceneEffect')) {
-            blok.sceneEffect = document.getElementById('zoom-field-sceneEffect').value;
-        }
-
+        if (document.getElementById('zoom-field-sceneEffect')) blok.sceneEffect = document.getElementById('zoom-field-sceneEffect').value;
         if (blok.type === 'chapter') {
             blok.title = document.getElementById('zoom-field-title').value;
             blok.subtitle = document.getElementById('zoom-field-subtitle').value;
@@ -385,9 +361,81 @@ export function potvrdiIZatvoriZoom() {
     osveziZiviPreview(trenutniConfig);
 }
 
-// ... Ostale helper funkcije (ukloniSlikuIzGalerijeZoom, inicijalizujDugmadZaSnimanje, okiniLokalniKlikFajla, inicijalizujDragAndDrop, sacuvajSveNaServer) se ne menjaju ...
-export function ukloniSlikuIzGalerijeZoom(imgIndex) { if (window.aktivniIndex !== null && window.aktivniIndex !== -1) { const blok = trenutniConfig.timeline[window.aktivniIndex]; blok.galleryImages.splice(imgIndex, 1); let slikeHtml = ''; blok.galleryImages.forEach((imgSrc, i) => { slikeHtml += `<div class="zoom-thumb" style="display:inline-block; position:relative; margin:5px; width:80px; height:80px; border:1px solid var(--admin-border); border-radius:6px; overflow:hidden;"><img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover;"><button type="button" onclick="ukloniSlikuIzGalerijeZoom(${i})" style="position:absolute; top:2px; right:2px; background:#b81d24; color:#fff; border:none; border-radius:50%; width:18px; height:18px; cursor:pointer; font-size:10px; font-weight:700;">×</button></div>`; }); document.getElementById('zoom-gallery-container').innerHTML = slikeHtml; osveziZiviPreview(trenutniConfig); } }
-export function inicijalizujDugmadZaSnimanje() { const previewPanel = document.getElementById('global-preview-panel'); if (!previewPanel || document.getElementById('kernel-save-wrapper-right')) return; const kontrolnaDugmadDesno = document.createElement('div'); kontrolnaDugmadDesno.id = 'kernel-save-wrapper-right'; kontrolnaDugmadDesno.style.cssText = `display:flex; flex-direction:column; gap:8px; width:100%; margin-top:auto; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05);`; kontrolnaDugmadDesno.innerHTML = `<button type="button" class="btn-save" onclick="sacuvajSveNaServer('save')" style="background:#1c2a39; border:1px solid rgba(255,255,255,0.1); color:#fff; width:100%; cursor:pointer; padding:12px; border-radius:6px; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:500;"><i class="fa-solid fa-floppy-disk"></i> Lock Changes to Staged Draft</button><button type="button" class="btn-save" onclick="sacuvajSveNaServer('publish')" style="width:100%; cursor:pointer; padding:12px; border-radius:6px; background:var(--admin-accent); color:var(--admin-sidebar); font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; border:none;"><i class="fa-solid fa-rocket"></i> Launch & Deploy Live Network</button>`; previewPanel.appendChild(kontrolnaDugmadDesno); }
+export function inicijalizujDugmadZaSnimanje() {
+    // 🎯 PLUTAJUĆA REDIREKCIJA: Dugmad za snimanje se sada crtaju u nezavisnom holderu u desnom uglu ekrana!
+    const floatHolder = document.getElementById('floating-action-holder');
+    if (!floatHolder) return;
+    floatHolder.innerHTML = `
+        <button type="button" class="btn-save" onclick="sacuvajSveNaServer('save')" style="background:#1c2a39; border:1px solid rgba(255,255,255,0.1); color:#fff; width:100%; cursor:pointer; padding:12px; border-radius:8px; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:500; box-shadow:0 4px 15px rgba(0,0,0,0.3);"><i class="fa-solid fa-floppy-disk"></i> Lock Changes to Draft</button>
+        <button type="button" class="btn-save" onclick="sacuvajSveNaServer('publish')" style="width:100%; cursor:pointer; padding:12px; border-radius:8px; background:var(--admin-accent); color:var(--admin-sidebar); font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; border:none; box-shadow:0 4px 15px rgba(212,180,131,0.2);"><i class="fa-solid fa-rocket"></i> Launch Live Network</button>
+    `;
+}
+
+export function inicijalizujDragAndDrop() {
+    const container = document.getElementById('cms-blocks-list');
+    if (!container) return;
+
+    let dragIzvorIndex = null;
+
+    // Slušači na nivou kontejnera sa kockicama (HTML5 Native Drag & Drop API)
+    container.addEventListener('dragstart', (e) => {
+        const card = e.target.closest('.cms-block-card');
+        if (!card) return;
+        dragIzvorIndex = parseInt(card.getAttribute('data-index'));
+        card.style.opacity = '0.4';
+    });
+
+    container.addEventListener('dragend', (e) => {
+        const card = e.target.closest('.cms-block-card');
+        if (card) card.style.opacity = '1';
+        document.querySelectorAll('.cms-block-card').forEach(c => c.classList.remove('drag-over-active'));
+    });
+
+    container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const card = e.target.closest('.cms-block-card');
+        if (card) card.classList.add('drag-over-active');
+    });
+
+    container.addEventListener('dragleave', (e) => {
+        const card = e.target.closest('.cms-block-card');
+        if (card) card.classList.remove('drag-over-active');
+    });
+
+    container.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const card = e.target.closest('.cms-block-card');
+        if (!card) return;
+
+        const dragCiljIndex = parseInt(card.getAttribute('data-index'));
+        if (dragIzvorIndex === null || dragIzvorIndex === dragCiljIndex) return;
+
+        // Hirurška rokada elemenata unutar memorijske matrice
+        const privremeni = trenutniConfig.timeline[dragIzvorIndex];
+        trenutniConfig.timeline.splice(dragIzvorIndex, 1);
+        trenutniConfig.timeline.splice(dragCiljIndex, 0, privremeni);
+
+        window.aktivniIndex = dragCiljIndex;
+        renderujTimelineBlokove();
+        postActiveBlock(dragCiljIndex);
+    });
+
+    // Zadržavamo i Drag za globalnu sliku pozadine
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const dropPozadina = e.target.closest('#drop-global-pozadina');
+        if (dropPozadina && e.dataTransfer.files.length > 0) {
+            const fajl = e.dataTransfer.files[0];
+            document.getElementById('input-slika-pozadina').value = 'images/' + fajl.name;
+            document.getElementById('label-global-pozadina').innerText = 'images/' + fajl.name;
+            fajloviZaUpload.push({ putanja: 'images/' + fajl.name, rawFile: fajl });
+            trenutniConfig.config.globalSettings._tempBgPreview = URL.createObjectURL(fajl);
+            osveziZiviPreview(trenutniConfig);
+        }
+    });
+}
+
+// ... Preostale bazične pomoćne funkcije (okiniLokalniKlikFajla, sacuvajSveNaServer) ostaju netaknute ...
 export function okiniLokalniKlikFajla(tipMetmete) { const input = document.createElement('input'); input.type = 'file'; if (tipMetmete === 'slika' || tipMetmete === 'gallery-images') input.accept = 'image/*'; else if (tipMetmete === 'video-file') input.accept = 'video/mp4'; else input.accept = 'audio/mp3'; if (tipMetmete === 'gallery-images') input.multiple = true; input.onchange = (e) => { if (e.target.files.length === 0) return; Array.from(e.target.files).forEach(fajl => { const imeFajla = fajl.name; const previewUrl = URL.createObjectURL(fajl); if (tipMetmete === 'slika') { document.getElementById('input-slika-pozadina').value = 'images/' + imeFajla; document.getElementById('label-global-pozadina').innerText = 'images/' + imeFajla; fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl }); trenutniConfig.config.globalSettings._tempBgPreview = previewUrl; } else if (tipMetmete === 'loader-mp3') { document.getElementById('input-loader-muzika').value = 'audio/' + imeFajla; document.getElementById('label-global-loader-muzika').innerText = 'audio/' + imeFajla; fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl }); } else if (tipMetmete === 'ss-mp3') { document.getElementById('input-ss-muzika').value = 'audio/' + imeFajla; document.getElementById('label-global-ss-muzika').innerText = 'audio/' + imeFajla; fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl }); } else if (tipMetmete === 'video-file' && window.aktivniIndex !== null) { const blok = trenutniConfig.timeline[window.aktivniIndex]; blok.url = previewUrl; blok._realVideoName = imeFajla; blok._realName = 'videos/' + imeFajla; fajloviZaUpload.push({ putanja: 'videos/' + imeFajla, rawFile: fajl }); if (document.getElementById('zoom-video-display-name')) document.getElementById('zoom-video-display-name').innerText = imeFajla; } else if (tipMetmete === 'block-audio' && window.aktivniIndex !== null) { const blok = trenutniConfig.timeline[window.aktivniIndex]; blok.bgMusicUrl = previewUrl; blok._realAudioName = imeFajla; blok._realName = 'audio/' + imeFajla; fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl }); if (document.getElementById('zoom-audio-display-name')) document.getElementById('zoom-audio-display-name').innerText = `Track: ${imeFajla}`; } else if (tipMetmete === 'gallery-images' && window.aktivniIndex !== null) { const blok = trenutniConfig.timeline[window.aktivniIndex]; if (!blok.galleryImages) blok.galleryImages = []; blok.galleryImages.push(previewUrl); fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl }); ukloniSlikuIzGalerijeZoom(-1); } }); osveziZiviPreview(trenutniConfig); }; input.click(); }
-export function inicijalizujDragAndDrop() { window.addEventListener('dragover', (e) => e.preventDefault()); window.addEventListener('drop', (e) => { e.preventDefault(); const dropPozadina = e.target.closest('#drop-global-pozadina'); if (dropPozadina && e.dataTransfer.files.length > 0) { const fajl = e.dataTransfer.files[0]; document.getElementById('input-slika-pozadina').value = 'images/' + fajl.name; document.getElementById('label-global-pozadina').innerText = 'images/' + fajl.name; fajloviZaUpload.push({ putanja: 'images/' + fajl.name, rawFile: fajl }); trenutniConfig.config.globalSettings._tempBgPreview = URL.createObjectURL(fajl); osveziZiviPreview(trenutniConfig); } }); }
 export async function sacuvajSveNaServer(akcija = 'save') { const poruka = akcija === 'publish' ? "Launch CHANGES LIVE?" : "Commit alterations to Draft?"; if (!confirm(poruka)) return; if (trenutniConfig.timeline) { trenutniConfig.timeline.forEach(blok => { if (blok.url && blok.url.startsWith('blob:')) blok.url = blok._realName || ''; if (blok.bgMusicUrl && blok.bgMusicUrl.startsWith('blob:')) blok.bgMusicUrl = blok._realName || ''; }); } const cistConfigZaExport = { config: { globalSettings: { primaryColor: document.getElementById('color-h1').value, secondaryColor: document.getElementById('color-h2').value, textColor: document.getElementById('color-p').value, backgroundColor: document.getElementById('input-boja-pozadina').value, containerBg: document.getElementById('input-boja-kontejner').value, mainBackgroundImage: document.getElementById('input-slika-pozadina').value.replace(/^\//, ''), fontHeader: document.getElementById('font-h1').value, fontQuote: document.getElementById('font-h2').value, fontBody: document.getElementById('font-p').value, loaderMusic: document.getElementById('input-loader-muzika').value.replace(/^\//, ''), screensaverMusic: document.getElementById('input-ss-muzika').value.replace(/^\//, ''), screensaverTimeout: parseInt(document.getElementById('input-ss-tajmer').value) || 60, projectName: trenutniConfig.config?.globalSettings?.projectName || "Selection", projectSubtitle: trenutniConfig.config?.globalSettings?.projectSubtitle || "" }, hasWarningMessage: trenutniConfig.config?.hasWarningMessage ?? true }, loader: { warningTitle: document.getElementById('zoom-core-warningTitle')?.value || "⚠️ NOTICE ⚠️", warningFinalLine: "", warningTexts: trenutniConfig.loader?.warningTexts || [] }, timeline: trenutniConfig.timeline || [] }; const formData = new FormData(); formData.append('config_data', JSON.stringify(cistConfigZaExport)); formData.append('action', akcija); formData.append('subdomain', window.currentSubdomain); if (fajloviZaUpload.length > 0) { fajloviZaUpload.forEach((item, idx) => { formData.append(`file_${idx}`, item.rawFile, item.putanja); }); } try { const token = localStorage.getItem('selection_session_token'); const response = await fetch(`${API_BASE}/save_data`, { method: 'POST', headers: { 'Authorization': token ? `Bearer ${token}` : '' }, body: formData }); if (response.ok) { alert("🎉 System Synced to Edge!"); location.reload(); } else { alert("🔒 Sync Denied."); } } catch (e) { alert("❌ Network connection lost."); } }
