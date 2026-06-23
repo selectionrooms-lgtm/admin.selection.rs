@@ -415,7 +415,7 @@ export function inicijalizujDragAndDrop() {
         window.aktivniIndex = dragCiljIndex;
         renderujTimelineBlokove();
 
-        // 🛠️ ISPRAVLJENO: Nema više postActiveBlock greške koja ruši app!
+        // 🛠️ FIX SPROVEDEN: Pozivamo ispravan, eksportovani naziv funkcije
         postaviAktivniBlok(dragCiljIndex);
     });
 
