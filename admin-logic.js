@@ -1006,6 +1006,9 @@ function okiniGlobalniKlikFajla(tipMetmete) {
 // ==========================================================================
 // 7. CONTROL PLANE: PROVISIONING NEW STANDS (Master Only)
 // ==========================================================================
+// ==========================================================================
+// 7. CONTROL PLANE: PROVISIONING NEW STANDS (Master Only - Fixed Auth)
+// ==========================================================================
 async function masterKreirajNovogKorisnika() {
     const subInput = document.getElementById('master-novi-subdomain');
     const emailInput = document.getElementById('master-novi-email');
@@ -1017,36 +1020,49 @@ async function masterKreirajNovogKorisnika() {
     const email = emailInput.value.trim();
 
     if (!subdomain || !email) {
-        statusPoruka.style.color = "#b81d24"; statusPoruka.innerText = "❌ Greška: Unesi i poddomen i email!"; return;
+        statusPoruka.style.color = "#b81d24";
+        statusPoruka.innerText = "❌ Error: Please enter both subdomain and email!";
+        return;
     }
     if (!/^[a-z0-9-]+$/.test(subdomain)) {
-        statusPoruka.style.color = "#b81d24"; statusPoruka.innerText = "❌ Koristi samo mala slova, brojeve i crticu."; return;
+        statusPoruka.style.color = "#b81d24";
+        statusPoruka.innerText = "❌ Error: Use lowercase letters, numbers, and hyphens only.";
+        return;
     }
 
-    if (!confirm(`Lansiraš novi SaaS prostor na adresi: https://${subdomain}.selection.rs za klijenta ${email}?`)) return;
+    if (!confirm(`Launch new SaaS space at https://${subdomain}.selection.rs for client ${email}?`)) return;
 
-    statusPoruka.style.color = "#d4b483"; statusPoruka.style.display = "block";
-    statusPoruka.innerText = "⚡ Pokrećem sisteme i mapiram KV slotove...";
+    statusPoruka.style.color = "#d4b483";
+    statusPoruka.style.display = "block";
+    statusPoruka.innerText = "⚡ Booting systems and mapping Edge slots...";
 
     try {
+        // 🎯 GVOZDENI POPRAVAK: Izvlačimo tvoj potpisani token iz lokalne memorije
+        const token = localStorage.getItem('selection_session_token');
+
         const response = await fetch(`${API_BASE}/provision_user`, {
             method: 'POST',
-            credentials: "include",
-            headers: { 'Content-Type': 'application/json' },
+            // Privremeni bypass za unakrsne sesije—čistimo kolačiće, idemo isključivo preko Bearera
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : '' // <-- OVDE JE BIO KVAR! Sada šaljemo tvoj identitet
+            },
             body: JSON.stringify({ email: email, subdomain: subdomain, role: "admin" })
         });
 
         const rez = await response.json();
         if (response.ok && rez.success) {
             statusPoruka.style.color = "#2ecc71";
-            statusPoruka.innerHTML = `🎉 USPEH: Prostor <strong>${subdomain}</strong> je aktiviran na Edge-u!<br>🔗 Klijentski prostor: <a href="https://${subdomain}.selection.rs" target="_blank" style="color:#2ecc71; text-decoration:underline;">${subdomain}.selection.rs</a>`;
-            subInput.value = ''; emailInput.value = '';
+            statusPoruka.innerHTML = `🎉 SUCCESS: Space <strong>${subdomain}</strong> is active on the Edge network!<br>🔗 Client Canvas: <a href="https://${subdomain}.selection.rs" target="_blank" style="color:#2ecc71; text-decoration:underline;">${subdomain}.selection.rs</a>`;
+            subInput.value = '';
+            emailInput.value = '';
         } else {
             statusPoruka.style.color = "#b81d24";
-            statusPoruka.innerText = `❌ Odbijeno od Kernela: ${rez.error || "Nepoznata greška"}`;
+            statusPoruka.innerText = `❌ Rejected by Kernel: ${rez.error || "Unknown error"}`;
         }
     } catch (error) {
-        statusPoruka.style.color = "#b81d24"; statusPoruka.innerText = "❌ Komunikacija sa kontrolnom tablom nije uspela.";
+        statusPoruka.style.color = "#b81d24";
+        statusPoruka.innerText = "❌ Communication with the Control Plane failed.";
     }
 }
 
