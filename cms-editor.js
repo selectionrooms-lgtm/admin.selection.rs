@@ -10,7 +10,7 @@ export function initCmsEditor(configData) {
     trenutniConfig = configData;
     window.trenutniConfig = configData; // Izlažemo globalno za simulator
 
-    // Vezivanje svih funkcija na window nivo za HTML onclick drajvere
+    // Vezivanje svih funkcija na window nivo za HTML i ruter drajvere
     window.postaviAktivniBlok = postaviAktivniBlok;
     window.dodajNoviBlok = dodajNoviBlok;
     window.obrisiBlok = obrisiBlok;
@@ -31,8 +31,8 @@ export function initCmsEditor(configData) {
     inicijalizujDugmadZaSnimanje();
     inicijalizujDragAndDrop();
 
-    // Početni preview postavi na intro
-    window.aktivniIndex = -1;
+    // Početni preview postavi na intro ili prvi blok
+    window.aktivniIndex = 0;
     osveziZiviPreview(trenutniConfig);
 }
 
@@ -62,50 +62,40 @@ export function renderujTimelineBlokove() {
     if (!container) return;
     container.innerHTML = '';
 
-    const coreCard = document.createElement('div');
-    coreCard.className = 'cms-block-card';
-    coreCard.id = 'splash-config-card';
-    if (window.aktivniIndex === -1) coreCard.classList.add('active-block');
-
-    coreCard.innerHTML = `
-        <div class="block-info-side">
-            <div class="block-num"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--admin-accent);"></i></div>
-            <div class="block-meta-details">
-                <div class="block-type-tag">APPLICATION INTRO STAGE</div>
-                <div class="block-summary-text" id="summary-core-title">Intro Screen & Preliminary Parameters</div>
-                <div class="block-media-indicators"><span><i class="fa-solid fa-gear"></i> Title, Subtitle, and Rules Matrix</span></div>
-            </div>
-        </div>
-        <div class="block-actions">
-            <button class="btn-action btn-edit-zoom"><i class="fa-expand fa-solid"></i> Open & Edit Core</button>
-        </div>
-    `;
-    container.appendChild(coreCard);
-
-    const name = trenutniConfig.config?.globalSettings?.projectName || 'Unnamed';
-    const sub = trenutniConfig.config?.globalSettings?.projectSubtitle || '';
-    const el = document.getElementById('summary-core-title');
-    if (el) el.innerHTML = `Active Project: <strong>${name}</strong> — <em>"${sub}"</em>`;
-
     if (!trenutniConfig.timeline) trenutniConfig.timeline = [];
+
     trenutniConfig.timeline.forEach((blok, index) => {
         const card = document.createElement('div');
         card.className = 'cms-block-card';
         card.setAttribute('data-index', index);
         if (index === window.aktivniIndex) card.classList.add('active-block');
 
+        // Određivanje naziva i tipa oznake (Intro ima prepoznatljiv stil ali ista svojstva)
+        let tipTag = `${blok.type.toUpperCase()} NODE`;
+        let numLabel = `MATRIX BLOCK #${index + 1}`;
+        let sumText = blok.title || blok.hint || 'Staged Node';
+
+        if (blok.type === 'intro') {
+            tipTag = `APPLICATION INTRO STAGE`;
+            numLabel = `START NODE`;
+            const name = trenutniConfig.config?.globalSettings?.projectName || 'Unnamed';
+            const sub = trenutniConfig.config?.globalSettings?.projectSubtitle || '';
+            sumText = `Active Project: <strong>${name}</strong> — <em>"${sub}"</em>`;
+        }
+
         let mediaIndicators = '';
         if (blok.type === 'video') mediaIndicators += `<span><i class="fa-solid fa-video"></i> ${blok._realVideoName || 'Video payload'}</span>`;
         if (blok.type === 'chapter' && blok.galleryImages) mediaIndicators += `<span><i class="fa-solid fa-images"></i> Contains ${blok.galleryImages.length} images</span>`;
+        if (blok.type === 'intro') mediaIndicators += `<span><i class="fa-solid fa-gear"></i> Title, Subtitle, and Rules Matrix</span>`;
         if (blok.bgMusicUrl) mediaIndicators += `<span><i class="fa-solid fa-music"></i> Audio active</span>`;
 
-        // 🎯 APDEJT: Dodata eksplicitna klasa .btn-edit-zoom na glavno dugme kockice
+        // Sve kockice bez izuzetka dobijaju identičan arsenal dugmića
         card.innerHTML = `
             <div class="block-info-side">
-                <div class="block-num">MATRIX BLOCK #${index + 1}</div>
+                <div class="block-num">${numLabel}</div>
                 <div class="block-meta-details">
-                    <div class="block-type-tag">${blok.type.toUpperCase()} NODE</div>
-                    <div class="block-summary-text">${blok.title || blok.hint || 'Staged Node'}</div>
+                    <div class="block-type-tag">${tipTag}</div>
+                    <div class="block-summary-text">${sumText}</div>
                     <div class="block-media-indicators">${mediaIndicators || '<span><i class="fa-solid fa-folder-open"></i> Empty node</span>'}</div>
                 </div>
             </div>
@@ -122,19 +112,17 @@ export function renderujTimelineBlokove() {
 
 export function postaviAktivniBlok(index) {
     window.aktivniIndex = index;
-    document.querySelectorAll('.cms-block-card, #splash-config-card').forEach(c => c.classList.remove('active-block'));
-    if (index === -1) {
-        document.getElementById('splash-config-card')?.classList.add('active-block');
-    } else {
-        const activeCard = document.querySelector(`.cms-block-card[data-index="${index}"]`);
-        if (activeCard) activeCard.classList.add('active-block');
-    }
+    document.querySelectorAll('.cms-block-card').forEach(c => c.classList.remove('active-block'));
+    const activeCard = document.querySelector(`.cms-block-card[data-index="${index}"]`);
+    if (activeCard) activeCard.classList.add('active-block');
     osveziZiviPreview(trenutniConfig);
 }
 
 export function dodajNoviBlok(tip) {
     const noviBlok = { type: tip, sceneEffect: 'none' };
-    if (tip === 'chapter') {
+    if (tip === 'intro') {
+        noviBlok.sceneEffect = 'none';
+    } else if (tip === 'chapter') {
         noviBlok.title = 'New Narrative Chapter'; noviBlok.subtitle = ''; noviBlok.paragraphs = [];
         noviBlok.galleryImages = []; noviBlok.nextButtonText = 'Continue →';
     } else if (tip === 'video') {
@@ -146,21 +134,19 @@ export function dodajNoviBlok(tip) {
     }
 
     trenutniConfig.timeline.push(noviBlok);
-    renderujTimelineBlokove();
 
-    // Otvori ga odmah u zoom režimu nakon kreiranja
-    window.aktivniIndex = trenutniConfig.timeline.length - 1;
-    otvoriZoomEditorZaBlok(window.aktivniIndex);
-    const zoomOverlay = document.getElementById('zoom-editor-overlay');
-    if (zoomOverlay) zoomOverlay.style.setProperty('display', 'flex', 'important');
+    // 🏁 FINI PODESNIK: Samo tiho osvežavamo listu, bez otvaranja Zooma na silu!
+    renderujTimelineBlokove();
+    postaviAktivniBlok(trenutniConfig.timeline.length - 1);
 }
 
 export function obrisiBlok(index) {
     if (confirm("Are you certain you want to delete this block?")) {
         trenutniConfig.timeline.splice(index, 1);
-        window.aktivniIndex = -1;
+        window.aktivniIndex = trenutniConfig.timeline.length > 0 ? 0 : null;
         renderujTimelineBlokove();
-        osveziZiviPreview(trenutniConfig);
+        if (window.aktivniIndex !== null) postaviAktivniBlok(window.aktivniIndex);
+        else osveziZiviPreview(trenutniConfig);
     }
 }
 
@@ -177,7 +163,6 @@ export function pomeriBlok(index, smer) {
 
 export function otvoriZoomEditorZaBlok(index) {
     window.aktivniIndex = index;
-    window.isEditingCore = false;
     postaviAktivniBlok(index);
 
     const blok = trenutniConfig.timeline[index];
@@ -189,7 +174,40 @@ export function otvoriZoomEditorZaBlok(index) {
     const audioName = blok._realAudioName || (blok.bgMusicUrl ? blok.bgMusicUrl.split('/').pop() : 'No audio file mapped');
     let dynamicHtml = '';
 
-    if (blok.type === 'video') {
+    if (blok.type === 'intro') {
+        window.isEditingCore = true;
+        const loader = trenutniConfig.loader || { warningTitle: '', warningTexts: [] };
+        const settings = trenutniConfig.config.globalSettings;
+        naslov.innerText = `EDITING MATRIX CORE: APPLICATION INTRO SETUP`;
+        dynamicHtml = `
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Primary Brand Project Name Header:</label>
+                    <input type="text" id="zoom-core-projectName" value="${settings.projectName || ''}" oninput="sinhronizujZoomSaPreviewom()">
+                </div>
+                <div class="form-group">
+                    <label>Subheading Introduction Tagline Statement:</label>
+                    <input type="text" id="zoom-core-projectSubtitle" value="${settings.projectSubtitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Preliminary Expedition Rules Matrix Block (One rule per line):</label>
+                <textarea id="zoom-core-warningTexts" style="min-height:120px;" oninput="sinhronizujZoomSaPreviewom()">${loader.warningTexts ? loader.warningTexts.join('\n') : ''}</textarea>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Notice Panel Warning Title Header:</label>
+                    <input type="text" id="zoom-core-warningTitle" value="${loader.warningTitle || '⚠️ NOTICE ⚠️'}" oninput="sinhronizujZoomSaPreviewom()">
+                </div>
+                <div class="form-group" style="display:flex; flex-direction:row; align-items:center; margin-top:25px; gap:10px;">
+                    <input type="checkbox" id="zoom-core-hasWarningMessage" ${trenutniConfig.config.hasWarningMessage ? 'checked' : ''} onchange="sinhronizujZoomSaPreviewom()" style="width:auto; cursor:pointer;">
+                    <label for="zoom-core-hasWarningMessage" style="cursor:pointer; font-size:0.85rem;">Render preliminary conditions restriction wall</label>
+                </div>
+            </div>
+        `;
+    }
+    else if (blok.type === 'video') {
+        window.isEditingCore = false;
         const videoName = blok._realVideoName || (blok.url ? blok.url.split('/').pop() : 'Click to select native .mp4 file');
         dynamicHtml = `
             <div class="form-group">
@@ -203,6 +221,7 @@ export function otvoriZoomEditorZaBlok(index) {
         `;
     }
     else if (blok.type === 'chapter') {
+        window.isEditingCore = false;
         let slikeHtml = '';
         if (blok.galleryImages && blok.galleryImages.length > 0) {
             blok.galleryImages.forEach((imgSrc, imgIndex) => {
@@ -245,6 +264,7 @@ export function otvoriZoomEditorZaBlok(index) {
         `;
     }
     else if (blok.type === 'gate') {
+        window.isEditingCore = false;
         dynamicHtml = `
             <div class="grid-2">
                 <div class="form-group">
@@ -273,6 +293,7 @@ export function otvoriZoomEditorZaBlok(index) {
         `;
     }
     else if (blok.type === 'finale') {
+        window.isEditingCore = false;
         dynamicHtml = `
             <div class="grid-2">
                 <div class="form-group">
@@ -312,44 +333,8 @@ export function otvoriZoomEditorZaBlok(index) {
 }
 
 export function otvoriCoreZoomEditor() {
-    window.isEditingCore = true;
-    window.aktivniIndex = -1;
-
-    const overlay = document.getElementById('zoom-editor-overlay');
-    const naslov = document.getElementById('zoom-module-title');
-    const telo = document.getElementById('zoom-dynamic-body');
-
-    naslov.innerText = `EDITING MATRIX CORE: APPLICATION INTRO SETUP`;
-    const loader = trenutniConfig.loader || { warningTitle: '', warningTexts: [] };
-    const settings = trenutniConfig.config.globalSettings;
-
-    telo.innerHTML = `
-        <div class="grid-2">
-            <div class="form-group">
-                <label>Primary Brand Project Name Header:</label>
-                <input type="text" id="zoom-core-projectName" value="${settings.projectName || ''}" oninput="sinhronizujZoomSaPreviewom()">
-            </div>
-            <div class="form-group">
-                <label>Subheading Introduction Tagline Statement:</label>
-                <input type="text" id="zoom-core-projectSubtitle" value="${settings.projectSubtitle || ''}" oninput="sinhronizujZoomSaPreviewom()">
-            </div>
-        </div>
-        <div class="form-group">
-            <label>Preliminary Expedition Rules Matrix Block (One rule per line):</label>
-            <textarea id="zoom-core-warningTexts" style="min-height:120px;" oninput="sinhronizujZoomSaPreviewom()">${loader.warningTexts ? loader.warningTexts.join('\n') : ''}</textarea>
-        </div>
-        <div class="grid-2">
-            <div class="form-group">
-                <label>Notice Panel Warning Title Header:</label>
-                <input type="text" id="zoom-core-warningTitle" value="${loader.warningTitle || '⚠️ NOTICE ⚠️'}" oninput="sinhronizujZoomSaPreviewom()">
-            </div>
-            <div class="form-group" style="display:flex; flex-direction:row; align-items:center; margin-top:25px; gap:10px;">
-                <input type="checkbox" id="zoom-core-hasWarningMessage" ${trenutniConfig.config.hasWarningMessage ? 'checked' : ''} onchange="sinhronizujZoomSaPreviewom()" style="width:auto; cursor:pointer;">
-                <label for="zoom-core-hasWarningMessage" style="cursor:pointer; font-size:0.85rem;">Render preliminary conditions restriction wall</label>
-            </div>
-        </div>
-    `;
-    overlay.style.display = 'flex';
+    // Ova funkcija se sada preslikava kroz otvoriZoomEditorZaBlok kada je tip 'intro'
+    otvoriZoomEditorZaBlok(0);
 }
 
 export function zatvoriZoomEditor() {
@@ -359,7 +344,10 @@ export function zatvoriZoomEditor() {
 }
 
 export function potvrdiIZatvoriZoom() {
-    if (window.isEditingCore) {
+    const blok = trenutniConfig.timeline[window.aktivniIndex];
+    if (!blok) return;
+
+    if (blok.type === 'intro' || window.isEditingCore) {
         trenutniConfig.config.globalSettings.projectName = document.getElementById('zoom-core-projectName').value;
         trenutniConfig.config.globalSettings.projectSubtitle = document.getElementById('zoom-core-projectSubtitle').value;
         trenutniConfig.loader.warningTitle = document.getElementById('zoom-core-warningTitle').value;
@@ -367,9 +355,7 @@ export function potvrdiIZatvoriZoom() {
 
         const rawTexts = document.getElementById('zoom-core-warningTexts').value;
         trenutniConfig.loader.warningTexts = rawTexts.split('\n').filter(r => r.trim() !== '');
-    } else if (window.aktivniIndex !== null && window.aktivniIndex !== -1) {
-        const blok = trenutniConfig.timeline[window.aktivniIndex];
-
+    } else {
         if (document.getElementById('zoom-field-sceneEffect')) {
             blok.sceneEffect = document.getElementById('zoom-field-sceneEffect').value;
         }
@@ -399,7 +385,7 @@ export function potvrdiIZatvoriZoom() {
     osveziZiviPreview(trenutniConfig);
 }
 
-// ... Ostale bazične pomoćne funkcije (inicijalizujDugmadZaSnimanje, okiniLokalniKlikFajla, inicijalizujDragAndDrop, ukloniSlikuIzGalerijeZoom, sacuvajSveNaServer) ostaju nepromenjene ...
+// ... Ostale helper funkcije (ukloniSlikuIzGalerijeZoom, inicijalizujDugmadZaSnimanje, okiniLokalniKlikFajla, inicijalizujDragAndDrop, sacuvajSveNaServer) se ne menjaju ...
 export function ukloniSlikuIzGalerijeZoom(imgIndex) { if (window.aktivniIndex !== null && window.aktivniIndex !== -1) { const blok = trenutniConfig.timeline[window.aktivniIndex]; blok.galleryImages.splice(imgIndex, 1); let slikeHtml = ''; blok.galleryImages.forEach((imgSrc, i) => { slikeHtml += `<div class="zoom-thumb" style="display:inline-block; position:relative; margin:5px; width:80px; height:80px; border:1px solid var(--admin-border); border-radius:6px; overflow:hidden;"><img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover;"><button type="button" onclick="ukloniSlikuIzGalerijeZoom(${i})" style="position:absolute; top:2px; right:2px; background:#b81d24; color:#fff; border:none; border-radius:50%; width:18px; height:18px; cursor:pointer; font-size:10px; font-weight:700;">×</button></div>`; }); document.getElementById('zoom-gallery-container').innerHTML = slikeHtml; osveziZiviPreview(trenutniConfig); } }
 export function inicijalizujDugmadZaSnimanje() { const previewPanel = document.getElementById('global-preview-panel'); if (!previewPanel || document.getElementById('kernel-save-wrapper-right')) return; const kontrolnaDugmadDesno = document.createElement('div'); kontrolnaDugmadDesno.id = 'kernel-save-wrapper-right'; kontrolnaDugmadDesno.style.cssText = `display:flex; flex-direction:column; gap:8px; width:100%; margin-top:auto; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05);`; kontrolnaDugmadDesno.innerHTML = `<button type="button" class="btn-save" onclick="sacuvajSveNaServer('save')" style="background:#1c2a39; border:1px solid rgba(255,255,255,0.1); color:#fff; width:100%; cursor:pointer; padding:12px; border-radius:6px; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:500;"><i class="fa-solid fa-floppy-disk"></i> Lock Changes to Staged Draft</button><button type="button" class="btn-save" onclick="sacuvajSveNaServer('publish')" style="width:100%; cursor:pointer; padding:12px; border-radius:6px; background:var(--admin-accent); color:var(--admin-sidebar); font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; border:none;"><i class="fa-solid fa-rocket"></i> Launch & Deploy Live Network</button>`; previewPanel.appendChild(kontrolnaDugmadDesno); }
 export function okiniLokalniKlikFajla(tipMetmete) { const input = document.createElement('input'); input.type = 'file'; if (tipMetmete === 'slika' || tipMetmete === 'gallery-images') input.accept = 'image/*'; else if (tipMetmete === 'video-file') input.accept = 'video/mp4'; else input.accept = 'audio/mp3'; if (tipMetmete === 'gallery-images') input.multiple = true; input.onchange = (e) => { if (e.target.files.length === 0) return; Array.from(e.target.files).forEach(fajl => { const imeFajla = fajl.name; const previewUrl = URL.createObjectURL(fajl); if (tipMetmete === 'slika') { document.getElementById('input-slika-pozadina').value = 'images/' + imeFajla; document.getElementById('label-global-pozadina').innerText = 'images/' + imeFajla; fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl }); trenutniConfig.config.globalSettings._tempBgPreview = previewUrl; } else if (tipMetmete === 'loader-mp3') { document.getElementById('input-loader-muzika').value = 'audio/' + imeFajla; document.getElementById('label-global-loader-muzika').innerText = 'audio/' + imeFajla; fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl }); } else if (tipMetmete === 'ss-mp3') { document.getElementById('input-ss-muzika').value = 'audio/' + imeFajla; document.getElementById('label-global-ss-muzika').innerText = 'audio/' + imeFajla; fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl }); } else if (tipMetmete === 'video-file' && window.aktivniIndex !== null) { const blok = trenutniConfig.timeline[window.aktivniIndex]; blok.url = previewUrl; blok._realVideoName = imeFajla; blok._realName = 'videos/' + imeFajla; fajloviZaUpload.push({ putanja: 'videos/' + imeFajla, rawFile: fajl }); if (document.getElementById('zoom-video-display-name')) document.getElementById('zoom-video-display-name').innerText = imeFajla; } else if (tipMetmete === 'block-audio' && window.aktivniIndex !== null) { const blok = trenutniConfig.timeline[window.aktivniIndex]; blok.bgMusicUrl = previewUrl; blok._realAudioName = imeFajla; blok._realName = 'audio/' + imeFajla; fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl }); if (document.getElementById('zoom-audio-display-name')) document.getElementById('zoom-audio-display-name').innerText = `Track: ${imeFajla}`; } else if (tipMetmete === 'gallery-images' && window.aktivniIndex !== null) { const blok = trenutniConfig.timeline[window.aktivniIndex]; if (!blok.galleryImages) blok.galleryImages = []; blok.galleryImages.push(previewUrl); fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl }); ukloniSlikuIzGalerijeZoom(-1); } }); osveziZiviPreview(trenutniConfig); }; input.click(); }

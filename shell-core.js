@@ -53,26 +53,42 @@ function inicijalizujLokalneDugmiceILepljenja() {
     const zoomOverlay = document.getElementById('zoom-editor-overlay');
 
     document.addEventListener('click', (e) => {
-        // 📡 DEBUG DIJAGNOSTIKA: Pratimo tačan kliknuti element u konzoli
-        console.log("🔍 CLICK DETECTED ON TARGET:", e.target);
-
         const card = e.target.closest('.cms-block-card');
 
         if (card) {
-            const idx = Number(card.getAttribute('data-index')) || 0;
+            const idx = Number(card.getAttribute('data-index'));
+            const btnDelete = e.target.closest('.btn-delete');
+            const btnEdit = e.target.closest('.btn-edit-zoom');
+            const btnMoveUp = e.target.textContent.trim() === '▲';
+            const btnMoveDown = e.target.textContent.trim() === '▼';
 
-            // 👑 1. EDIT UVEK IMA APSOLUTNI PRIORITET (Tvoj poboljšani filter)
-            if (e.target.closest('.btn-edit-zoom,[data-action="edit"]')) {
-                e.preventDefault();
-                e.stopPropagation();
+            // A. Brisanje čvora
+            if (btnDelete) {
+                e.preventDefault(); e.stopPropagation();
+                if (window.obrisiBlok) window.obrisiBlok(idx);
+                return;
+            }
 
-                console.log("✏️ EDIT MATRIX NODE OKINUT ZA BLOK INDEKS:", card.id === 'splash-config-card' ? -1 : idx);
+            // B. Pomeranje na gore
+            if (btnMoveUp) {
+                e.preventDefault(); e.stopPropagation();
+                if (window.pomeriBlok) window.pomeriBlok(idx, -1);
+                return;
+            }
 
-                if (card.id === 'splash-config-card') {
-                    if (window.otvoriCoreZoomEditor) window.otvoriCoreZoomEditor();
-                } else {
-                    if (window.otvoriZoomEditorZaBlok) window.otvoriZoomEditorZaBlok(idx);
-                }
+            // C. Pomeranje na dole
+            if (btnMoveDown) {
+                e.preventDefault(); e.stopPropagation();
+                if (window.pomeriBlok) window.pomeriBlok(idx, 1);
+                return;
+            }
+
+            // D. 👑 PRIORITETNI UJEDNAČENI EDIT FILTER (Radi za apsolutno sve kockice!)
+            if (btnEdit) {
+                e.preventDefault(); e.stopPropagation();
+                console.log("✏️ EDIT OKINUT ZA KOCKICU NA INDEKSU:", idx);
+
+                if (window.otvoriZoomEditorZaBlok) window.otvoriZoomEditorZaBlok(idx);
 
                 requestAnimationFrame(() => {
                     if (zoomOverlay) zoomOverlay.style.setProperty('display', 'flex', 'important');
@@ -80,45 +96,22 @@ function inicijalizujLokalneDugmiceILepljenja() {
                 return;
             }
 
-            // 2. Klik na DELETE dugme
-            if (e.target.closest('.btn-delete')) {
-                e.preventDefault(); e.stopPropagation();
-                if (window.obrisiBlok) window.obrisiBlok(idx);
-                return;
-            }
-
-            // 3. Kretanje GORE (▲)
-            if (e.target.textContent.trim() === '▲') {
-                e.preventDefault(); e.stopPropagation();
-                if (window.pomeriBlok) window.pomeriBlok(idx, -1);
-                return;
-            }
-
-            // 4. Kretanje DOLE (▼)
-            if (e.target.textContent.trim() === '▼') {
-                e.preventDefault(); e.stopPropagation();
-                if (window.pomeriBlok) window.pomeriBlok(idx, 1);
-                return;
-            }
-
-            // 5. Ako nije ništa od dugmića -> OBIČNA SELEKCIJA BLOKA (FOKUS)
+            // E. Običan klik na slobodnu površinu kartice vrši samo SELEKCIJU (FOKUS)
             e.preventDefault();
-            if (window.postaviAktivniBlok) {
-                window.postaviAktivniBlok(card.id === 'splash-config-card' ? -1 : idx);
-            }
+            if (window.postaviAktivniBlok) window.postaviAktivniBlok(idx);
             return;
         }
 
-        // --- GLOBALNI SISTEMSKI RUTER KLIKOVA (Master & Ostalo) ---
-        if (e.target.closest('#btn-master-console-trigger')) { window.otvoriMasterControlPlane?.(); return; }
-        if (e.target.closest('#btn-master-console-close')) { window.zatvoriMasterControlPlane?.(); return; }
-
-        if (e.target.closest('#btn-shortcut-intro')) { window.postaviAktivniBlok?.(-1); return; }
+        // --- TOPBAR PREČICE: SADA VRŠE SAMO TIHO DODAVANJE BEZ ZUUM-A ---
+        if (e.target.closest('#btn-shortcut-intro')) { window.dodajNoviBlok?.('intro'); return; }
         if (e.target.closest('#btn-add-video')) { window.dodajNoviBlok?.('video'); return; }
         if (e.target.closest('#btn-add-chapter')) { window.dodajNoviBlok?.('chapter'); return; }
         if (e.target.closest('#btn-add-gate')) { window.dodajNoviBlok?.('gate'); return; }
         if (e.target.closest('#btn-add-finale')) { window.dodajNoviBlok?.('finale'); return; }
 
+        // Master i simulator kontrole
+        if (e.target.closest('#btn-master-console-trigger')) { window.otvoriMasterControlPlane?.(); return; }
+        if (e.target.closest('#btn-master-console-close')) { window.zatvoriMasterControlPlane?.(); return; }
         if (e.target.closest('#btn-mode-mobile')) { window.promeniRezimSimulatora?.('mobile'); return; }
         if (e.target.closest('#btn-mode-pc')) { window.promeniRezimSimulatora?.('pc'); return; }
 
@@ -134,13 +127,13 @@ function inicijalizujLokalneDugmiceILepljenja() {
             return;
         }
 
-        // Upload sekcije sidebara
+        // Upload okidači
         if (e.target.closest('#drop-global-pozadina')) { window.okiniLokalniKlikFajla?.('slika'); return; }
         if (e.target.closest('#drop-global-loader-muzika')) { window.okiniLokalniKlikFajla?.('loader-mp3'); return; }
         if (e.target.closest('#drop-global-ss-muzika')) { window.okiniLokalniKlikFajla?.('ss-mp3'); return; }
     });
 
-    // Gvozdeni ESC ključ za zatvaranje modala nazad
+    // ESC ključ za brz izlazak iz svih panela (Zoom out)
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             const masterOverlay = document.getElementById('master-control-plane-overlay');
