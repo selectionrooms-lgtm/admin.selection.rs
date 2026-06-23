@@ -44,12 +44,11 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 
         console.log("📡 Korak 2: Autentifikujem se na javni shell sa novim Bearer tokenom...");
 
-        // 2. Sada idemo na javni shell, ali u Authorization zaglavlju nosimo naš token!
+        // 🚀 Sada idemo na javni shell sa hirurški očišćenim zaglavljem!
         const res = await fetch(`${API_BASE}/get_user`, {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${tokenData.token}`,
-                'X-Requested-With': 'XMLHttpRequest'
+                'Authorization': `Bearer ${tokenData.token}`
             }
         });
 
