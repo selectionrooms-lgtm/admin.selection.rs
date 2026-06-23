@@ -34,22 +34,26 @@ export async function verifyIdentityAndGetProfile() {
 
         if (!activeSubdomain || activeSubdomain === "undefined") activeSubdomain = "admin";
 
-        // 🧱 ČEKAONICA ZA KLIJENTE NA ČEKANJU (100% DEAD CENTER RASPORD)
+        // 🧱 ČEKAONICA ZA KLIJENTE (Fiksiran raspored bez trzanja)
         if (userRole !== "master" && userStatus !== "approved") {
             console.warn(`🔒 Identity parked in waiting room [Status: ${userStatus}].`);
             if (rootShield) {
                 rootShield.setAttribute('data-status', 'pending');
-                rootShield.className = "global-splash-lockout"; // Gvozdeno aktivira mrtvi centar ekrana
 
+                // 🔄 POPRAVKA 1: Koristimo classList umesto grubog brisanja celog className-a
+                rootShield.classList.remove("main-workspace-container");
+                rootShield.classList.add("global-splash-lockout");
+
+                // ⏳ POPRAVKA 2: Menjamo FontAwesome ikonicu sa nativnim emoji-jem ⏳ da sprečimo CLS dok font kasni
                 rootShield.innerHTML = `
-                    <div class="global-splash-wrapper">
+                    <div class="global-splash-wrapper" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                         <div style="font-size: 50px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(214,180,131,0.15));">🔒</div>
                         <h1 style="font-family: 'Cinzel', serif; color: #d4b483; font-size: 2.2rem; margin-bottom: 15px; letter-spacing: 1px; text-transform: uppercase;">Account Review in Progress</h1>
                         <p style="color: #eeeeee; font-size: 1rem; line-height: 1.7; opacity: 0.95; max-width: 550px;">
                             Hello <strong style="color:#d4b483; font-weight: 600;">${userEmail}</strong>. Your Selection SaaS space has been successfully reserved and provisioned on the Edge node, but it is currently awaiting administration approval.
                             <br><br>
                             <span style="color: #d4b483; font-weight: 600; font-size: 0.95rem; letter-spacing: 0.3px;">
-                                <i class="fa-solid fa-clock-rotate-left" style="margin-right: 6px;"></i> Administration is verifying your metrics and will activate your panel shortly.
+                                ⏳ Administration is verifying your metrics and will activate your panel shortly.
                             </span>
                         </p>
                         <span style="font-size: 0.75rem; margin-top: 50px; opacity: 0.2; letter-spacing: 0.5px; display: block;">Selection SaaS Engine • Identity Verified at Edge</span>
@@ -58,21 +62,29 @@ export async function verifyIdentityAndGetProfile() {
             }
             if (badge) {
                 badge.innerHTML = `⏳ <span style="color: #d4b483; font-weight: 600;">Awaiting Approval</span>`;
-                badge.style.display = "flex";
+                // POPRAVKA 3: Glatko prikazivanje badge-a bez trzanja
+                badge.style.visibility = "visible";
+                badge.style.opacity = "1";
             }
             return null;
         }
 
-        // 🔓 ODOBREN MASTER ILI ADMIN
+        // 🔓 USPEŠAN PROLAZ ZA MASTER / ADMIN
         if (rootShield) {
             rootShield.setAttribute('data-status', 'approved');
-            rootShield.className = "main-workspace-container"; // Vraća standardni raspored panela s leva na desno
+
+            // 🔄 POPRAVKA 1: Hirurška zamena klase kroz classList
+            rootShield.classList.remove("global-splash-lockout");
+            rootShield.classList.add("main-workspace-container");
         }
 
         if (badge) {
             const icon = userRole === "master" ? "👑" : "🔒";
             badge.innerHTML = `${icon} <span style="color: var(--admin-accent); font-weight: 600;">${userEmail}</span>`;
-            badge.style.display = "flex";
+
+            // POPRAVKA 3: Glatko prikazivanje bez pomeranja layout-a
+            badge.style.visibility = "visible";
+            badge.style.opacity = "1";
         }
 
         localStorage.setItem('userEmail', userEmail);
@@ -85,7 +97,8 @@ export async function verifyIdentityAndGetProfile() {
         console.error("❌ Gateway failure. Sandbox recovery...", err);
         if (rootShield) {
             rootShield.setAttribute('data-status', 'approved');
-            rootShield.className = "main-workspace-container";
+            rootShield.classList.remove("global-splash-lockout");
+            rootShield.classList.add("main-workspace-container");
         }
         const fallbackSubdomain = localStorage.getItem('userSubdomain') || 'admin';
         window.currentSubdomain = fallbackSubdomain;

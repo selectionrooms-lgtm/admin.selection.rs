@@ -473,3 +473,20 @@ body {
     max-height: 100vh;
     overflow: hidden !important;
 }
+
+/* 🔒 ANTI-SHIFT MATRIX LOCK (Osigurava 100vh bez obzira na brzinu ubacivanja HTML-a) */
+#selection-saas-root-shield {
+    min-height: 100vh !important;
+}
+
+.global-splash-wrapper {
+    min-height: 100vh !important;
+    width: 100%;
+}
+
+/* Inicijalno sakrivanje badge-a kroz opacity umesto display:none da ne pomera sidebar */
+#user-session-badge {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
