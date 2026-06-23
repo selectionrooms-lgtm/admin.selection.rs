@@ -60,7 +60,7 @@ export function renderujTimelineBlokove() {
         const card = document.createElement('div');
         card.className = 'cms-block-card';
         card.setAttribute('data-index', index);
-        card.setAttribute('draggable', 'true'); // 🧲 Oklopljen Drag parametar
+        card.setAttribute('draggable', 'true');
         if (index === window.aktivniIndex) card.classList.add('active-block');
 
         let tipTag = `${blok.type.toUpperCase()} NODE`;
@@ -362,7 +362,6 @@ export function potvrdiIZatvoriZoom() {
 }
 
 export function inicijalizujDugmadZaSnimanje() {
-    // 🎯 PLUTAJUĆA REDIREKCIJA: Dugmad za snimanje se sada crtaju u nezavisnom holderu u desnom uglu ekrana!
     const floatHolder = document.getElementById('floating-action-holder');
     if (!floatHolder) return;
     floatHolder.innerHTML = `
@@ -377,7 +376,6 @@ export function inicijalizujDragAndDrop() {
 
     let dragIzvorIndex = null;
 
-    // Slušači na nivou kontejnera sa kockicama (HTML5 Native Drag & Drop API)
     container.addEventListener('dragstart', (e) => {
         const card = e.target.closest('.cms-block-card');
         if (!card) return;
@@ -410,7 +408,6 @@ export function inicijalizujDragAndDrop() {
         const dragCiljIndex = parseInt(card.getAttribute('data-index'));
         if (dragIzvorIndex === null || dragIzvorIndex === dragCiljIndex) return;
 
-        // Hirurška rokada elemenata unutar memorijske matrice
         const privremeni = trenutniConfig.timeline[dragIzvorIndex];
         trenutniConfig.timeline.splice(dragIzvorIndex, 1);
         trenutniConfig.timeline.splice(dragCiljIndex, 0, privremeni);
@@ -418,11 +415,10 @@ export function inicijalizujDragAndDrop() {
         window.aktivniIndex = dragCiljIndex;
         renderujTimelineBlokove();
 
-        // ✨ GVOZDENI FIX: Pozivamo tačan naziv funkcije koji ne ruši sistem
+        // 🛠️ ISPRAVLJENO: Nema više postActiveBlock greške koja ruši app!
         postaviAktivniBlok(dragCiljIndex);
     });
 
-    // Zadržavamo i Drag za globalnu sliku pozadine
     window.addEventListener('dragover', (e) => e.preventDefault());
     window.addEventListener('drop', (e) => {
         e.preventDefault();
@@ -438,6 +434,5 @@ export function inicijalizujDragAndDrop() {
     });
 }
 
-// ... Preostale bazične pomoćne funkcije (okiniLokalniKlikFajla, sacuvajSveNaServer) ostaju netaknute ...
-export function okiniLokalniKlikFajla(tipMetmete) { const input = document.createElement('input'); input.type = 'file'; if (tipMetmete === 'slika' || tipMetmete === 'gallery-images') input.accept = 'image/*'; else if (tipMetmete === 'video-file') input.accept = 'video/mp4'; else input.accept = 'audio/mp3'; if (tipMetmete === 'gallery-images') input.multiple = true; input.onchange = (e) => { if (e.target.files.length === 0) return; Array.from(e.target.files).forEach(fajl => { const imeFajla = fajl.name; const previewUrl = URL.createObjectURL(fajl); if (tipMetmete === 'slika') { document.getElementById('input-slika-pozadina').value = 'images/' + imeFajla; document.getElementById('label-global-pozadina').innerText = 'images/' + imeFajla; fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl }); trenutniConfig.config.globalSettings._tempBgPreview = previewUrl; } else if (tipMetmete === 'loader-mp3') { document.getElementById('input-loader-muzika').value = 'audio/' + imeFajla; document.getElementById('label-global-loader-muzika').innerText = 'audio/' + imeFajla; fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl }); } else if (tipMetmete === 'ss-mp3') { document.getElementById('input-ss-muzika').value = 'audio/' + imeFajla; document.getElementById('label-global-ss-muzika').innerText = 'audio/' + imeFajla; fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl }); } else if (tipMetmete === 'video-file' && window.aktivniIndex !== null) { const blok = trenutniConfig.timeline[window.aktivniIndex]; blok.url = previewUrl; blok._realVideoName = imeFajla; blok._realName = 'videos/' + imeFajla; fajloviZaUpload.push({ putanja: 'videos/' + imeFajla, rawFile: fajl }); if (document.getElementById('zoom-video-display-name')) document.getElementById('zoom-video-display-name').innerText = imeFajla; } else if (tipMetmete === 'block-audio' && window.aktivniIndex !== null) { const blok = trenutniConfig.timeline[window.aktivniIndex]; blok.bgMusicUrl = previewUrl; blok._realAudioName = imeFajla; blok._realName = 'audio/' + imeFajla; fajloviZaUpload.push({ putanja: 'audio/' + imeFajla, rawFile: fajl }); if (document.getElementById('zoom-audio-display-name')) document.getElementById('zoom-audio-display-name').innerText = `Track: ${imeFajla}`; } else if (tipMetmete === 'gallery-images' && window.aktivniIndex !== null) { const blok = trenutniConfig.timeline[window.aktivniIndex]; if (!blok.galleryImages) blok.galleryImages = []; blok.galleryImages.push(previewUrl); fajloviZaUpload.push({ putanja: 'images/' + imeFajla, rawFile: fajl }); ukloniSlikuIzGalerijeZoom(-1); } }); osveziZiviPreview(trenutniConfig); }; input.click(); }
+export function ukloniSlikuIzGalerijeZoom(imgIndex) { if (window.aktivniIndex !== null && window.aktivniIndex !== -1) { const blok = trenutniConfig.timeline[window.aktivniIndex]; if (imgIndex !== -1) { blok.galleryImages.splice(imgIndex, 1); } let slikeHtml = ''; blok.galleryImages.forEach((imgSrc, i) => { slikeHtml += `<div class="zoom-thumb" style="display:inline-block; position:relative; margin:5px; width:80px; height:80px; border:1px solid var(--admin-border); border-radius:6px; overflow:hidden;"><img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover;"><button type="button" onclick="ukloniSlikuIzGalerijeZoom(${i})" style="position:absolute; top:2px; right:2px; background:#b81d24; color:#fff; border:none; border-radius:50%; width:18px; height:18px; cursor:pointer; font-size:10px; font-weight:700;">×</button></div>`; }); if (document.getElementById('zoom-gallery-container')) { document.getElementById('zoom-gallery-container').innerHTML = slikeHtml; } osveziZiviPreview(trenutniConfig); } }
 export async function sacuvajSveNaServer(akcija = 'save') { const poruka = akcija === 'publish' ? "Launch CHANGES LIVE?" : "Commit alterations to Draft?"; if (!confirm(poruka)) return; if (trenutniConfig.timeline) { trenutniConfig.timeline.forEach(blok => { if (blok.url && blok.url.startsWith('blob:')) blok.url = blok._realName || ''; if (blok.bgMusicUrl && blok.bgMusicUrl.startsWith('blob:')) blok.bgMusicUrl = blok._realName || ''; }); } const cistConfigZaExport = { config: { globalSettings: { primaryColor: document.getElementById('color-h1').value, secondaryColor: document.getElementById('color-h2').value, textColor: document.getElementById('color-p').value, backgroundColor: document.getElementById('input-boja-pozadina').value, containerBg: document.getElementById('input-boja-kontejner').value, mainBackgroundImage: document.getElementById('input-slika-pozadina').value.replace(/^\//, ''), fontHeader: document.getElementById('font-h1').value, fontQuote: document.getElementById('font-h2').value, fontBody: document.getElementById('font-p').value, loaderMusic: document.getElementById('input-loader-muzika').value.replace(/^\//, ''), screensaverMusic: document.getElementById('input-ss-muzika').value.replace(/^\//, ''), screensaverTimeout: parseInt(document.getElementById('input-ss-tajmer').value) || 60, projectName: trenutniConfig.config?.globalSettings?.projectName || "Selection", projectSubtitle: trenutniConfig.config?.globalSettings?.projectSubtitle || "" }, hasWarningMessage: trenutniConfig.config?.hasWarningMessage ?? true }, loader: { warningTitle: document.getElementById('zoom-core-warningTitle')?.value || "⚠️ NOTICE ⚠️", warningFinalLine: "", warningTexts: trenutniConfig.loader?.warningTexts || [] }, timeline: trenutniConfig.timeline || [] }; const formData = new FormData(); formData.append('config_data', JSON.stringify(cistConfigZaExport)); formData.append('action', akcija); formData.append('subdomain', window.currentSubdomain); if (fajloviZaUpload.length > 0) { fajloviZaUpload.forEach((item, idx) => { formData.append(`file_${idx}`, item.rawFile, item.putanja); }); } try { const token = localStorage.getItem('selection_session_token'); const response = await fetch(`${API_BASE}/save_data`, { method: 'POST', headers: { 'Authorization': token ? `Bearer ${token}` : '' }, body: formData }); if (response.ok) { alert("🎉 System Synced to Edge!"); location.reload(); } else { alert("🔒 Sync Denied."); } } catch (e) { alert("❌ Network connection lost."); } }
