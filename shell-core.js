@@ -50,7 +50,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function inicijalizujLokalneDugmiceILepljenja() {
-    // Slušamo događaje globalno na nivou dokumenta da izbegnemo null-render trke
     document.addEventListener('click', (e) => {
         const zoomOverlay = document.getElementById('zoom-editor-overlay');
         const card = e.target.closest('.cms-block-card');
@@ -83,8 +82,8 @@ function inicijalizujLokalneDugmiceILepljenja() {
                 return;
             }
 
-            // D. 👑 GVOZDENI EDIT FILTER (Radi za svaki klik, tekst ili ikonicu unutar dugmeta)
-            if (btnEdit || e.target.classList.contains('btn-edit-zoom')) {
+            // D. 👑 PRIORITETNI EDIT FILTER (Stabilan i oklopljen)
+            if (btnEdit || e.target.classList.contains('btn-edit-zoom') || e.target.closest('.btn-edit-zoom')) {
                 e.preventDefault(); e.stopPropagation();
                 console.log("✏️ EDIT OKINUT ZA INDEKS KOCKICE:", idx);
 
@@ -97,20 +96,24 @@ function inicijalizujLokalneDugmiceILepljenja() {
                 return;
             }
 
-            // E. Običan klik na slobodnu površinu kartice vrši samo SELEKCIJU (FOKUS)
+            // E. ✨ ZAŠTITA OD DUPLIH AKCIJA: Ako je kliknuto bilo koje unutrašnje namensko dugme, ovde prekidamo granu
+            if (e.target.closest('.btn-action') || e.target.classList.contains('btn-action')) {
+                return;
+            }
+
+            // F. Običan klik na praznu površinu kartice vrši samo SELEKCIJU (FOKUS)
             e.preventDefault();
             if (window.postaviAktivniBlok) window.postaviAktivniBlok(idx);
             return;
         }
 
-        // --- GLOBALNE TOPBAR I BUILD NODE KONTROLE ---
+        // --- GLOBALNE TOPBAR I SISTEMSKE PREČICE ---
         if (e.target.closest('#btn-shortcut-intro')) { window.dodajNoviBlok?.('intro'); return; }
         if (e.target.closest('#btn-add-video')) { window.dodajNoviBlok?.('video'); return; }
         if (e.target.closest('#btn-add-chapter')) { window.dodajNoviBlok?.('chapter'); return; }
         if (e.target.closest('#btn-add-gate')) { window.dodajNoviBlok?.('gate'); return; }
         if (e.target.closest('#btn-add-finale')) { window.dodajNoviBlok?.('finale'); return; }
 
-        // Master konzola triggers
         if (e.target.closest('#btn-master-console-trigger')) { window.otvoriMasterControlPlane?.(); return; }
         if (e.target.closest('#btn-master-console-close')) { window.zatvoriMasterControlPlane?.(); return; }
 
@@ -132,7 +135,7 @@ function inicijalizujLokalneDugmiceILepljenja() {
         if (e.target.closest('#drop-global-ss-muzika')) { window.okiniLokalniKlikFajla?.('ss-mp3'); return; }
     });
 
-    // 🔒 GVOZDENI ESCAPE OKIDAČ (Uvek aktivan na nivou celog window-a)
+    // 🔒 GLOBALNI ESCAPE OKIDAČ (Uvek aktivan)
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             const dynamicOverlay = document.getElementById('zoom-editor-overlay');
@@ -141,11 +144,9 @@ function inicijalizujLokalneDugmiceILepljenja() {
             if (dynamicOverlay && dynamicOverlay.style.display === 'flex') {
                 dynamicOverlay.style.setProperty('display', 'none', 'important');
                 window.zatvoriZoomEditor?.();
-                console.log("⌨️ ESC: Zoom zatvoren.");
             }
             if (masterOverlay && masterOverlay.style.display === 'block') {
                 window.zatvoriMasterControlPlane?.();
-                console.log("⌨️ ESC: Master zatvoren.");
             }
         }
     });

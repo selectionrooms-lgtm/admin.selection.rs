@@ -376,7 +376,9 @@ export function inicijalizujDragAndDrop() {
 
     let dragIzvorIndex = null;
 
+    // 🔥 GVOZDENO RAZDVAJANJE OD KLIKOVA KROZ stopPropagation()
     container.addEventListener('dragstart', (e) => {
+        e.stopPropagation();
         const card = e.target.closest('.cms-block-card');
         if (!card) return;
         dragIzvorIndex = parseInt(card.getAttribute('data-index'));
@@ -384,6 +386,7 @@ export function inicijalizujDragAndDrop() {
     });
 
     container.addEventListener('dragend', (e) => {
+        e.stopPropagation();
         const card = e.target.closest('.cms-block-card');
         if (card) card.style.opacity = '1';
         document.querySelectorAll('.cms-block-card').forEach(c => c.classList.remove('drag-over-active'));
@@ -391,17 +394,21 @@ export function inicijalizujDragAndDrop() {
 
     container.addEventListener('dragover', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         const card = e.target.closest('.cms-block-card');
         if (card) card.classList.add('drag-over-active');
     });
 
     container.addEventListener('dragleave', (e) => {
+        e.stopPropagation();
         const card = e.target.closest('.cms-block-card');
         if (card) card.classList.remove('drag-over-active');
     });
 
     container.addEventListener('drop', (e) => {
         e.preventDefault();
+        e.stopPropagation(); // Stopiramo curenje događaja u ruter klikova
+
         const card = e.target.closest('.cms-block-card');
         if (!card) return;
 
@@ -414,8 +421,6 @@ export function inicijalizujDragAndDrop() {
 
         window.aktivniIndex = dragCiljIndex;
         renderujTimelineBlokove();
-
-        // 🛠️ FIX SPROVEDEN: Pozivamo ispravan, eksportovani naziv funkcije
         postaviAktivniBlok(dragCiljIndex);
     });
 
