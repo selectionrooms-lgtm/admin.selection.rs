@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SELECTION ENGINE SKELETON — style.css (Unified Production Edition)
+   SELECTION CANVAS ARCHITECTURE — style.css (Production Core Restoration)
    ========================================================================== */
 
 :root {
@@ -26,17 +26,18 @@ body {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
+    display: flex;
 }
 
-/* --- 🛡️ SHIELD SYSTEM: INITIAL DARKNESS LAYER --- */
-/* Sve sakrivamo odmah na startu da sprečimo blicanje bilo kakvog panela */
+/* --- 🛡️ GVOZDENI KORENSKI ŠTIT --- */
 .main-workspace-container {
-    display: none !important;
+    display: none;
+    /* Inicijalno sakriveno dok traje token exchange */
     width: 100%;
     height: 100%;
 }
 
-/* Kada JS proveri vizu i odobri prolaz, diže se kompletna troslojna arhitektura */
+/* Kada prođe autorizaciju, aktivira se globalni flexbox raspored */
 .main-workspace-container[data-status="approved"] {
     display: flex !important;
     width: 100vw;
@@ -44,7 +45,7 @@ body {
     overflow: hidden;
 }
 
-/* --- JEDINSTVENA KONTROLNA TABLA (LEVO) --- */
+/* --- LEVI PANEL: KONTROLNA TABLA (FIKSNO 320px) --- */
 .sidebar {
     width: 320px;
     min-width: 320px;
@@ -141,7 +142,6 @@ body {
 
 .form-group select:focus,
 .form-group input[type="text"]:focus,
-.form-group input[type="email"]:focus,
 .form-group input[type="number"]:focus,
 .form-group textarea:focus {
     border-color: var(--admin-accent);
@@ -169,9 +169,9 @@ body {
     box-shadow: 0 0 12px rgba(212, 180, 131, 0.3);
 }
 
-/* --- RADNI PROSTOR SA KOCKICAMA (SREDINA) --- */
+/* --- SREDNJI PANEL: RADNI PROSTOR SA KOCKICAMA (FLEX FLUIDAN) --- */
 .main-workspace {
-    flex: 1.2;
+    flex: 1;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -187,7 +187,6 @@ body {
     align-items: center;
     gap: 12px;
     backdrop-filter: blur(10px);
-    flex-wrap: wrap;
 }
 
 .toolbar-title {
@@ -304,12 +303,7 @@ body {
     border-radius: 6px;
 }
 
-.btn-action:hover {
-    color: white;
-    border-color: var(--admin-accent);
-}
-
-/* --- DESNI PANEL & LIVE PREVIEW SIMULATOR --- */
+/* --- DESNI PANEL & SIMULATOR (Vraćen originalni flex raspored) --- */
 .preview-panel {
     flex: 0.75;
     min-width: 320px;
@@ -320,7 +314,7 @@ body {
     gap: 15px;
     height: 100%;
     overflow: hidden;
-    transition: flex 0.3s ease, width 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 .device-simulator {
@@ -340,7 +334,12 @@ body {
     transition: all 0.3s ease;
 }
 
-/* --- ZOOM MODAL MATRIX --- */
+#simulator-content-target {
+    width: 100%;
+    text-align: center;
+}
+
+/* --- ZOOM MODAL WINDOW --- */
 #zoom-editor-overlay {
     position: fixed;
     top: 0;
@@ -360,8 +359,8 @@ body {
     width: 100%;
     max-width: 900px;
     height: 100%;
-    max-height: 85vh;
-    background: var(--admin-sidebar);
+    max-height: 80vh;
+    background: var(--admin-card);
     border: 1px solid var(--admin-border);
     border-radius: 20px;
     display: flex;
@@ -370,95 +369,16 @@ body {
     overflow: hidden;
 }
 
-.zoom-header {
-    padding: 20px 25px;
-    border-bottom: 1px solid var(--admin-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.01);
-}
-
-.zoom-body {
-    flex: 1;
-    padding: 25px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.zoom-footer {
-    padding: 15px 25px;
-    border-top: 1px solid var(--admin-border);
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    background: rgba(255, 255, 255, 0.01);
-}
-
-.zoom-drop-zone {
-    border: 2px dashed var(--admin-border);
-    padding: 20px;
-    text-align: center;
-    border-radius: 10px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.01);
-    transition: 0.2s;
-}
-
-.zoom-drop-zone:hover {
-    border-color: var(--admin-accent);
-    background: rgba(212, 180, 131, 0.02);
-}
-
-.grid-2 {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-}
-
-/* --- 👑 SELECTION MASTER CONTROLS --- */
+/* --- 👑 MASTER CONTROL CARDS --- */
 .master-card {
-    display: none;
-    /* Inicijalno strogo sakriven, shell-core ga pali isključivo Masteru */
     background: rgba(255, 255, 255, 0.02) !important;
     border: 1px solid rgba(214, 180, 131, 0.25) !important;
     border-radius: 12px;
     padding: 15px;
     margin: 10px 0 20px 0;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    animation: masterGlowIn 1.5s ease-in-out infinite alternate;
 }
 
-@keyframes masterGlowIn {
-    from {
-        border-color: rgba(214, 180, 131, 0.2);
-    }
-
-    to {
-        border-color: rgba(214, 180, 131, 0.4);
-    }
-}
-
-/* --- 🧱 GLOBAL SPLASH LOCK SCREEN (Čekaonica) --- */
-.global-splash-lockout {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    background-color: #0f171e !important;
-    z-index: 999999 !important;
-    margin: 0 !important;
-    padding: 20px !important;
-}
-
-/* --- 👑 FULL SCREEN CONTROL PLANE DASHBOARD OVERLAY --- */
 .master-control-plane-overlay {
     position: fixed !important;
     top: 0 !important;
