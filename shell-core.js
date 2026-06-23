@@ -5,12 +5,13 @@ import { initCmsEditor } from './cms-editor.js';
 const API_BASE = "https://shell.selection.rs";
 
 document.addEventListener("DOMContentLoaded", async () => {
+    // Provera identiteta na ivici mreže
     const sessionProfile = await verifyIdentityAndGetProfile();
     if (!sessionProfile) return;
 
     const masterBlok = document.getElementById('master-admin-blok');
 
-    // 👑 MASTER REGISTAR INJEKCIJA
+    // 👑 MASTER ENGINE ŽIVA REGISTRACIJA
     if (sessionProfile.userRole === 'master') {
         console.log("👑 Escalating local system clearance to Master Level...");
         if (masterBlok) masterBlok.style.setProperty('display', 'block', 'important');
@@ -20,7 +21,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const btnOpen = document.getElementById('btn-master-console-trigger');
             const btnClose = document.getElementById('btn-master-console-close');
-            const btnSubmit = document.getElementById('master-control-plane-overlay');
 
             if (btnOpen) btnOpen.onclick = () => module.otvoriMasterControlPlane();
             if (btnClose) btnClose.onclick = () => module.zatvoriMasterControlPlane();
@@ -33,9 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (masterBlok) masterBlok.remove();
     }
 
-    // 🧱 POVEZIVANJE DOGAĐAJA ZA LEGO KOCKICE (Sprečava prekid okidanja na Edit)
-    inicijalizujLokalneDugmiceILepljenja();
-
+    // Povlačenje konfiguracije sa Cloudflare klijentskog gateway-a
     fetch(`${API_BASE}/api/config?subdomain=${sessionProfile.activeSubdomain}&nocache=${Date.now()}`, {
         credentials: "include"
     })
@@ -45,7 +43,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         })
         .then(data => {
             let configurationMatrix = data.draft_config || data.live_config || data.config || data;
+
+            // 🧱 1. Prvo podižemo kompletan interfejs i renderujemo kockice!
             initCmsEditor(configurationMatrix);
+
+            // 📡 2. Tek kada elementi POSTOJE u memoriji, lepimo mrežne drajvere!
+            inicijalizujLokalneDugmiceILepljenja();
         })
         .catch(err => {
             console.error("⚠️ Workspace stream read failed. Fallback triggered.", err);
@@ -53,8 +56,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function inicijalizujLokalneDugmiceILepljenja() {
-    // 🛡️ GVOZDENA DELEGACIJA: Slušamo sve klikove unutar liste kockica dinamički!
     const listaKockica = document.getElementById('cms-blocks-list');
+    const zoomOverlay = document.getElementById('zoom-editor-overlay');
+
     if (listaKockica) {
         listaKockica.addEventListener('click', (e) => {
             const btnEdit = e.target.closest('.btn-edit-zoom');
@@ -64,10 +68,16 @@ function inicijalizujLokalneDugmiceILepljenja() {
             if (btnEdit) {
                 e.stopPropagation();
                 if (card && card.id === 'splash-config-card') {
-                    if (window.otvoriCoreZoomEditor) window.otvoriCoreZoomEditor();
+                    if (window.otvoriCoreZoomEditor) {
+                        window.otvoriCoreZoomEditor();
+                        if (zoomOverlay) zoomOverlay.style.setProperty('display', 'flex', 'important');
+                    }
                 } else if (card) {
                     const idx = parseInt(card.getAttribute('data-index'));
-                    if (window.otvoriZoomEditorZaBlok) window.otvoriZoomEditorZaBlok(idx);
+                    if (window.otvoriZoomEditorZaBlok) {
+                        window.otvoriZoomEditorZaBlok(idx);
+                        if (zoomOverlay) zoomOverlay.style.setProperty('display', 'flex', 'important');
+                    }
                 }
             } else if (btnDelete) {
                 e.stopPropagation();
@@ -79,7 +89,7 @@ function inicijalizujLokalneDugmiceILepljenja() {
         });
     }
 
-    // Povezivanje fiksnih HTML elemenata iz levog panela i topbara
+    // Povezivanje fiksnih HTML prečica iz levog panela i topbara
     document.getElementById('btn-shortcut-intro')?.addEventListener('click', () => window.postActiveBlock?.(-1));
     document.getElementById('btn-add-video')?.addEventListener('click', () => window.dodajNoviBlok?.('video'));
     document.getElementById('btn-add-chapter')?.addEventListener('click', () => window.dodajNoviBlok?.('chapter'));
@@ -90,10 +100,19 @@ function inicijalizujLokalneDugmiceILepljenja() {
     document.getElementById('btn-mode-mobile')?.addEventListener('click', () => window.promeniRezimSimulatora?.('mobile'));
     document.getElementById('btn-mode-pc')?.addEventListener('click', () => window.promeniRezimSimulatora?.('pc'));
 
+    // Funkcija za bezbedno zatvaranje modala
+    const ugasiZoomOklop = () => {
+        if (zoomOverlay) zoomOverlay.style.setProperty('display', 'none', 'important');
+        window.zatvoriZoomEditor?.();
+    };
+
     // Povezivanje drajvera unutar samog Zoom prozora
-    document.getElementById('btn-zoom-close-header')?.addEventListener('click', () => window.zatvoriZoomEditor?.());
-    document.getElementById('btn-zoom-cancel')?.addEventListener('click', () => window.zatvoriZoomEditor?.());
-    document.getElementById('btn-zoom-save')?.addEventListener('click', () => window.potvrdiIZatvoriZoom?.());
+    document.getElementById('btn-zoom-close-header')?.addEventListener('click', ugasiZoomOklop);
+    document.getElementById('btn-zoom-cancel')?.addEventListener('click', ugasiZoomOklop);
+    document.getElementById('btn-zoom-save')?.addEventListener('click', () => {
+        if (window.potvrdiIZatvoriZoom) window.potvrdiIZatvoriZoom();
+        if (zoomOverlay) zoomOverlay.style.setProperty('display', 'none', 'important');
+    });
 
     // Povezivanje oninput promena na levom panelu
     document.getElementById('color-h1')?.addEventListener('input', () => window.osveziZiviPreview?.());

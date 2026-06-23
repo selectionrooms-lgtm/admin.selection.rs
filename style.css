@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SELECTION CANVAS ARCHITECTURE — style.css (Armored V3 Layout Engine)
+   SELECTION CANVAS ARCHITECTURE — style.css (Production Core Layer)
    ========================================================================== */
 
 :root {
@@ -19,28 +19,47 @@
     box-sizing: border-box;
 }
 
+html,
 body {
-    font-family: 'Segoe UI', Roboto, sans-serif;
-    background-color: var(--admin-bg);
-    color: var(--admin-text);
     width: 100vw;
     height: 100vh;
-    overflow: hidden;
+    max-width: 100vw;
+    max-height: 100vh;
+    overflow: hidden !important;
+    background-color: var(--admin-bg);
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    color: var(--admin-text);
 }
 
-/* --- 🛡️ GVOZDENI KORENSKI ŠTIT (Troslojna raspodela leži ovde) --- */
+/* --- 🛡️ SHIELD SYSTEM: THE INITIAL DARKNESS --- */
 .main-workspace-container {
     display: none;
     width: 100vw;
     height: 100vh;
 }
 
-/* Kada JS odobri vizu, aktivira se globalni flexbox raspored na korenskom štitu */
+/* Otključavanje troslojne arhitekture nakon validacije vize */
 .main-workspace-container[data-status="approved"] {
     display: flex !important;
     width: 100vw;
     height: 100vh;
     overflow: hidden;
+}
+
+/* --- ⏳ GLOBAL SPLASH LOCK SCREEN (Gvozdeno Centriranje na Sredinu) --- */
+.global-splash-lockout {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: #0f171e !important;
+    z-index: 999999 !important;
 }
 
 /* --- LEVI PANEL: KONTROLNA TABLA (FIKSNO 320px) --- */
@@ -136,14 +155,6 @@ body {
     border-radius: 8px;
     font-size: 0.85rem;
     outline: none;
-}
-
-.form-group select:focus,
-.form-group input[type="text"]:focus,
-.form-group input[type="number"]:focus,
-.form-group textarea:focus {
-    border-color: var(--admin-accent);
-    background-color: var(--admin-sidebar);
 }
 
 .sidebar-drop-zone {
@@ -362,22 +373,85 @@ body {
     transition: all 0.3s ease;
 }
 
-/* --- ⏳ GLOBAL SPLASH LOCK SCREEN (Gvozdeno Centriranje na Sredinu) --- */
-.global-splash-lockout {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
+/* --- 🔍 GVOZDENI ZOOM ENGINE (Uvek u mraku dok se ne pozove!) --- */
+#zoom-editor-overlay {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    background-color: #0f171e !important;
-    z-index: 999999 !important;
-    margin: 0 !important;
-    padding: 20px !important;
+    background: rgba(10, 16, 21, 0.98) !important;
+    backdrop-filter: blur(15px) !important;
+    z-index: 9999 !important;
+    display: none !important;
+    /* GVOZDENA BLOKADA */
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 40px !important;
     box-sizing: border-box !important;
+}
+
+.zoom-window {
+    width: 100%;
+    max-width: 900px;
+    height: 100%;
+    max-height: 80vh;
+    background: var(--admin-card);
+    border: 1px solid var(--admin-border);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+.zoom-header {
+    padding: 18px 25px;
+    border-bottom: 1px solid var(--admin-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.zoom-body {
+    flex: 1;
+    padding: 25px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.zoom-footer {
+    padding: 15px 25px;
+    border-top: 1px solid var(--admin-border);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.zoom-drop-zone {
+    border: 2px dashed var(--admin-border);
+    padding: 22px;
+    text-align: center;
+    border-radius: 10px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.01);
+    transition: 0.2s;
+}
+
+.zoom-drop-zone:hover {
+    border-color: var(--admin-accent);
+    background: rgba(212, 180, 131, 0.02);
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
 }
 
 /* --- 👑 PREMIUM GOLD MASTER CARD --- */
@@ -392,7 +466,6 @@ body {
 
 .master-card h3 {
     color: #d4b483 !important;
-    font-family: 'Segoe UI', sans-serif;
     font-size: 0.9rem;
     margin-bottom: 6px;
     display: flex;
@@ -413,19 +486,4 @@ body {
     z-index: 99999 !important;
     overflow-y: auto !important;
     padding: 40px !important;
-}
-
-/* --- ⛔ TOTAL STOP HORIZONTAL SCROLLBAR --- */
-html,
-body {
-    width: 100vw;
-    height: 100vh;
-    max-width: 100vw;
-    max-height: 100vh;
-    overflow: hidden !important;
-}
-
-#zoom-editor-overlay {
-    box-sizing: border-box;
-    max-width: 100vw;
 }
