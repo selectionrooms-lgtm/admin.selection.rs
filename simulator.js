@@ -38,8 +38,8 @@ export function osveziZiviPreview(trenutniConfigParam) {
         simulatorScreen.style.backgroundPosition = 'center';
 
         // Strukturna definicija unutrašnjeg kontejnera kockice unutar ekrana
-        const stilKontejnera = `background: ${bojaKontejnera}; padding: 25px; border-radius: 14px; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.4); width: 100%; color: #fff; border: 1px solid rgba(255,255,255,0.03);`;
-
+        // ✨ GVOZDENA POPRAVKA: Kontejner sada puni 100% širine i 100% visine ekrana, brišući crni prazan prostor!
+        const stilKontejnera = `background: ${bojaKontejnera}; padding: 30px 25px; border-radius: 0px; text-align: left; box-shadow: none; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; color: #fff; box-sizing: border-box;`;
         const ziviPoddomen = (window.currentSubdomain || "ADMIN").toUpperCase();
         const aktivniIndex = window.aktivniIndex !== undefined ? window.aktivniIndex : 0;
 
