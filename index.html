@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Selection Canvas - Workspace Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.1.0">
+    <link rel="stylesheet" href="style.css?v=2.2.0">
 </head>
 
 <body>
@@ -17,17 +17,11 @@
             <div class="admin-brand">
                 <span class="brand-main">SELECTION</span>
                 <span class="brand-sub">Creative Innovation Space</span>
-                <div id="user-session-badge"
-                    style="display: none; align-items: center; justify-content: center; gap: 6px; margin: 8px auto 15px auto; font-family: 'Montserrat', sans-serif; font-size: 0.8rem; color: var(--admin-muted); background: rgba(255,255,255,0.03); padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); width: fit-content; text-align: center;">
-                </div>
+                <div id="user-session-badge" style="display: none;"></div>
             </div>
 
-            <div id="master-admin-blok" class="master-card"
-                style="margin: 10px 0 20px 0; border: 1px solid rgba(214, 180, 131, 0.3); padding: 15px; border-radius: 12px; background: rgba(255, 255, 255, 0.02); display: none;">
-                <h3
-                    style="color: #d4b483; font-family: 'Segoe UI', sans-serif; font-size: 0.85rem; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 1px;">
-                    <i class="fa-solid fa-crown" style="color: #d4b483;"></i> Master Admin
-                </h3>
+            <div id="master-admin-blok" class="master-card">
+                <h3><i class="fa-solid fa-crown"></i> Master Admin</h3>
                 <p style="font-size: 10px; color: #888; margin-bottom: 12px;">Provision new tenant on the network:</p>
 
                 <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;">
@@ -35,15 +29,13 @@
                         <label
                             style="font-size: 9px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 4px;">Assigned
                             Subdomain</label>
-                        <input type="text" id="master-novi-subdomain" placeholder="e.g. luxury-apartment"
-                            style="width: 100%; padding: 8px; background: #070b0e; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px;">
+                        <input type="text" id="master-novi-subdomain" placeholder="e.g. luxury-apartment">
                     </div>
                     <div>
                         <label
                             style="font-size: 9px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 4px;">Client
                             Email Identity</label>
-                        <input type="email" id="master-novi-email" placeholder="client@domain.com"
-                            style="width: 100%; padding: 8px; background: #070b0e; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px;">
+                        <input type="email" id="master-novi-email" placeholder="client@domain.com">
                     </div>
                 </div>
 
@@ -108,12 +100,10 @@
             <div class="form-group">
                 <label>Screen Background Image</label>
                 <div class="zoom-drop-zone" id="drop-global-pozadina" style="padding: 12px; font-size: 0.8rem;"
-                    onclick="okiniGlobalniKlikFajla('slika')">
+                    onclick="okiniLokalniKlikFajla('slika')">
                     <i class="fa-solid fa-image"
                         style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
-                    <span id="label-global-pozadina"
-                        style="font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Click
-                        or drag image here</span>
+                    <span id="label-global-pozadina">Click or drag image here</span>
                 </div>
                 <input type="hidden" id="input-slika-pozadina" value="">
             </div>
@@ -127,12 +117,10 @@
             <div class="form-group">
                 <label>Intro Loader Audio (.mp3)</label>
                 <div class="zoom-drop-zone" id="drop-global-loader-muzika" style="padding: 12px; font-size: 0.8rem;"
-                    onclick="okiniGlobalniKlikFajla('loader-mp3')">
+                    onclick="okiniLokalniKlikFajla('loader-mp3')">
                     <i class="fa-solid fa-music"
                         style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
-                    <span id="label-global-loader-muzika"
-                        style="font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Click
-                        or drag .mp3 file</span>
+                    <span id="label-global-loader-muzika">Click or drag .mp3 file</span>
                 </div>
                 <input type="hidden" id="input-loader-muzika" value="">
             </div>
@@ -140,12 +128,10 @@
             <div class="form-group">
                 <label>Idle Screensaver Audio (.mp3)</label>
                 <div class="zoom-drop-zone" id="drop-global-ss-muzika" style="padding: 12px; font-size: 0.8rem;"
-                    onclick="okiniGlobalniKlikFajla('ss-mp3')">
+                    onclick="okiniLokalniKlikFajla('ss-mp3')">
                     <i class="fa-solid fa-lock"
                         style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
-                    <span id="label-global-ss-muzika"
-                        style="font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Click
-                        or drag .mp3 file</span>
+                    <span id="label-global-ss-muzika">Click or drag .mp3 file</span>
                 </div>
                 <input type="hidden" id="input-ss-muzika" value="">
             </div>
@@ -156,8 +142,7 @@
             </div>
         </div>
 
-        <div class="main-workspace" id="main-saas-workspace"
-            style="flex: 1.2; border-right: 1px solid var(--admin-border);">
+        <div class="main-workspace" id="main-saas-workspace">
             <div class="toolbar">
                 <span class="toolbar-title">Shortcut:</span>
                 <button class="btn-add btn-splash-trigger" onclick="postaviAktivniBlok(-1)">
@@ -180,18 +165,17 @@
             <div class="blocks-container" id="cms-blocks-list"></div>
         </div>
 
-        <div class="preview-panel" id="global-preview-panel"
-            style="flex: 0.75; min-width: 320px; background-color: #070b0e; padding: 20px; display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden; transition: flex 0.3s ease;">
+        <div class="preview-panel" id="global-preview-panel">
             <div
                 style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--admin-border); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
                 <div
                     style="display: flex; gap: 6px; background: rgba(255,255,255,0.03); padding: 4px; border-radius: 8px; border: 1px solid var(--admin-border);">
                     <button id="btn-mode-mobile" onclick="promeniRezimSimulatora('mobile')"
-                        style="background: var(--admin-accent); color: var(--admin-sidebar); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                        style="background: var(--admin-accent); color: var(--admin-sidebar); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer;">
                         <i class="fa-solid fa-mobile-screen-button"></i> Mobile View
                     </button>
                     <button id="btn-mode-pc" onclick="promeniRezimSimulatora('pc')"
-                        style="background: transparent; color: var(--admin-muted); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                        style="background: transparent; color: var(--admin-muted); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer;">
                         <i class="fa-solid fa-desktop"></i> Desktop View
                     </button>
                 </div>
@@ -200,14 +184,13 @@
                     Intro Loader</span>
             </div>
 
-            <div class="device-simulator" id="live-simulator-screen"
-                style="flex: 1; width: 100%; background-color: #0f171e; border: 4px solid #1c2a39; border-radius: 24px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); position: relative; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 25px; transition: all 0.3s ease;">
-                <div id="simulator-content-target" style="width: 100%; text-align: center; transition: all 0.3s ease;">
-                </div>
+            <div class="device-simulator" id="live-simulator-screen">
+                <div id="simulator-content-target"></div>
             </div>
         </div>
 
     </div>
+
     <div id="master-control-plane-overlay" class="master-control-plane-overlay" style="display: none;">
         <div
             style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--admin-border); padding-bottom: 20px; margin-bottom: 30px;">
@@ -288,7 +271,7 @@
         </div>
     </div>
 
-    <script type="module" src="shell-core.js?v=2.0.0"></script>
+    <script type="module" src="shell-core.js?v=2.2.0"></script>
 </body>
 
 </html>

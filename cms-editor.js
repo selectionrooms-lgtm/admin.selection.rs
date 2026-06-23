@@ -4,12 +4,13 @@ import { osveziZiviPreview } from './simulator.js';
 const API_BASE = "https://shell.selection.rs";
 let trenutniConfig = null;
 let fajloviZaUpload = [];
-let isEditingCore = false; // 🔒 OSIGURANO: Unutrašnje stanje editora vraćeno na vrh modula!
+window.isEditingCore = false;
 
 export function initCmsEditor(configData) {
     trenutniConfig = configData;
+    window.trenutniConfig = configData; // 🛡️ Vezujemo na prozor da simulator uvek ima pristup!
 
-    // Globalni drajveri za window nivo (da bi stari onclick u HTML-u radili bez pucanja)
+    // Globalni drajveri za window nivo
     window.postaviAktivniBlok = postaviAktivniBlok;
     window.dodajNoviBlok = dodajNoviBlok;
     window.obrisiBlok = obrisiBlok;
@@ -20,44 +21,29 @@ export function initCmsEditor(configData) {
     window.potvrdiIZatvoriZoom = potvrdiIZatvoriZoom;
     window.ukloniSlikuIzGalerijeZoom = ukloniSlikuIzGalerijeZoom;
     window.sacuvajSveNaServer = sacuvajSveNaServer;
-    window.okiniLokalniKlikFajla = okiniLokalniKlikFajla;
     window.getAktivniIndex = () => window.aktivniIndex;
     window.okiniPreviewUpdate = () => osveziZiviPreview(trenutniConfig);
     window.sinhronizujZoomSaPreviewom = () => osveziZiviPreview(trenutniConfig);
 
+    // Otključavamo srednji i desni panel za ulogovanog korisnika jer su podaci stigli!
+    const workspace = document.querySelector('.main-workspace');
+    const preview = document.getElementById('global-preview-panel');
+    if (workspace) workspace.style.setProperty('display', 'block', 'important');
+    if (preview) preview.style.setProperty('display', 'block', 'important');
+
     renderujTimelineBlokove();
-    popuniGlobalneStilove(); // 🎯 OSIGURANO: Automatsko punjenje levog panela stilovima na startu!
+    popuniGlobalneStilove();
     inicijalizujDugmadZaSnimanje();
-    inicijalizujDragAndDrop();
-}
-
-function popuniGlobalneStilove() {
-    if (!trenutniConfig || !trenutniConfig.config || !trenutniConfig.config.globalSettings) return;
-    const settings = trenutniConfig.config.globalSettings;
-
-    if (document.getElementById('color-h1')) document.getElementById('color-h1').value = settings.primaryColor || '#d4b483';
-    if (document.getElementById('color-h2')) document.getElementById('color-h2').value = settings.secondaryColor || '#d4b483';
-    if (document.getElementById('color-p')) document.getElementById('color-p').value = settings.textColor || '#eeeeee';
-    if (document.getElementById('input-boja-pozadina')) document.getElementById('input-boja-pozadina').value = settings.backgroundColor || '#0f171e';
-    if (document.getElementById('input-boja-kontejner')) document.getElementById('input-boja-kontejner').value = settings.containerBg || '#1c2a39';
-    if (document.getElementById('input-ss-tajmer')) document.getElementById('input-ss-tajmer').value = settings.screensaverTimeout || 60;
-
-    if (document.getElementById('input-slika-pozadina')) document.getElementById('input-slika-pozadina').value = settings.mainBackgroundImage || '';
-    if (document.getElementById('label-global-pozadina')) document.getElementById('label-global-pozadina').innerText = settings.mainBackgroundImage || 'Click or drag image here';
-
-    if (document.getElementById('input-loader-muzika')) document.getElementById('input-loader-muzika').value = settings.loaderMusic || '';
-    if (document.getElementById('label-global-loader-muzika')) document.getElementById('label-global-loader-muzika').innerText = settings.loaderMusic || 'Click or drag .mp3 file';
-
-    if (document.getElementById('input-ss-muzika')) document.getElementById('input-ss-muzika').value = settings.screensaverMusic || '';
-    if (document.getElementById('label-global-ss-muzika')) document.getElementById('label-global-ss-muzika').innerText = settings.screensaverMusic || 'Click or drag .mp3 file';
 }
 
 export function renderujTimelineBlokove() {
     const container = document.getElementById('cms-blocks-list');
-    if (!container) return; container.innerHTML = '';
+    if (!container) return;
+    container.innerHTML = '';
 
     const coreCard = document.createElement('div');
-    coreCard.className = 'cms-block-card'; coreCard.id = 'splash-config-card';
+    coreCard.className = 'cms-block-card';
+    coreCard.id = 'splash-config-card';
     coreCard.onclick = (e) => { if (e.target.closest('.block-actions')) return; postaviAktivniBlok(-1); };
     if (window.aktivniIndex === -1) coreCard.classList.add('active-block');
 

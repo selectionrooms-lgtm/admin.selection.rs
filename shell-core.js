@@ -11,15 +11,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     // If the profile returns null, the identity is parked in the waiting room. Halt execution.
     if (!sessionProfile) return;
 
+    const masterBlok = document.getElementById('master-admin-blok');
+
     // 👑 2. SECURITY INJECTION FOR MASTER ROLE ONLY
     if (sessionProfile.userRole === 'master') {
         console.log("👑 Escalating local system clearance to Master Level. Injecting Terminal tools...");
+
+        // Eksplicitno i bezbedno palimo master kontrole samo tebi
+        if (masterBlok) masterBlok.style.setProperty('display', 'block', 'important');
 
         // Dynamically import the control plane system so clients never download this code
         import('./control-plane.js').then((module) => {
             module.initControlPlaneElements();
             console.log("✅ Master Control Plane Terminal fully loaded and active.");
         });
+    } else {
+        // 🔒 Sabotaža za klijente: Hirurški brišemo Master HTML strukturu iz klijentskog brauzera
+        if (masterBlok) masterBlok.remove();
     }
 
     // 🧱 3. Bootstrapping Tenant Workspace Config Matrix
