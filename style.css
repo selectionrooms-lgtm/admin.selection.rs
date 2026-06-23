@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SELECTION CANVAS ARCHITECTURE — style.css (Production Stable Layer V6)
+   SELECTION CANVAS ARCHITECTURE — style.css (Production Stable Layer V6.1)
    ========================================================================== */
 
 :root {
@@ -21,10 +21,10 @@
 
 html,
 body {
-    width: 100vw;
-    height: 100vh;
-    max-width: 100vw;
-    max-height: 100vh;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     overflow: hidden !important;
     background-color: var(--admin-bg);
     font-family: 'Segoe UI', Roboto, sans-serif;
@@ -187,8 +187,10 @@ body {
     display: flex;
     flex-direction: column;
     height: 100%;
+    max-height: 100vh;
     background-color: var(--admin-bg);
     border-right: 1px solid var(--admin-border);
+    overflow: hidden;
 }
 
 .toolbar {
@@ -244,19 +246,20 @@ body {
     align-items: center;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     cursor: grab;
-    /* Ruka za hvatanje */
-    transition: transform 0.15s ease, border-color 0.15s ease;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
     width: 100%;
+    user-select: none;
+    /* Sprečava selektovanje teksta dok se kockica vuče */
 }
 
 .cms-block-card:active {
     cursor: grabbing;
 }
 
-/* Stanje kada prevlačimo kockicu preko druge */
+/* 🔥 POPRAVKA: Koristimo senku umesto top bordera da ne pomera visinu kockica unutar liste */
 .cms-block-card.drag-over-active {
-    border-top: 2px dashed var(--admin-accent) !important;
-    transform: scale(1.01);
+    box-shadow: 0 -4px 0 0 var(--admin-accent), 0 8px 20px rgba(0, 0, 0, 0.4) !important;
+    transform: scale(1.005);
 }
 
 .cms-block-card.active-block {
@@ -338,13 +341,16 @@ body {
 /* --- 📺 POTPUNO SLOBODAN PREVIEW PANEL --- */
 .preview-panel {
     flex: 1.2 !important;
-    /* Širi se i uzima udoban prostor */
     background-color: #070b0e;
     height: 100%;
+    max-height: 100vh;
+    /* Zalepljeno za ivicu */
     overflow: hidden;
     position: relative;
     padding: 0;
-    /* Leti spoljno punjenje da sajt popuni ivice */
+    display: flex;
+    /* Gvozdeno poravnanje za unutrašnji iframe */
+    flex-direction: column;
 }
 
 /* 🎯 PLUTAJUĆI HOLDER ZA EDGE DUGMAD (Dole desno na ekranu) */
@@ -463,7 +469,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center !important;
-    /* Centriranje naslova unutra */
     gap: 8px;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -484,9 +489,9 @@ body {
 /* --- ⛔ TOTAL STOP HORIZONTAL SCROLLBAR --- */
 html,
 body {
-    width: 100vw;
-    height: 100vh;
-    max-width: 100vw;
-    max-height: 100vh;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
     overflow: hidden !important;
 }
