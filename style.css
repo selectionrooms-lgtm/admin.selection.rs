@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SELECTION CANVAS ARCHITECTURE — style.css (Production Core Restoration)
+   SELECTION CANVAS ARCHITECTURE — style.css (Unified Production Fix)
    ========================================================================== */
 
 :root {
@@ -31,14 +31,6 @@ body {
 
 /* --- 🛡️ GVOZDENI KORENSKI ŠTIT --- */
 .main-workspace-container {
-    display: none;
-    /* Inicijalno sakriveno dok traje token exchange */
-    width: 100%;
-    height: 100%;
-}
-
-/* Kada prođe autorizaciju, aktivira se globalni flexbox raspored */
-.main-workspace-container[data-status="approved"] {
     display: flex !important;
     width: 100vw;
     height: 100vh;
@@ -148,28 +140,24 @@ body {
     background-color: var(--admin-sidebar);
 }
 
-.btn-save {
-    background: rgba(212, 180, 131, 0.15);
-    color: var(--admin-accent);
-    border: 1px solid var(--admin-accent);
+/* 🎯 STRUKTURNI FIX: Posebna drop-zona za levi panel koja ne puca */
+.sidebar-drop-zone {
+    border: 1px dashed var(--admin-border);
     padding: 12px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
+    text-align: center;
+    border-radius: 8px;
     cursor: pointer;
-    border-radius: 10px;
-    margin-top: 10px;
-    transition: all 0.2s;
+    background: rgba(255, 255, 255, 0.01);
+    transition: 0.2s;
+    font-size: 0.8rem;
 }
 
-.btn-save:hover {
-    background: var(--admin-accent);
-    color: var(--admin-sidebar);
-    box-shadow: 0 0 12px rgba(212, 180, 131, 0.3);
+.sidebar-drop-zone:hover {
+    border-color: var(--admin-accent);
+    background: rgba(212, 180, 131, 0.03);
 }
 
-/* --- SREDNJI PANEL: RADNI PROSTOR SA KOCKICAMA (FLEX FLUIDAN) --- */
+/* --- SREDNJI PANEL: RADNI PROSTOR SA KOCKICAMA --- */
 .main-workspace {
     flex: 1;
     display: flex;
@@ -231,18 +219,19 @@ body {
     gap: 12px;
 }
 
-/* --- LEGO KOCKICE --- */
+/* --- LEGO KOCKICE SOLIDAN PANEL SYSTEM --- */
 .cms-block-card {
     background-color: var(--admin-card);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 12px;
-    padding: 14px 20px;
+    padding: 16px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     cursor: pointer;
     transition: all 0.2s ease;
+    width: 100%;
 }
 
 .cms-block-card:hover {
@@ -259,51 +248,86 @@ body {
     display: flex;
     align-items: center;
     gap: 15px;
+    flex: 1;
 }
 
 .block-num {
-    font-size: 0.85rem;
-    color: var(--admin-muted);
-    font-weight: 600;
-    min-width: 25px;
+    font-size: 0.8rem;
+    color: var(--admin-accent);
+    font-weight: 700;
+    min-width: 110px;
 }
 
 .block-meta-details {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
 }
 
 .block-type-tag {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--admin-accent);
-    letter-spacing: 0.5px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--admin-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 
 .block-summary-text {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: #fff;
-    opacity: 0.9;
+    font-weight: 600;
+}
+
+.block-media-indicators {
+    display: flex;
+    gap: 10px;
+    font-size: 0.75rem;
+    color: var(--admin-muted);
+    margin-top: 2px;
+}
+
+.block-media-indicators span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .block-actions {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
 }
 
 .btn-action {
     background: var(--btn-glass);
     border: 1px solid var(--admin-border);
-    color: var(--admin-muted);
-    padding: 5px 10px;
+    color: var(--admin-text);
+    padding: 6px 12px;
     cursor: pointer;
     font-size: 0.75rem;
     border-radius: 6px;
+    font-weight: 600;
+    transition: 0.2s;
 }
 
-/* --- DESNI PANEL & SIMULATOR (Vraćen originalni flex raspored) --- */
+.btn-action:hover {
+    color: white;
+    border-color: var(--admin-accent);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-delete {
+    border-color: rgba(184, 29, 36, 0.3);
+    color: #b81d24;
+}
+
+.btn-delete:hover {
+    background: #b81d24;
+    color: #fff;
+    border-color: #b81d24;
+}
+
+/* --- DESNI PANEL & SIMULATOR --- */
 .preview-panel {
     flex: 0.75;
     min-width: 320px;
@@ -314,7 +338,6 @@ body {
     gap: 15px;
     height: 100%;
     overflow: hidden;
-    transition: all 0.3s ease;
 }
 
 .device-simulator {
@@ -332,11 +355,6 @@ body {
     align-items: center;
     padding: 25px;
     transition: all 0.3s ease;
-}
-
-#simulator-content-target {
-    width: 100%;
-    text-align: center;
 }
 
 /* --- ZOOM MODAL WINDOW --- */
@@ -369,14 +387,61 @@ body {
     overflow: hidden;
 }
 
-/* --- 👑 MASTER CONTROL CARDS --- */
+.zoom-header {
+    padding: 18px 25px;
+    border-bottom: 1px solid var(--admin-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.zoom-body {
+    flex: 1;
+    padding: 25px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.zoom-footer {
+    padding: 15px 25px;
+    border-top: 1px solid var(--admin-border);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.zoom-drop-zone {
+    border: 2px dashed var(--admin-border);
+    padding: 22px;
+    text-align: center;
+    border-radius: 10px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.01);
+    transition: 0.2s;
+}
+
+.zoom-drop-zone:hover {
+    border-color: var(--admin-accent);
+    background: rgba(212, 180, 131, 0.02);
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
 .master-card {
     background: rgba(255, 255, 255, 0.02) !important;
     border: 1px solid rgba(214, 180, 131, 0.25) !important;
     border-radius: 12px;
     padding: 15px;
     margin: 10px 0 20px 0;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .master-control-plane-overlay {

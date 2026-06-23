@@ -26,15 +26,21 @@ export function initCmsEditor(configData) {
     window.sinhronizujZoomSaPreviewom = () => osveziZiviPreview(trenutniConfig);
     window.okiniLokalniKlikFajla = okiniLokalniKlikFajla;
 
+    // 🔨 Izgradnja i stabilizacija interfejsa hronološki
     renderujTimelineBlokove();
     popuniGlobalneStilove();
-    inicijalizujDugmadZaSnimanje();
+    inicijalizujDugmadZaSnimanje(); // 🚀 Crta glavna Edge dugmad odmah čim stigne matrica
     inicijalizujDragAndDrop();
 
-    // Početni preview postavi na intro
+    // 🔒 GVOZDENI F5 MOBILE-FIRST FIX
+    // Eksplicitno forsiramo mobilni režim na učitavanju i pokrećemo simulator
     window.aktivniIndex = -1;
-    osveziZiviPreview(trenutniConfig);
-}
+    if (window.promeniRezimSimulatora) {
+        window.promeniRezimSimulatora('mobile');
+    } else {
+        osveziZiviPreview(trenutniConfig);
+    }
+} // 🎯 OVDE SE ZAVRŠAVA FUNKCIJA initCmsEditor
 
 export function popuniGlobalneStilove() {
     if (!trenutniConfig || !trenutniConfig.config || !trenutniConfig.config.globalSettings) return;

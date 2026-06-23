@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Selection Canvas - Workspace Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.3.0">
+    <link rel="stylesheet" href="style.css?v=2.4.0">
 </head>
 
 <body>
@@ -92,8 +92,7 @@
             </div>
             <div class="form-group">
                 <label>Screen Background Image</label>
-                <div class="zoom-drop-zone" id="drop-global-pozadina" style="padding: 12px; font-size: 0.8rem;"
-                    onclick="okiniLokalniKlikFajla('slika')">
+                <div class="sidebar-drop-zone" id="drop-global-pozadina" onclick="okiniLokalniKlikFajla('slika')">
                     <i class="fa-solid fa-image"
                         style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
                     <span id="label-global-pozadina">Click or drag image here</span>
@@ -108,7 +107,7 @@
             <h2>Atmosphere & Automation</h2>
             <div class="form-group">
                 <label>Intro Loader Audio (.mp3)</label>
-                <div class="zoom-drop-zone" id="drop-global-loader-muzika" style="padding: 12px; font-size: 0.8rem;"
+                <div class="sidebar-drop-zone" id="drop-global-loader-muzika"
                     onclick="okiniLokalniKlikFajla('loader-mp3')">
                     <i class="fa-solid fa-music"
                         style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
@@ -118,8 +117,7 @@
             </div>
             <div class="form-group">
                 <label>Idle Screensaver Audio (.mp3)</label>
-                <div class="zoom-drop-zone" id="drop-global-ss-muzika" style="padding: 12px; font-size: 0.8rem;"
-                    onclick="okiniLokalniKlikFajla('ss-mp3')">
+                <div class="sidebar-drop-zone" id="drop-global-ss-muzika" onclick="okiniLokalniKlikFajla('ss-mp3')">
                     <i class="fa-solid fa-lock"
                         style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
                     <span id="label-global-ss-muzika">Click or drag .mp3 file</span>
@@ -193,7 +191,7 @@
         </div>
     </div>
 
-    <script type="module" src="shell-core.js?v=2.3.0"></script>
+    <script type="module" src="shell-core.js?v=2.4.0"></script>
 </body>
 
 </html>
