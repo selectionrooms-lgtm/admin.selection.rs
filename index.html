@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Selection Canvas - Workspace Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.6.0">
+    <link rel="stylesheet" href="style.css?v=2.7.0">
     <style>
         #selection-saas-root-shield[data-status="loading"] {
             display: none !important;
@@ -123,11 +123,9 @@
 
         <div class="main-workspace" id="main-saas-workspace">
             <div class="toolbar">
-                <span class="toolbar-title">Shortcut:</span>
-                <button class="btn-add btn-splash-trigger" id="btn-shortcut-intro">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Intro Display
-                </button>
-                <span class="toolbar-title" style="margin-left: 20px;">Build Node:</span>
+                <span class="toolbar-title">Build Node:</span>
+                <button class="btn-add btn-splash-trigger" id="btn-shortcut-intro"><i
+                        class="fa-solid fa-wand-magic-sparkles"></i> + Intro</button>
                 <button class="btn-add" id="btn-add-video"><i class="fa-solid fa-circle-play"></i> + Video</button>
                 <button class="btn-add" id="btn-add-chapter"><i class="fa-solid fa-book-open"></i> + Chapter</button>
                 <button class="btn-add" id="btn-add-gate"><i class="fa-solid fa-key"></i> + Gate</button>
@@ -162,9 +160,7 @@
         <div id="zoom-editor-overlay">
             <div class="zoom-window">
                 <div class="zoom-header">
-                    <h3 id="zoom-module-title"
-                        style="color: var(--admin-accent); font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">
-                        EDIT MATRIX BLOCK Content</h3>
+                    <h3 id="zoom-module-title">EDIT MATRIX BLOCK Content</h3>
                     <button id="btn-zoom-close-header" class="btn-action"
                         style="border-color:#b81d24; color:#b81d24; font-weight:700;">X CLOSE WINDOW</button>
                 </div>
@@ -178,6 +174,7 @@
         </div>
 
     </div>
+
     <div id="master-control-plane-overlay" class="master-control-plane-overlay" style="display: none;">
         <div
             style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--admin-border); padding-bottom: 20px; margin-bottom: 30px;">
@@ -260,7 +257,7 @@
         </div>
     </div>
 
-    <script type="module" src="shell-core.js?v=2.6.3"></script>
+    <script type="module" src="shell-core.js?v=2.7.0"></script>
 </body>
 
 </html>
