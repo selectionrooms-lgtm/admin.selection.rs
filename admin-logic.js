@@ -61,6 +61,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         const profil = userData.user || userData;
         const korisnickiEmail = profil.email || localStorage.getItem('userEmail') || "selectionrooms@gmail.com";
         const korisnickaUloga = profil.role || "client";
+        const korisnickiStatus = profil.status || "pending"; // 🎯 Čitamo status vize sa Edge-a!
 
         // Gvozdeni guard protiv undefined poddomena
         let aktivniSubdomain = profil.tenant || profil.subdomain || "admin";
@@ -69,7 +70,38 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
             aktivniSubdomain = "admin";
         }
 
-        // Renderovanje interfejsa na osnovu bezbedno izvučenih podataka
+        // 🧱 BOOKING.COM STYLE SPLASH GATE (Zid za korisnike na čekanju)
+        if (korisnickaUloga !== "master" && korisnickiStatus !== "approved") {
+            console.warn(`🔒 Korisnik na čekanju [Status: ${korisnickiStatus}]. Blokiram radni prostor.`);
+
+            if (masterBlok) masterBlok.style.display = "none";
+
+            // Hvata glavni kontejner celog CMS-a, čisti ga iz memorije i crta zatvorenu čekaonicu
+            const glavniCMSWorkspace = document.querySelector('.main-workspace-container') || document.body;
+
+            glavniCMSWorkspace.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 85vh; text-align: center; font-family: 'Montserrat', sans-serif; color: #fff; padding: 20px; box-sizing: border-box;">
+                    <div style="font-size: 60px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(214,180,131,0.2));">🔒</div>
+                    <h1 style="font-family: 'Cinzel', serif; color: var(--admin-accent); font-size: 2.2rem; margin: 0 0 12px 0; letter-spacing: 1px; text-transform: uppercase;">Pregled Naloga u Toku</h1>
+                    <p style="color: #eeeeee; max-width: 480px; font-size: 0.95rem; line-height: 1.6; opacity: 0.85; margin: 0 0 25px 0;">
+                        Zdravo <strong style="color:var(--admin-accent); font-weight: 600;">${korisnickiEmail}</strong>. Tvoj Selection SaaS prostor je uspešno rezervisan i kreiran na Edge serveru, ali se trenutno nalazi u redu za odobrenje.
+                    </p>
+                    <div style="background: rgba(212, 180, 131, 0.03); border: 1px dashed var(--admin-accent); padding: 14px 24px; border-radius: 6px; font-size: 0.85rem; color: var(--admin-accent); font-weight: 500; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Administracija proverava Vaše podatke i aktiviraće panel u najkraćem roku.
+                    </div>
+                    <span style="font-size: 0.75rem; margin-top: 50px; opacity: 0.25; letter-spacing: 0.5px;">Selection SaaS Engine • Identitet Potvrđen na Edge-u</span>
+                </div>
+            `;
+
+            if (badge) {
+                badge.innerHTML = `⏳ <span style="color: #d4b483; font-weight: 600;">Čeka Odobrenje</span>`;
+                badge.style.display = "flex";
+            }
+
+            return; // ⛔ STOP! Prekidamo bootstrap lanca ovde. ucitajConfig se nikada neće okinuti!
+        }
+
+        // --- PROLAZ ODOBREN (Korisnik je APPROVED ili si ti SYSTEM MASTER) ---
         if (badge) {
             const ikonica = korisnickaUloga === "master" ? "👑" : "🔒";
             badge.innerHTML = `${ikonica} <span style="color: var(--admin-accent); font-weight: 600;">${korisnickiEmail}</span>`;
@@ -82,12 +114,13 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
 
         if (korisnickaUloga === "master") {
             if (masterBlok) masterBlok.style.display = "block";
+            console.log(`📂 Prolaz odobren [Sistem Master]. Otvaram ruter na admin alocirani prostor.`);
+            ucitajConfig("admin");
         } else {
             if (masterBlok) masterBlok.style.display = "none";
+            console.log(`📂 Prolaz odobren [Klijent]. Pokrećem učitavanje za poddomen: ${aktivniSubdomain}`);
+            ucitajConfig(aktivniSubdomain);
         }
-
-        console.log(`📂 Žičenje završeno. Pokrećem učitavanje za poddomen: ${aktivniSubdomain}`);
-        ucitajConfig(aktivniSubdomain);
 
     } catch (err) {
         console.error("❌ Bootstrap krah. Aktiviram lokalni Devel Fallback...", err);
