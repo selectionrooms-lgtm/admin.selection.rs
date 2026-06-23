@@ -64,26 +64,34 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
             aktivniSubdomain = "admin";
         }
 
-        // 🧱 RASKRSNICA 1: KORISNIK JE NA ČEKANJU (PENDING)
+        // 🧱 BOOKING.COM STYLE SPLASH GATE (Korisnik je na čekanju)
         if (korisnickaUloga !== "master" && korisnickiStatus !== "approved") {
             console.warn(`🔒 Korisnik na čekanju [Status: ${korisnickiStatus}]. Aktiviram splash čekaonicu.`);
 
             if (rootShield) {
-                // Skidamo !important barijeru i pretvaramo ceo koren u Booking splash ekran
+                // FORCE: Skidamo barijeru i odmah na licu mesta zaključavamo flex i crnu pozadinu
                 rootShield.style.setProperty('display', 'flex', 'important');
-                rootShield.className = "global-splash-lockout";
+                rootShield.style.flexDirection = 'column';
+                rootShield.style.alignItems = 'center';
+                rootShield.style.justifyContent = 'center';
+                rootShield.style.backgroundColor = '#0f171e'; // Direktno korensko zaključavanje u mrak
+                rootShield.style.width = '100vw';
+                rootShield.style.height = '100vh';
+                rootShield.style.margin = '0';
+                rootShield.style.padding = '20px';
+                rootShield.style.boxSizing = 'border-box';
 
                 rootShield.innerHTML = `
-                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-family: 'Montserrat', sans-serif; color: #fff;">
-                        <div style="font-size: 60px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(214,180,131,0.2));">🔒</div>
-                        <h1 style="font-family: 'Cinzel', serif; color: var(--admin-accent); font-size: 2.2rem; margin: 0 0 12px 0; letter-spacing: 1px; text-transform: uppercase;">Account Review in Progress</h1>
-                        <p style="color: #eeeeee; max-width: 480px; font-size: 0.95rem; line-height: 1.6; opacity: 0.85; margin: 0 0 25px 0;">
-                            Hello <strong style="color:var(--admin-accent); font-weight: 600;">${korisnickiEmail}</strong>. Your Selection SaaS space has been successfully reserved and provisioned on the Edge node, but it is currently awaiting administration approval.
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-family: 'Montserrat', sans-serif; color: #fff; background-color: #0f171e;">
+                        <div style="font-size: 60px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(214,180,131,0.2)); line-height: 1;">🔒</div>
+                        <h1 style="font-family: 'Cinzel', serif; color: #d4b483; font-size: 2.2rem; margin: 0 0 12px 0; letter-spacing: 1px; text-transform: uppercase;">Account Review in Progress</h1>
+                        <p style="color: #eeeeee; max-width: 480px; font-size: 0.95rem; line-height: 1.6; opacity: 0.85; margin: 0 0 25px 0; font-family: 'Montserrat', sans-serif;">
+                            Hello <strong style="color:#d4b483; font-weight: 600;">${korisnickiEmail}</strong>. Your Selection SaaS space has been successfully reserved and provisioned on the Edge node, but it is currently awaiting administration approval.
                         </p>
-                        <div style="background: rgba(212, 180, 131, 0.03); border: 1px dashed var(--admin-accent); padding: 14px 24px; border-radius: 6px; font-size: 0.85rem; color: var(--admin-accent); font-weight: 500; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                        <div style="background: rgba(212, 180, 131, 0.03); border: 1px dashed #d4b483; padding: 14px 24px; border-radius: 6px; font-size: 0.85rem; color: #d4b483; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-family: 'Montserrat', sans-serif; width: fit-content; margin: 0 auto;">
                             <i class="fa-solid fa-clock-rotate-left"></i> Administration is verifying your metrics and will activate your panel shortly.
                         </div>
-                        <span style="font-size: 0.75rem; margin-top: 50px; opacity: 0.25; letter-spacing: 0.5px;">Selection SaaS Engine • Identity Verified at Edge</span>
+                        <span style="font-size: 0.75rem; margin-top: 50px; opacity: 0.25; letter-spacing: 0.5px; font-family: 'Montserrat', sans-serif; display: block;">Selection SaaS Engine • Identity Verified at Edge</span>
                     </div>
                 `;
             }
