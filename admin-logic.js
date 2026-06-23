@@ -74,14 +74,12 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         if (korisnickaUloga !== "master" && korisnickiStatus !== "approved") {
             console.warn(`🔒 Korisnik na čekanju [Status: ${korisnickiStatus}]. Blokiram radni prostor.`);
 
-            if (masterBlok) masterBlok.style.display = "none";
+            // Hvata glavni kontejner koji je u startu sakriven sa display: none
+            const glavniCMSWorkspace = document.getElementById('main-saas-workspace') || document.querySelector('.main-workspace-container') || document.body;
 
-            // Hvata glavni kontejner celog CMS-a
-            const glavniCMSWorkspace = document.querySelector('.main-workspace-container') || document.body;
-
-            // 🎯 POPRAVAK PORAVNANJA: Samo dodeljujemo čistu klasu iz style.css!
+            // Pretvaramo ga direktno u splash čekaonicu i tek ga SAD prikazujemo!
             glavniCMSWorkspace.className = "global-splash-lockout";
-            glavniCMSWorkspace.removeAttribute("style"); // Čistimo stare inline tragove ako postoje
+            glavniCMSWorkspace.style.display = "flex"; // Otvaramo samo čekaonicu!
 
             glavniCMSWorkspace.innerHTML = `
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-family: 'Montserrat', sans-serif; color: #fff;">
@@ -102,10 +100,16 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
                 badge.style.display = "flex";
             }
 
-            return; // ⛔ STOP! Prekidamo bootstrap lanca ovde. ucitajConfig se nikada neće okinuti!
+            return; // ⛔ STOP! Klijent ostaje zaključan u splash-u, panel se nikada ne pali.
         }
 
         // --- PROLAZ ODOBREN (Korisnik je APPROVED ili si ti SYSTEM MASTER) ---
+        // Tek ovde hvatamo kontejner i skidamo mu display: none!
+        const glavniCMSWorkspace = document.getElementById('main-saas-workspace') || document.querySelector('.main-workspace-container');
+        if (glavniCMSWorkspace) {
+            glavniCMSWorkspace.style.display = "block"; // 🔓 PANEL SE ODSECAN UKLJUČUJE TEK OVDE!
+        }
+
         if (badge) {
             const ikonica = korisnickaUloga === "master" ? "👑" : "🔒";
             badge.innerHTML = `${ikonica} <span style="color: var(--admin-accent); font-weight: 600;">${korisnickiEmail}</span>`;
@@ -116,26 +120,17 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         localStorage.setItem('userSubdomain', aktivniSubdomain);
         window.currentSubdomain = aktivniSubdomain;
 
-        // 👑 INTERFEJS RASKRSNICA: Master vs Klijent Guard
+        // 👑 INTERFEJS RASKRSNICA: Master vs Klijent Guard (Isto kao maločas...)
         if (korisnickaUloga === "master") {
             console.log(`👑 Access Granted [System Master]. Deploying Core Control Plane...`);
             if (masterBlok) masterBlok.style.display = "block";
             ucitajConfig("admin");
         } else {
             console.log(`🛡️ Access Granted [Tenant Client]. Bootstrapping workspace for: ${aktivniSubdomain}`);
+            if (masterBlok) masterBlok.remove(); // Čupanje iz memorije za klijenta!
 
-            // 🔥 BRUTALNO UNIŠTAVANJE: Čupamo Master blok iz HTML memorije brauzera!
-            if (masterBlok) {
-                masterBlok.remove();
-            }
-
-            // 🛑 SABOTAŽA KONZOLE: Kompletna neutralizacija funkcija ako klijent pokuša ručni poziv
-            window.otvoriMasterControlPlane = function () {
-                console.warn("🔒 Security Engine Exception: Hierarchy restriction active.");
-                return false;
-            };
-            window.promeniStatusKlijentaMaster = null;
-            window.osveziMasterTabeluKorisnika = null;
+            // Sabotaža konzole...
+            window.otvoriMasterControlPlane = function () { return false; };
 
             ucitajConfig(aktivniSubdomain);
         }
