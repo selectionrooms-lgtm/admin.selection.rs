@@ -50,9 +50,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function inicijalizujLokalneDugmiceILepljenja() {
-    const zoomOverlay = document.getElementById('zoom-editor-overlay');
-
+    // Slušamo događaje globalno na nivou dokumenta da izbegnemo null-render trke
     document.addEventListener('click', (e) => {
+        const zoomOverlay = document.getElementById('zoom-editor-overlay');
         const card = e.target.closest('.cms-block-card');
 
         if (card) {
@@ -83,15 +83,16 @@ function inicijalizujLokalneDugmiceILepljenja() {
                 return;
             }
 
-            // D. 👑 PRIORITETNI UJEDNAČENI EDIT FILTER (Radi za apsolutno sve kockice!)
-            if (btnEdit) {
+            // D. 👑 GVOZDENI EDIT FILTER (Radi za svaki klik, tekst ili ikonicu unutar dugmeta)
+            if (btnEdit || e.target.classList.contains('btn-edit-zoom')) {
                 e.preventDefault(); e.stopPropagation();
-                console.log("✏️ EDIT OKINUT ZA KOCKICU NA INDEKSU:", idx);
+                console.log("✏️ EDIT OKINUT ZA INDEKS KOCKICE:", idx);
 
                 if (window.otvoriZoomEditorZaBlok) window.otvoriZoomEditorZaBlok(idx);
 
                 requestAnimationFrame(() => {
-                    if (zoomOverlay) zoomOverlay.style.setProperty('display', 'flex', 'important');
+                    const dynamicOverlay = document.getElementById('zoom-editor-overlay');
+                    if (dynamicOverlay) dynamicOverlay.style.setProperty('display', 'flex', 'important');
                 });
                 return;
             }
@@ -102,18 +103,16 @@ function inicijalizujLokalneDugmiceILepljenja() {
             return;
         }
 
-        // --- TOPBAR PREČICE: SADA VRŠE SAMO TIHO DODAVANJE BEZ ZUUM-A ---
+        // --- GLOBALNE TOPBAR I BUILD NODE KONTROLE ---
         if (e.target.closest('#btn-shortcut-intro')) { window.dodajNoviBlok?.('intro'); return; }
         if (e.target.closest('#btn-add-video')) { window.dodajNoviBlok?.('video'); return; }
         if (e.target.closest('#btn-add-chapter')) { window.dodajNoviBlok?.('chapter'); return; }
         if (e.target.closest('#btn-add-gate')) { window.dodajNoviBlok?.('gate'); return; }
         if (e.target.closest('#btn-add-finale')) { window.dodajNoviBlok?.('finale'); return; }
 
-        // Master i simulator kontrole
+        // Master konzola triggers
         if (e.target.closest('#btn-master-console-trigger')) { window.otvoriMasterControlPlane?.(); return; }
         if (e.target.closest('#btn-master-console-close')) { window.zatvoriMasterControlPlane?.(); return; }
-        if (e.target.closest('#btn-mode-mobile')) { window.promeniRezimSimulatora?.('mobile'); return; }
-        if (e.target.closest('#btn-mode-pc')) { window.promeniRezimSimulatora?.('pc'); return; }
 
         // Zatvaranje modala
         if (e.target.closest('#btn-zoom-close-header') || e.target.closest('#btn-zoom-cancel')) {
@@ -127,22 +126,26 @@ function inicijalizujLokalneDugmiceILepljenja() {
             return;
         }
 
-        // Upload okidači
+        // Upload sekcije
         if (e.target.closest('#drop-global-pozadina')) { window.okiniLokalniKlikFajla?.('slika'); return; }
         if (e.target.closest('#drop-global-loader-muzika')) { window.okiniLokalniKlikFajla?.('loader-mp3'); return; }
         if (e.target.closest('#drop-global-ss-muzika')) { window.okiniLokalniKlikFajla?.('ss-mp3'); return; }
     });
 
-    // ESC ključ za brz izlazak iz svih panela (Zoom out)
-    document.addEventListener('keydown', (e) => {
+    // 🔒 GVOZDENI ESCAPE OKIDAČ (Uvek aktivan na nivou celog window-a)
+    window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+            const dynamicOverlay = document.getElementById('zoom-editor-overlay');
             const masterOverlay = document.getElementById('master-control-plane-overlay');
-            if (zoomOverlay && zoomOverlay.style.display === 'flex') {
-                zoomOverlay.style.setProperty('display', 'none', 'important');
+
+            if (dynamicOverlay && dynamicOverlay.style.display === 'flex') {
+                dynamicOverlay.style.setProperty('display', 'none', 'important');
                 window.zatvoriZoomEditor?.();
+                console.log("⌨️ ESC: Zoom zatvoren.");
             }
             if (masterOverlay && masterOverlay.style.display === 'block') {
                 window.zatvoriMasterControlPlane?.();
+                console.log("⌨️ ESC: Master zatvoren.");
             }
         }
     });
