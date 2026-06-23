@@ -1,508 +1,371 @@
- :root {
-     --admin-bg: #0f171e;
-     --admin-card: rgba(28, 42, 57, 0.95);
-     --admin-sidebar: #0a1015;
-     --admin-accent: #d4b483;
-     --admin-text: #eee;
-     --admin-muted: #a0acb8;
-     --admin-border: rgba(255, 255, 255, 0.08);
-     --btn-glass: rgba(255, 255, 255, 0.06);
- }
+:root {
+    --admin-bg: #0f171e;
+    --admin-card: rgba(28, 42, 57, 0.95);
+    --admin-sidebar: #0a1015;
+    --admin-accent: #d4b483;
+    --admin-text: #eee;
+    --admin-muted: #a0acb8;
+    --admin-border: rgba(255, 255, 255, 0.08);
+    --btn-glass: rgba(255, 255, 255, 0.06);
+}
 
- * {
-     margin: 0;
-     padding: 0;
-     box-sizing: border-box;
- }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
- body {
-     font-family: 'Segoe UI', Roboto, sans-serif;
-     background-color: var(--admin-bg);
-     color: var(--admin-text);
-     display: flex;
-     width: 100vw;
-     height: 100vh;
-     overflow: hidden;
- }
+body {
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--admin-bg);
+    color: var(--admin-text);
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
 
- /* --- JEDINSTVENA KONTROLNA TABLA (LEVO) --- */
- .sidebar {
-     width: 320px;
-     min-width: 320px;
-     background-color: var(--admin-sidebar);
-     padding: 22px;
-     display: flex;
-     flex-direction: column;
-     gap: 16px;
-     overflow-y: auto;
-     height: 100%;
-     border-right: 1px solid var(--admin-border);
- }
+/* --- JEDINSTVENA KONTROLNA TABLA (LEVO) --- */
+.sidebar {
+    width: 320px;
+    min-width: 320px;
+    background-color: var(--admin-sidebar);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    height: 100%;
+    border-right: 1px solid var(--admin-border);
+}
 
- .admin-brand {
-     text-align: center;
-     margin-bottom: 5px;
-     text-transform: uppercase;
- }
+.admin-brand {
+    text-align: center;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
 
- .brand-main {
-     display: block;
-     font-size: 22px;
-     font-weight: 700;
-     letter-spacing: 4px;
+.brand-main {
+    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--admin-accent);
+    background: linear-gradient(to right, #d4b483 20%, #fff 50%, #d4b483 80%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
 
-     /* Fallback boja za starije pretraživače */
-     color: var(--admin-accent);
+.brand-sub {
+    display: block;
+    font-size: 10px;
+    color: #fff;
+    letter-spacing: 1px;
+    margin-top: 2px;
+    opacity: 0.7;
+}
 
-     /* Definisanje gradijenta */
-     background: linear-gradient(to right, #d4b483 20%, #fff 50%, #d4b483 80%);
-     background-size: 200% auto;
+.sidebar h2 {
+    font-size: 0.75rem;
+    color: var(--admin-accent);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    border-bottom: 1px solid var(--admin-border);
+    padding-bottom: 5px;
+    margin-top: 8px;
+}
 
-     /* Vendor prefiksi za Webkit (Chrome, Safari, Edge) */
-     -webkit-background-clip: text;
-     -webkit-text-fill-color: transparent;
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
 
-     /* Standardno svojstvo za modernu kompatibilnost */
-     background-clip: text;
+.form-group label {
+    font-size: 0.65rem;
+    color: var(--admin-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
 
-     /* Postavljanje boje teksta na providno da bi se video gradijent pozadine */
-     color: transparent;
- }
+.color-picker-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
 
- .brand-sub {
-     display: block;
-     font-size: 10px;
-     color: #fff;
-     letter-spacing: 1px;
-     margin-top: 2px;
-     opacity: 0.7;
- }
+.color-picker-wrapper input[type="color"] {
+    width: 45px;
+    height: 32px;
+    border: 1px solid var(--admin-border);
+    background: none;
+    cursor: pointer;
+    border-radius: 6px;
+}
 
- .sidebar h2 {
-     font-size: 0.75rem;
-     color: var(--admin-accent);
-     text-transform: uppercase;
-     letter-spacing: 1.5px;
-     border-bottom: 1px solid var(--admin-border);
-     padding-bottom: 5px;
-     margin-top: 8px;
- }
+.form-group select,
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group textarea {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--admin-border);
+    color: white;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    outline: none;
+}
 
- .form-group {
-     display: flex;
-     flex-direction: column;
-     gap: 5px;
- }
+.form-group select:focus,
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form-group textarea:focus {
+    border-color: var(--admin-accent);
+    background-color: var(--admin-sidebar);
+}
 
- .form-group label {
-     font-size: 0.65rem;
-     color: var(--admin-muted);
-     text-transform: uppercase;
-     letter-spacing: 0.5px;
- }
+.btn-save {
+    background: rgba(212, 180, 131, 0.15);
+    color: var(--admin-accent);
+    border: 1px solid var(--admin-accent);
+    padding: 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    border-radius: 10px;
+    margin-top: 10px;
+    transition: all 0.2s;
+}
 
- .color-picker-wrapper {
-     display: flex;
-     gap: 8px;
-     align-items: center;
- }
+.btn-save:hover {
+    background: var(--admin-accent);
+    color: var(--admin-sidebar);
+    box-shadow: 0 0 12px rgba(212, 180, 131, 0.3);
+}
 
- .color-picker-wrapper input[type="color"] {
-     width: 45px;
-     height: 32px;
-     border: 1px solid var(--admin-border);
-     background: none;
-     cursor: pointer;
-     border-radius: 6px;
- }
+/* --- RADNI PROSTOR SA KOCKICAMA (SREDINA) --- */
+.main-workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: var(--admin-bg);
+}
 
- .form-group select,
- .form-group input[type="text"],
- .form-group input[type="number"],
- .form-group textarea {
-     width: 100%;
-     padding: 8px 12px;
-     background-color: rgba(255, 255, 255, 0.03);
-     border: 1px solid var(--admin-border);
-     color: white;
-     border-radius: 8px;
-     font-size: 0.85rem;
-     outline: none;
- }
+.toolbar {
+    background-color: rgba(28, 42, 57, 0.4);
+    border-bottom: 1px solid var(--admin-border);
+    padding: 15px 30px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    backdrop-filter: blur(10px);
+}
 
- .form-group select:focus,
- .form-group input[type="text"]:focus,
- .form-group input[type="number"]:focus,
- .form-group textarea:focus {
-     border-color: var(--admin-accent);
-     background-color: var(--admin-sidebar);
- }
+.toolbar-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--admin-accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
 
- .btn-save {
-     background: rgba(212, 180, 131, 0.15);
-     color: var(--admin-accent);
-     border: 1px solid var(--admin-accent);
-     padding: 12px;
-     font-size: 0.8rem;
-     font-weight: 700;
-     text-transform: uppercase;
-     letter-spacing: 1.5px;
-     cursor: pointer;
-     border-radius: 10px;
-     margin-top: 10px;
-     transition: all 0.2s;
- }
+.btn-add {
+    background: var(--btn-glass);
+    border: 1px solid var(--admin-border);
+    color: white;
+    padding: 8px 14px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
 
- .btn-save:hover {
-     background: var(--admin-accent);
-     color: var(--admin-sidebar);
-     box-shadow: 0 0 12px rgba(212, 180, 131, 0.3);
- }
+.btn-add:hover {
+    border-color: var(--admin-accent);
+    background: rgba(255, 255, 255, 0.1);
+}
 
- /* --- RADNI PROSTOR SA KOCKICAMA (SREDINA) --- */
- .main-workspace {
-     flex: 1;
-     display: flex;
-     flex-direction: column;
-     height: 100%;
-     background-color: var(--admin-bg);
- }
+.btn-splash-trigger {
+    border: 1px dashed var(--admin-accent) !important;
+    background: rgba(212, 180, 131, 0.03);
+}
 
- .toolbar {
-     background-color: rgba(28, 42, 57, 0.4);
-     border-bottom: 1px solid var(--admin-border);
-     padding: 15px 30px;
-     display: flex;
-     align-items: center;
-     gap: 12px;
-     backdrop-filter: blur(10px);
- }
+.blocks-container {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 
- .toolbar-title {
-     font-size: 0.75rem;
-     font-weight: 700;
-     color: var(--admin-accent);
-     text-transform: uppercase;
-     letter-spacing: 1px;
- }
+/* --- LEGO KOCKICE --- */
+.cms-block-card {
+    background-color: var(--admin-card);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
 
- .btn-add {
-     background: var(--btn-glass);
-     border: 1px solid var(--admin-border);
-     color: white;
-     padding: 8px 14px;
-     font-size: 0.75rem;
-     cursor: pointer;
-     border-radius: 8px;
-     font-weight: 600;
-     display: flex;
-     align-items: center;
-     gap: 6px;
-     transition: all 0.2s;
- }
+.cms-block-card:hover {
+    border-color: rgba(212, 180, 131, 0.4);
+    transform: translateX(2px);
+}
 
- .btn-add:hover {
-     border-color: var(--admin-accent);
-     background: rgba(255, 255, 255, 0.1);
- }
+.cms-block-card.active-block {
+    border-color: var(--admin-accent) !important;
+    background: rgba(28, 42, 57, 0.99);
+}
 
- .btn-splash-trigger {
-     border: 1px dashed var(--admin-accent) !important;
-     background: rgba(212, 180, 131, 0.03);
- }
+.block-info-side {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
 
- .blocks-container {
-     flex: 1;
-     padding: 30px;
-     overflow-y: auto;
-     display: flex;
-     flex-direction: column;
-     gap: 12px;
- }
+.block-num {
+    font-size: 0.85rem;
+    color: var(--admin-muted);
+    font-weight: 600;
+    min-width: 25px;
+}
 
- /* --- LEGO KOCKICE --- */
- .cms-block-card {
-     background-color: var(--admin-card);
-     border: 1px solid rgba(255, 255, 255, 0.05);
-     border-radius: 12px;
-     padding: 14px 20px;
-     display: flex;
-     justify-content: space-between;
-     align-items: center;
-     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-     cursor: pointer;
-     transition: all 0.2s ease;
- }
+.block-meta-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
 
- .cms-block-card:hover {
-     border-color: rgba(212, 180, 131, 0.4);
-     transform: translateX(2px);
- }
+.block-type-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--admin-accent);
+    letter-spacing: 0.5px;
+}
 
- .cms-block-card.active-block {
-     border-color: var(--admin-accent) !important;
-     background: rgba(28, 42, 57, 0.99);
- }
+.block-summary-text {
+    font-size: 0.85rem;
+    color: #fff;
+    opacity: 0.9;
+}
 
- .block-info-side {
-     display: flex;
-     align-items: center;
-     gap: 15px;
- }
+.block-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
 
- .block-num {
-     font-size: 0.85rem;
-     color: var(--admin-muted);
-     font-weight: 600;
-     min-width: 25px;
- }
+.btn-action {
+    background: var(--btn-glass);
+    border: 1px solid var(--admin-border);
+    color: var(--admin-muted);
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    border-radius: 6px;
+}
 
- .block-meta-details {
-     display: flex;
-     flex-direction: column;
-     gap: 2px;
- }
+.btn-action:hover {
+    color: white;
+    border-color: var(--admin-accent);
+}
 
- .block-type-tag {
-     font-size: 0.75rem;
-     font-weight: 700;
-     color: var(--admin-accent);
-     letter-spacing: 0.5px;
- }
+/* --- ZOOM MODAL --- */
+#zoom-editor-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(10, 16, 21, 0.98);
+    backdrop-filter: blur(15px);
+    z-index: 9999;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+}
 
- .block-summary-text {
-     font-size: 0.85rem;
-     color: #fff;
-     opacity: 0.9;
- }
+.zoom-window {
+    width: 100%;
+    max-width: 900px;
+    height: 100%;
+    max-height: 80vh;
+    background: var(--admin-card);
+    border: 1px solid var(--admin-border);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
 
- .block-media-indicators {
-     display: flex;
-     gap: 10px;
-     margin-top: 4px;
-     font-size: 0.75rem;
-     color: var(--admin-muted);
- }
+/* --- 👑 SELECTION MASTER CONTROLS --- */
+.master-card {
+    display: block !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(214, 180, 131, 0.25) !important;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    animation: masterGlowIn 1.5s ease-in-out infinite alternate;
+}
 
- .block-media-indicators span i {
-     color: var(--admin-accent);
-     margin-right: 3px;
- }
+@keyframes masterGlowIn {
+    from {
+        border-color: rgba(214, 180, 131, 0.2);
+    }
 
- .block-actions {
-     display: flex;
-     gap: 6px;
-     align-items: center;
- }
+    to {
+        border-color: rgba(214, 180, 131, 0.4);
+    }
+}
 
- .btn-action {
-     background: var(--btn-glass);
-     border: 1px solid var(--admin-border);
-     color: var(--admin-muted);
-     padding: 5px 10px;
-     cursor: pointer;
-     font-size: 0.75rem;
-     border-radius: 6px;
- }
+/* --- 🧱 NOVO: GLOBAL SPLASH LOCK SCREEN ENGINE --- */
+.global-splash-lockout {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: var(--admin-bg) !important;
+    z-index: 999999 !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+}
 
- .btn-action:hover {
-     color: white;
-     border-color: var(--admin-accent);
- }
-
- .btn-edit-zoom {
-     background: rgba(212, 180, 131, 0.1);
-     color: var(--admin-accent);
-     border-color: rgba(212, 180, 131, 0.2);
-     font-weight: 600;
- }
-
- .btn-delete:hover {
-     background-color: #b81d24;
-     border-color: #b81d24;
-     color: white;
- }
-
- /* --- VELIKI PROZOR ZA UREĐIVANJE (ZOOM MODAL) --- */
- #zoom-editor-overlay {
-     position: fixed;
-     top: 0;
-     left: 0;
-     width: 100vw;
-     height: 100vh;
-     background: rgba(10, 16, 21, 0.98);
-     backdrop-filter: blur(15px);
-     z-index: 9999;
-     display: none;
-     justify-content: center;
-     align-items: center;
-     padding: 40px;
- }
-
- .zoom-window {
-     width: 100%;
-     max-width: 900px;
-     height: 100%;
-     max-height: 80vh;
-     background: var(--admin-card);
-     border: 1px solid var(--admin-border);
-     border-radius: 20px;
-     display: flex;
-     flex-direction: column;
-     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-     overflow: hidden;
- }
-
- .zoom-header {
-     padding: 20px 30px;
-     border-bottom: 1px solid var(--admin-border);
-     display: flex;
-     justify-content: space-between;
-     align-items: center;
-     background: rgba(0, 0, 0, 0.2);
- }
-
- .zoom-body {
-     padding: 30px;
-     overflow-y: auto;
-     flex: 1;
-     display: flex;
-     flex-direction: column;
-     gap: 20px;
- }
-
- .zoom-footer {
-     padding: 20px 30px;
-     border-top: 1px solid var(--admin-border);
-     display: flex;
-     justify-content: flex-end;
-     gap: 12px;
-     background: rgba(0, 0, 0, 0.2);
- }
-
- /* --- KUTIJE ZA SPUŠTANJE FAJLOVA UNUTAR ZOOMA --- */
- .zoom-drop-zone {
-     border: 2px dashed var(--admin-border);
-     padding: 25px;
-     text-align: center;
-     border-radius: 12px;
-     background: rgba(255, 255, 255, 0.01);
-     cursor: pointer;
-     transition: all 0.2s;
- }
-
- .zoom-drop-zone:hover {
-     border-color: var(--admin-accent);
-     background: rgba(212, 180, 131, 0.03);
- }
-
- .zoom-media-grid {
-     display: flex;
-     flex-wrap: wrap;
-     gap: 10px;
-     margin-top: 10px;
- }
-
- .zoom-thumb {
-     width: 90px;
-     height: 90px;
-     border-radius: 8px;
-     overflow: hidden;
-     border: 1px solid var(--admin-border);
-     position: relative;
-     background: #000;
- }
-
- .zoom-thumb img {
-     width: 100%;
-     height: 100%;
-     object-fit: cover;
- }
-
- .zoom-thumb button {
-     position: absolute;
-     top: 0;
-     right: 0;
-     background: #b81d24;
-     color: #fff;
-     border: none;
-     padding: 2px 6px;
-     font-size: 10px;
-     cursor: pointer;
-     border-radius: 0 0 0 6px;
- }
-
- .hint-text {
-     font-size: 0.75rem;
-     color: var(--admin-muted);
-     margin-top: 2px;
- }
-
- .grid-2 {
-     display: grid;
-     grid-template-columns: 1fr 1fr;
-     gap: 20px;
- }
-
- .toggle-group {
-     display: flex;
-     align-items: center;
-     gap: 10px;
- }
-
- .toggle-group input[type="checkbox"] {
-     accent-color: var(--admin-accent);
-     width: 16px;
-     height: 16px;
-     cursor: pointer;
- }
-
- /* --- 👑 SELECTION MASTER ADMIN TABLA STYLE --- */
- .master-card {
-     display: block !important;
-     background: rgba(255, 255, 255, 0.02) !important;
-     border: 1px solid rgba(214, 180, 131, 0.25) !important;
-     border-radius: 12px;
-     padding: 20px;
-     margin: 20px;
-     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-     animation: masterGlowIn 1.5s ease-in-out infinite alternate;
- }
-
- .master-card label {
-     font-size: 11px;
-     color: var(--admin-muted);
-     text-transform: uppercase;
-     letter-spacing: 0.5px;
-     display: block;
-     margin-bottom: 5px;
- }
-
- .master-card input[type="text"],
- .master-card input[type="email"] {
-     width: 100%;
-     padding: 10px 14px;
-     background-color: #070b0e !important;
-     border: 1px solid var(--admin-border);
-     color: white;
-     border-radius: 6px;
-     font-size: 0.85rem;
-     outline: none;
-     transition: border-color 0.2s;
- }
-
- .master-card input:focus {
-     border-color: var(--admin-accent) !important;
- }
-
- @keyframes masterGlowIn {
-     from {
-         border-color: rgba(214, 180, 131, 0.2);
-         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-     }
-
-     to {
-         border-color: rgba(214, 180, 131, 0.4);
-         box-shadow: 0 4px 25px rgba(214, 180, 131, 0.05);
-     }
- }
+/* --- 👑 NOVO: FULL SCREEN CONTROL PLANE DASHBOARD --- */
+.master-control-plane-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(7, 11, 14, 0.99) !important;
+    z-index: 99999 !important;
+    overflow-y: auto !important;
+    padding: 40px !important;
+    box-sizing: border-box !important;
+}
