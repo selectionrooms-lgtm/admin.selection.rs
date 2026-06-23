@@ -1171,3 +1171,132 @@ function globalDrop(e) {
     }
 }
 function okiniLokalniKlikFajla(tip) { okiniGlobalniKlikFajla(tip); }
+
+// ==========================================================================
+// 8. SAAS CONTROL PLANE: FULL-SCREEN OVERLAY ENGINE (Master Only)
+// ==========================================================================
+async function otvoriMasterControlPlane() {
+    const overlay = document.getElementById('master-control-plane-overlay');
+    if (!overlay) return;
+
+    overlay.style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Lock background scrolling
+
+    await osveziMasterTabeluKorisnika();
+}
+
+function zatvoriMasterControlPlane() {
+    document.getElementById('master-control-plane-overlay').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+async function osveziMasterTabeluKorisnika() {
+    const tbody = document.getElementById('master-users-table-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--admin-accent); font-weight:600;">⚡ Scanning Edge KV bus, fetching user records...</td></tr>`;
+
+    try {
+        const token = localStorage.getItem('selection_session_token');
+        const res = await fetch(`${API_BASE}/api/master/users`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error("Edge Kernel rejected access control read.");
+        const data = await res.json();
+
+        if (!data.users || data.users.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--admin-muted);">No tenant records found on the network.</td></tr>`;
+            return;
+        }
+
+        document.getElementById('stat-total-users').innerText = data.users.length;
+        document.getElementById('stat-pending-users').innerText = data.users.filter(u => u.status === 'pending').length;
+        document.getElementById('stat-approved-users').innerText = data.users.filter(u => u.status === 'approved').length;
+
+        tbody.innerHTML = ''; // Clear loader
+
+        data.users.forEach(user => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = "1px solid var(--admin-border)";
+
+            let statusBadge = '';
+            if (user.status === 'approved') {
+                statusBadge = `<span style="background: rgba(46, 204, 113, 0.1); color: #2ecc71; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">✔️ APPROVED</span>`;
+            } else if (user.status === 'blocked') {
+                statusBadge = `<span style="background: rgba(184, 29, 36, 0.1); color: #b81d24; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">⛔ BLOCKED</span>`;
+            } else {
+                statusBadge = `<span style="background: rgba(212, 180, 131, 0.1); color: var(--admin-accent); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">⏳ PENDING</span>`;
+            }
+
+            let actionButton = '';
+            if (user.email !== "selectionrooms@gmail.com") {
+                if (user.status === 'approved') {
+                    actionButton = `<button onclick="promeniStatusKlijentaMaster('${user.email}', 'blocked', '${user.tenant}')" style="background:#b81d24; border:none; color:#fff; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:700; transition:0.2s;">Revoke Access</button>`;
+                } else {
+                    actionButton = `<button onclick="promeniStatusKlijentaMaster('${user.email}', 'approved', '${user.tenant}')" style="background:#2ecc71; border:none; color:#0a1015; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:800; transition:0.2s;">Approve Tenant</button>`;
+                }
+            } else {
+                actionButton = `<span style="color:var(--admin-muted); font-size:0.75rem; font-style:italic;">Core Master Node</span>`;
+            }
+
+            tr.innerHTML = `
+                <td style="padding: 14px; font-weight:600; color:#fff;">${user.email}</td>
+                <td style="padding: 14px;">
+                    <input type="text" id="tenant-input-${user.email.replace(/[@.]/g, '_')}" value="${user.tenant || ''}" style="background:#070b0e; color:#fff; border:1px solid var(--admin-border); padding:6px 10px; border-radius:6px; font-size:0.85rem; width:140px;">
+                </td>
+                <td style="padding: 14px; text-transform:uppercase; font-size:0.8rem; color:var(--admin-muted); font-weight:600;">${user.role || 'client'}</td>
+                <td style="padding: 14px; color:var(--admin-muted); font-size:0.85rem;">${user.odobren_datuma || user.created_at || 'N/A'}</td>
+                <td style="padding: 14px;">${statusBadge}</td>
+                <td style="padding: 14px; text-align: right;">${actionButton}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:#b81d24; font-weight:600;">❌ Matrix error: ${err.message}</td></tr>`;
+    }
+}
+
+async function promeniStatusKlijentaMaster(email, status, oldTenant) {
+    const idSuffix = email.replace(/[@.]/g, '_');
+    const inputElement = document.getElementById(`tenant-input-${idSuffix}`);
+    const targetSubdomain = inputElement ? inputElement.value.trim().toLowerCase() : oldTenant;
+
+    if (!targetSubdomain) {
+        alert("❌ Operations Error: A valid subdomain mapping is required before status transformation.");
+        return;
+    }
+
+    const confirmMessage = status === 'approved'
+        ? `Authorize security visa for ${email} on node: https://${targetSubdomain}.selection.rs?`
+        : `Revoke system permissions for ${email}? This will immediately lockout the tenant.`;
+
+    if (!confirm(confirmMessage)) return;
+
+    try {
+        const token = localStorage.getItem('selection_session_token');
+        const response = await fetch(`${API_BASE}/api/master/update_status`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                klijentEmail: email,
+                noviStatus: status,
+                noviTenant: targetSubdomain,
+                novaUloga: "client"
+            })
+        });
+
+        if (response.ok) {
+            await osveziMasterTabeluKorisnika(); // Reload table matrix instantly
+        } else {
+            alert("🔒 Edge Engine core validation rejected the request.");
+        }
+    } catch (e) {
+        alert("❌ Control Plane transmission interface lost link.");
+    }
+}
