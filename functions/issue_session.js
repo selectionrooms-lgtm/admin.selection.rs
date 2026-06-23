@@ -57,27 +57,26 @@ async function getTenantContext(email, env) {
 export async function onRequestGet(context) {
     const { request, env } = context;
 
-    // 👤 Čitamo gvozdeni Access identitet koji nam Cloudflare garantuje na admin.selection.rs
-    const authenticatedEmail = request.headers.get('Cf-Access-Authenticated-User-Email') ||
+    // 👤 Prošireno čitanje identiteta (Hvatamo sve moguće Cloudflare Access kanale)
+    let email = request.headers.get('Cf-Access-Authenticated-User-Email') ||
         request.headers.get('Cf-Access-Authenticated-With-User-Email');
 
-    if (!authenticatedEmail) {
-        return new Response(JSON.stringify({ error: "🔒 Gvozdeni Štit: Nema Cloudflare Access identiteta." }), {
-            status: 401,
-            headers: {
-                "Content-Type": "application/json",
-                "Cache-Control": "no-store"
-            }
-        });
+    // 💡 Ekstra trik: Ako zaglavlja zakazu, Pages Functions imaju Access podatke spakovane unutar request.cf objekta
+    if (!email && request.cf && request.cf.jwtUser) {
+        email = request.cf.jwtUser.email;
     }
 
-    const cisceniEmail = authenticatedEmail.trim().toLowerCase();
-
-    // 🔍 Provera prava u bazi
-    const userContext = await getTenantContext(cisceniEmail, env);
-    if (!userContext) {
-        return new Response(JSON.stringify({ error: "⛔ Korisnik nije mapiran u KV bazi." }), {
-            status: 403,
+    if (!email) {
+        // Privremeni debug: Vratićemo u telu odgovora šta tačno radnik vidi u zaglavljima da lakše lociramo
+        const sviHeaderi = {};
+        for (let [key, value] of request.headers.entries()) {
+            if (key.startsWith('cf-access')) sviHeaderi[key] = value;
+        }
+        return new Response(JSON.stringify({
+            error: "🔒 Gvozdeni Štit: Nema Cloudflare Access identiteta.",
+            debug_seen_headers: sviHeaderi
+        }), {
+            status: 401,
             headers: { "Content-Type": "application/json" }
         });
     }
