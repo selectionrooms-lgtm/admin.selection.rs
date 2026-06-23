@@ -34,25 +34,25 @@ export async function verifyIdentityAndGetProfile() {
 
         if (!activeSubdomain || activeSubdomain === "undefined") activeSubdomain = "admin";
 
-        // 🧱 PROVERA ULJEZA ILI KLIJENTA NA ČEKANJU (WAITING ROOM ENGINE)
+        // 🧱 ČEKAONICA ZA KLIJENTE NA ČEKANJU (100% DEAD CENTER RASPORD)
         if (userRole !== "master" && userStatus !== "approved") {
             console.warn(`🔒 Identity parked in waiting room [Status: ${userStatus}].`);
             if (rootShield) {
                 rootShield.setAttribute('data-status', 'pending');
-                rootShield.className = "global-splash-lockout"; // Aktivira fiksiran mrak preko celog ekrana
+                rootShield.className = "global-splash-lockout"; // Gvozdeno aktivira mrtvi centar ekrana
 
-                // Čist, centriran HTML bez okvira koji guše sredinu
                 rootShield.innerHTML = `
                     <div class="global-splash-wrapper">
-                        <div style="font-size: 55px; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(214,180,131,0.15));">🔒</div>
-                        <h1 style="font-family: 'Cinzel', serif; color: #d4b483; font-size: 2.1rem; margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase;">Account Review in Progress</h1>
-                        <p style="color: #eeeeee; font-size: 0.95rem; line-height: 1.6; opacity: 0.85; margin-bottom: 20px;">
+                        <div style="font-size: 50px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(214,180,131,0.15));">🔒</div>
+                        <h1 style="font-family: 'Cinzel', serif; color: #d4b483; font-size: 2.2rem; margin-bottom: 15px; letter-spacing: 1px; text-transform: uppercase;">Account Review in Progress</h1>
+                        <p style="color: #eeeeee; font-size: 1rem; line-height: 1.7; opacity: 0.95; max-width: 550px;">
                             Hello <strong style="color:#d4b483; font-weight: 600;">${userEmail}</strong>. Your Selection SaaS space has been successfully reserved and provisioned on the Edge node, but it is currently awaiting administration approval.
+                            <br><br>
+                            <span style="color: #d4b483; font-weight: 600; font-size: 0.95rem; letter-spacing: 0.3px;">
+                                <i class="fa-solid fa-clock-rotate-left" style="margin-right: 6px;"></i> Administration is verifying your metrics and will activate your panel shortly.
+                            </span>
                         </p>
-                        <p style="font-size: 0.9rem; color: #d4b483; font-weight: 500; letter-spacing: 0.5px; opacity: 0.95; line-height: 1.5;">
-                            <i class="fa-solid fa-clock-rotate-left" style="margin-right: 6px;"></i> Administration is verifying your metrics and will activate your panel shortly.
-                        </p>
-                        <span style="font-size: 0.75rem; margin-top: 60px; opacity: 0.2; letter-spacing: 0.5px; display: block;">Selection SaaS Engine • Identity Verified at Edge</span>
+                        <span style="font-size: 0.75rem; margin-top: 50px; opacity: 0.2; letter-spacing: 0.5px; display: block;">Selection SaaS Engine • Identity Verified at Edge</span>
                     </div>
                 `;
             }
@@ -60,11 +60,15 @@ export async function verifyIdentityAndGetProfile() {
                 badge.innerHTML = `⏳ <span style="color: #d4b483; font-weight: 600;">Awaiting Approval</span>`;
                 badge.style.display = "flex";
             }
-            return null; // Stopira učitavanje ostatka aplikacije
+            return null;
         }
 
-        // 🔓 USPEŠNO ODOBREN PROLAZ
-        if (rootShield) rootShield.setAttribute('data-status', 'approved');
+        // 🔓 ODOBREN MASTER ILI ADMIN
+        if (rootShield) {
+            rootShield.setAttribute('data-status', 'approved');
+            rootShield.className = "main-workspace-container"; // Vraća standardni raspored panela s leva na desno
+        }
+
         if (badge) {
             const icon = userRole === "master" ? "👑" : "🔒";
             badge.innerHTML = `${icon} <span style="color: var(--admin-accent); font-weight: 600;">${userEmail}</span>`;
@@ -79,7 +83,10 @@ export async function verifyIdentityAndGetProfile() {
 
     } catch (err) {
         console.error("❌ Gateway failure. Sandbox recovery...", err);
-        if (rootShield) rootShield.setAttribute('data-status', 'approved');
+        if (rootShield) {
+            rootShield.setAttribute('data-status', 'approved');
+            rootShield.className = "main-workspace-container";
+        }
         const fallbackSubdomain = localStorage.getItem('userSubdomain') || 'admin';
         window.currentSubdomain = fallbackSubdomain;
         return { userEmail: "fallback@selection.rs", userRole: "master", userStatus: "approved", activeSubdomain: fallbackSubdomain };

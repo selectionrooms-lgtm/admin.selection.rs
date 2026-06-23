@@ -53,12 +53,20 @@ function inicijalizujLokalneDugmiceILepljenja() {
     const zoomOverlay = document.getElementById('zoom-editor-overlay');
 
     document.addEventListener('click', (e) => {
-        // 🔍 HIRURŠKI FILTAR ZA EDIT KLIKOVE NA KOCKICAMA
-        const kliknutoDugmeZaEdit = e.target.closest('.btn-edit-zoom') || e.target.closest('.btn-action:not(.btn-delete)');
         const btnDelete = e.target.closest('.btn-delete');
         const card = e.target.closest('.cms-block-card');
 
-        if (kliknutoDugmeZaEdit && card) {
+        // 1. Ako je kliknut Delete taster unutar kartice - brišemo
+        if (btnDelete && card) {
+            e.preventDefault();
+            e.stopPropagation();
+            const idx = parseInt(card.getAttribute('data-index'));
+            if (window.obrisiBlok) window.obrisiBlok(idx);
+            return;
+        }
+
+        // 2. APSOLUTNI FIX: Ako klikneš BILO GDE na kockicu (a nije brisanje), otvaramo Zoom!
+        if (card) {
             e.preventDefault();
             e.stopPropagation();
             if (card.id === 'splash-config-card') {
@@ -72,30 +80,22 @@ function inicijalizujLokalneDugmiceILepljenja() {
             return;
         }
 
-        if (btnDelete && card) {
-            e.preventDefault();
-            e.stopPropagation();
-            const idx = parseInt(card.getAttribute('data-index'));
-            if (window.obrisiBlok) window.obrisiBlok(idx);
-            return;
-        }
-
         // Master kontrole
         if (e.target.closest('#btn-master-console-trigger')) { window.otvoriMasterControlPlane?.(); return; }
         if (e.target.closest('#btn-master-console-close')) { window.zatvoriMasterControlPlane?.(); return; }
 
-        // Topbar drajveri
+        // Topbar dugmad
         if (e.target.closest('#btn-shortcut-intro')) { window.postaviAktivniBlok?.(-1); return; }
         if (e.target.closest('#btn-add-video')) { window.dodajNoviBlok?.('video'); return; }
         if (e.target.closest('#btn-add-chapter')) { window.dodajNoviBlok?.('chapter'); return; }
         if (e.target.closest('#btn-add-gate')) { window.dodajNoviBlok?.('gate'); return; }
         if (e.target.closest('#btn-add-finale')) { window.dodajNoviBlok?.('finale'); return; }
 
-        // Simulator drajveri
+        // Simulator rezimi
         if (e.target.closest('#btn-mode-mobile')) { window.promeniRezimSimulatora?.('mobile'); return; }
         if (e.target.closest('#btn-mode-pc')) { window.promeniRezimSimulatora?.('pc'); return; }
 
-        // Zoom Modal zatvaranje i čuvanje
+        // Zatvaranje i čuvanje Zoom Modala
         if (e.target.closest('#btn-zoom-close-header') || e.target.closest('#btn-zoom-cancel')) {
             if (zoomOverlay) zoomOverlay.style.setProperty('display', 'none', 'important');
             window.zatvoriZoomEditor?.();
@@ -107,7 +107,7 @@ function inicijalizujLokalneDugmiceILepljenja() {
             return;
         }
 
-        // Levi Panel Upload okidači
+        // Upload sekcije na levom panelu
         if (e.target.closest('#drop-global-pozadina')) { window.okiniLokalniKlikFajla?.('slika'); return; }
         if (e.target.closest('#drop-global-loader-muzika')) { window.okiniLokalniKlikFajla?.('loader-mp3'); return; }
         if (e.target.closest('#drop-global-ss-muzika')) { window.okiniLokalniKlikFajla?.('ss-mp3'); return; }
