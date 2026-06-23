@@ -417,7 +417,9 @@ export function inicijalizujDragAndDrop() {
 
         window.aktivniIndex = dragCiljIndex;
         renderujTimelineBlokove();
-        postActiveBlock(dragCiljIndex);
+
+        // ✨ GVOZDENI FIX: Pozivamo tačan naziv funkcije koji ne ruši sistem
+        postaviAktivniBlok(dragCiljIndex);
     });
 
     // Zadržavamo i Drag za globalnu sliku pozadine
