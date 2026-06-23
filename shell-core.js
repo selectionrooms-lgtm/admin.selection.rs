@@ -19,12 +19,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         import('./control-plane.js').then((module) => {
             module.initControlPlaneElements();
 
-            const btnOpen = document.getElementById('btn-master-console-trigger');
-            const btnClose = document.getElementById('btn-master-console-close');
-
-            if (btnOpen) btnOpen.onclick = () => module.otvoriMasterControlPlane();
-            if (btnClose) btnClose.onclick = () => module.zatvoriMasterControlPlane();
-
             window.masterKreirajNovogKorisnika = module.masterKreirajNovogKorisnika;
             window.otvoriMasterControlPlane = module.otvoriMasterControlPlane;
             window.zatvoriMasterControlPlane = module.zatvoriMasterControlPlane;
@@ -44,83 +38,93 @@ document.addEventListener("DOMContentLoaded", async () => {
         .then(data => {
             let configurationMatrix = data.draft_config || data.live_config || data.config || data;
 
-            // 🧱 1. Prvo podižemo kompletan interfejs i renderujemo kockice!
+            // 🧱 1. Podižemo kompletan interfejs i renderujemo kockice
             initCmsEditor(configurationMatrix);
 
-            // 📡 2. Tek kada elementi POSTOJE u memoriji, lepimo mrežne drajvere!
-            inicijalizujLokalneDugmiceILepljenja();
+            // 📡 2. Aktivacija globalnog pametnog rutera za klikove
+            aktivirajGvozdeniRuterKlikova();
         })
         .catch(err => {
             console.error("⚠️ Workspace stream read failed. Fallback triggered.", err);
         });
 });
 
-function inicijalizujLokalneDugmiceILepljenja() {
-    const listaKockica = document.getElementById('cms-blocks-list');
+function aktivirajGvozdeniRuterKlikova() {
     const zoomOverlay = document.getElementById('zoom-editor-overlay');
 
-    if (listaKockica) {
-        listaKockica.addEventListener('click', (e) => {
-            const btnEdit = e.target.closest('.btn-edit-zoom');
-            const btnDelete = e.target.closest('.btn-delete');
-            const card = e.target.closest('.cms-block-card');
+    // 🛡️ GLOBALNI EVENT LISTENER (Hvata sve elemente bez obzira na to kad su rođeni u DOM-u)
+    document.addEventListener('click', (e) => {
 
-            if (btnEdit) {
-                e.stopPropagation();
-                if (card && card.id === 'splash-config-card') {
-                    if (window.otvoriCoreZoomEditor) {
-                        window.otvoriCoreZoomEditor();
-                        if (zoomOverlay) zoomOverlay.style.setProperty('display', 'flex', 'important');
-                    }
-                } else if (card) {
-                    const idx = parseInt(card.getAttribute('data-index'));
-                    if (window.otvoriZoomEditorZaBlok) {
-                        window.otvoriZoomEditorZaBlok(idx);
-                        if (zoomOverlay) zoomOverlay.style.setProperty('display', 'flex', 'important');
-                    }
-                }
-            } else if (btnDelete) {
-                e.stopPropagation();
-                if (card) {
-                    const idx = parseInt(card.getAttribute('data-index'));
-                    if (window.obrisiBlok) window.obrisiBlok(idx);
-                }
+        // 1. Klik na LEGO Kockice (Edit / Delete)
+        const btnEdit = e.target.closest('.btn-edit-zoom');
+        const btnDelete = e.target.closest('.btn-delete');
+        const card = e.target.closest('.cms-block-card');
+
+        if (btnEdit && card) {
+            e.preventDefault();
+            if (card.id === 'splash-config-card') {
+                if (window.otvoriCoreZoomEditor) window.otvoriCoreZoomEditor();
+                if (zoomOverlay) zoomOverlay.style.setProperty('display', 'flex', 'important');
+            } else {
+                const idx = parseInt(card.getAttribute('data-index'));
+                if (window.otvoriZoomEditorZaBlok) window.otvoriZoomEditorZaBlok(idx);
+                if (zoomOverlay) zoomOverlay.style.setProperty('display', 'flex', 'important');
             }
-        });
-    }
+            return;
+        }
 
-    // Povezivanje fiksnih HTML prečica iz levog panela i topbara
-    document.getElementById('btn-shortcut-intro')?.addEventListener('click', () => window.postActiveBlock?.(-1));
-    document.getElementById('btn-add-video')?.addEventListener('click', () => window.dodajNoviBlok?.('video'));
-    document.getElementById('btn-add-chapter')?.addEventListener('click', () => window.dodajNoviBlok?.('chapter'));
-    document.getElementById('btn-add-gate')?.addEventListener('click', () => window.dodajNoviBlok?.('gate'));
-    document.getElementById('btn-add-finale')?.addEventListener('click', () => window.dodajNoviBlok?.('finale'));
+        if (btnDelete && card) {
+            e.preventDefault();
+            const idx = parseInt(card.getAttribute('data-index'));
+            if (window.obrisiBlok) window.obrisiBlok(idx);
+            return;
+        }
 
-    // Povezivanje drajvera za prebacivanje PC/Mobile režima
-    document.getElementById('btn-mode-mobile')?.addEventListener('click', () => window.promeniRezimSimulatora?.('mobile'));
-    document.getElementById('btn-mode-pc')?.addEventListener('click', () => window.promeniRezimSimulatora?.('pc'));
+        // 2. Klik na Master Control Plane dugmad
+        if (e.target.closest('#btn-master-console-trigger')) {
+            window.otvoriMasterControlPlane?.();
+            return;
+        }
+        if (e.target.closest('#btn-master-console-close')) {
+            window.zatvoriMasterControlPlane?.();
+            return;
+        }
 
-    // Funkcija za bezbedno zatvaranje modala
-    const ugasiZoomOklop = () => {
-        if (zoomOverlay) zoomOverlay.style.setProperty('display', 'none', 'important');
-        window.zatvoriZoomEditor?.();
-    };
+        // 3. Klik na Topbar dugmad za dodavanje novih čvorova (Nodes)
+        if (e.target.closest('#btn-shortcut-intro')) { window.postaviAktivniBlok?.(-1); return; }
+        if (e.target.closest('#btn-add-video')) { window.dodajNoviBlok?.('video'); return; }
+        if (e.target.closest('#btn-add-chapter')) { window.dodajNoviBlok?.('chapter'); return; }
+        if (e.target.closest('#btn-add-gate')) { window.dodajNoviBlok?.('gate'); return; }
+        if (e.target.closest('#btn-add-finale')) { window.dodajNoviBlok?.('finale'); return; }
 
-    // Povezivanje drajvera unutar samog Zoom prozora
-    document.getElementById('btn-zoom-close-header')?.addEventListener('click', ugasiZoomOklop);
-    document.getElementById('btn-zoom-cancel')?.addEventListener('click', ugasiZoomOklop);
-    document.getElementById('btn-zoom-save')?.addEventListener('click', () => {
-        if (window.potvrdiIZatvoriZoom) window.potvrdiIZatvoriZoom();
-        if (zoomOverlay) zoomOverlay.style.setProperty('display', 'none', 'important');
+        // 4. Klik na PC / Mobile Simulator View
+        if (e.target.closest('#btn-mode-mobile')) { window.promeniRezimSimulatora?.('mobile'); return; }
+        if (e.target.closest('#btn-mode-pc')) { window.promeniRezimSimulatora?.('pc'); return; }
+
+        // 5. Zatvaranje i čuvanje unutar Zoom Modala
+        if (e.target.closest('#btn-zoom-close-header') || e.target.closest('#btn-zoom-cancel')) {
+            if (zoomOverlay) zoomOverlay.style.setProperty('display', 'none', 'important');
+            window.zatvoriZoomEditor?.();
+            return;
+        }
+        if (e.target.closest('#btn-zoom-save')) {
+            if (window.potvrdiIZatvoriZoom) window.potvrdiIZatvoriZoom();
+            if (zoomOverlay) zoomOverlay.style.setProperty('display', 'none', 'important');
+            return;
+        }
+
+        // 6. 🎯 FIX ZA LEVI PANEL UPLOAD (Gvozdeno presretanje klikova za medije)
+        if (e.target.closest('#drop-global-pozadina')) {
+            window.okiniLokalniKlikFajla?.('slika');
+            return;
+        }
+        if (e.target.closest('#drop-global-loader-muzika')) {
+            window.okiniLokalniKlikFajla?.('loader-mp3');
+            return;
+        }
+        if (e.target.closest('#drop-global-ss-muzika')) {
+            window.okiniLokalniKlikFajla?.('ss-mp3');
+            return;
+        }
     });
-
-    // Povezivanje oninput promena na levom panelu
-    document.getElementById('color-h1')?.addEventListener('input', () => window.osveziZiviPreview?.());
-    document.getElementById('color-h2')?.addEventListener('input', () => window.osveziZiviPreview?.());
-    document.getElementById('color-p')?.addEventListener('input', () => window.osveziZiviPreview?.());
-    document.getElementById('font-h1')?.addEventListener('change', () => window.osveziZiviPreview?.());
-    document.getElementById('font-h2')?.addEventListener('change', () => window.osveziZiviPreview?.());
-    document.getElementById('font-p')?.addEventListener('change', () => window.osveziZiviPreview?.());
-    document.getElementById('input-boja-pozadina')?.addEventListener('input', () => window.osveziZiviPreview?.());
-    document.getElementById('input-boja-kontejner')?.addEventListener('input', () => window.osveziZiviPreview?.());
 }
