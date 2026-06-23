@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Selection Canvas - Workspace Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.5.0">
-
+    <link rel="stylesheet" href="style.css?v=2.6.0">
     <style>
         #selection-saas-root-shield[data-status="loading"] {
             display: none !important;
@@ -17,6 +16,7 @@
             background-color: #0f171e !important;
             margin: 0;
             padding: 0;
+            overflow: hidden;
         }
     </style>
 </head>
@@ -36,7 +36,6 @@
                 <h3><i class="fa-solid fa-crown"></i> Master Engine</h3>
                 <p style="font-size: 10px; color: #a0acb8; margin-bottom: 15px;">System cleared at clearance level 1.
                 </p>
-
                 <button type="button" id="btn-master-console-trigger"
                     style="width: 100%; background: linear-gradient(135deg, #d4b483 0%, #aa8c5e 100%); color: #0a1015; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family:'Montserrat',sans-serif; text-transform:uppercase; font-size:0.75rem; letter-spacing:1px; box-shadow: 0 4px 15px rgba(212, 180, 131, 0.2);">
                     <i class="fa-solid fa-sliders"></i> Control Plane Console
@@ -47,8 +46,8 @@
             <div class="form-group">
                 <label>MAIN HEADINGS (H1)</label>
                 <div class="color-picker-wrapper">
-                    <input type="color" id="color-h1" value="#d4b483" oninput="osveziZiviPreview()">
-                    <select id="font-h1" style="flex: 1;" onchange="osveziZiviPreview()">
+                    <input type="color" id="color-h1" value="#d4b483">
+                    <select id="font-h1" style="flex: 1;">
                         <option value="Cinzel">Cinzel (Elegant Academic)</option>
                         <option value="Playfair Display">Playfair Display</option>
                         <option value="Cormorant Garamond">Cormorant Garamond</option>
@@ -59,8 +58,8 @@
             <div class="form-group">
                 <label>SUBHEADINGS & QUOTES (H2)</label>
                 <div class="color-picker-wrapper">
-                    <input type="color" id="color-h2" value="#d4b483" oninput="osveziZiviPreview()">
-                    <select id="font-h2" style="flex: 1;" onchange="osveziZiviPreview()">
+                    <input type="color" id="color-h2" value="#d4b483">
+                    <select id="font-h2" style="flex: 1;">
                         <option value="Cormorant Garamond">Cormorant Garamond</option>
                         <option value="Cinzel">Cinzel</option>
                     </select>
@@ -70,8 +69,8 @@
             <div class="form-group">
                 <label>BODY TEXT (P)</label>
                 <div class="color-picker-wrapper">
-                    <input type="color" id="color-p" value="#eeeeee" oninput="osveziZiviPreview()">
-                    <select id="font-p" style="flex: 1;" onchange="osveziZiviPreview()">
+                    <input type="color" id="color-p" value="#eeeeee">
+                    <select id="font-p" style="flex: 1;">
                         <option value="Montserrat">Montserrat</option>
                         <option value="Inter">Inter</option>
                     </select>
@@ -81,11 +80,11 @@
             <h2>Canvas Environment</h2>
             <div class="form-group">
                 <label>Screen Background Color</label>
-                <input type="color" id="input-boja-pozadina" value="#0f171e" oninput="osveziZiviPreview()">
+                <input type="color" id="input-boja-pozadina" value="#0f171e">
             </div>
             <div class="form-group">
                 <label>Screen Background Image</label>
-                <div class="sidebar-drop-zone" id="drop-global-pozadina" onclick="okiniLokalniKlikFajla('slika')">
+                <div class="sidebar-drop-zone" id="drop-global-pozadina">
                     <i class="fa-solid fa-image"
                         style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
                     <span id="label-global-pozadina">Click or drag image here</span>
@@ -94,14 +93,13 @@
             </div>
             <div class="form-group">
                 <label>Inner Container Background Color</label>
-                <input type="color" id="input-boja-kontejner" value="#1c2a39" oninput="osveziZiviPreview()">
+                <input type="color" id="input-boja-kontejner" value="#1c2a39">
             </div>
 
             <h2>Atmosphere & Automation</h2>
             <div class="form-group">
                 <label>Intro Loader Audio (.mp3)</label>
-                <div class="sidebar-drop-zone" id="drop-global-loader-muzika"
-                    onclick="okiniLokalniKlikFajla('loader-mp3')">
+                <div class="sidebar-drop-zone" id="drop-global-loader-muzika">
                     <i class="fa-solid fa-music"
                         style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
                     <span id="label-global-loader-muzika">Click or drag .mp3 file</span>
@@ -110,7 +108,7 @@
             </div>
             <div class="form-group">
                 <label>Idle Screensaver Audio (.mp3)</label>
-                <div class="sidebar-drop-zone" id="drop-global-ss-muzika" onclick="okiniLokalniKlikFajla('ss-mp3')">
+                <div class="sidebar-drop-zone" id="drop-global-ss-muzika">
                     <i class="fa-solid fa-lock"
                         style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
                     <span id="label-global-ss-muzika">Click or drag .mp3 file</span>
@@ -126,17 +124,14 @@
         <div class="main-workspace" id="main-saas-workspace">
             <div class="toolbar">
                 <span class="toolbar-title">Shortcut:</span>
-                <button class="btn-add btn-splash-trigger" onclick="postaviAktivniBlok(-1)">
+                <button class="btn-add btn-splash-trigger" id="btn-shortcut-intro">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> Intro Display
                 </button>
                 <span class="toolbar-title" style="margin-left: 20px;">Build Node:</span>
-                <button class="btn-add" onclick="dodajNoviBlok('video')"><i class="fa-solid fa-circle-play"></i> +
-                    Video</button>
-                <button class="btn-add" onclick="dodajNoviBlok('chapter')"><i class="fa-solid fa-book-open"></i> +
-                    Chapter</button>
-                <button class="btn-add" onclick="dodajNoviBlok('gate')"><i class="fa-solid fa-key"></i> + Gate</button>
-                <button class="btn-add" onclick="dodajNoviBlok('finale')"><i class="fa-solid fa-crown"></i> +
-                    Outro</button>
+                <button class="btn-add" id="btn-add-video"><i class="fa-solid fa-circle-play"></i> + Video</button>
+                <button class="btn-add" id="btn-add-chapter"><i class="fa-solid fa-book-open"></i> + Chapter</button>
+                <button class="btn-add" id="btn-add-gate"><i class="fa-solid fa-key"></i> + Gate</button>
+                <button class="btn-add" id="btn-add-finale"><i class="fa-solid fa-crown"></i> + Outro</button>
             </div>
             <div class="blocks-container" id="cms-blocks-list"></div>
         </div>
@@ -146,44 +141,43 @@
                 style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--admin-border); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
                 <div
                     style="display: flex; gap: 6px; background: rgba(255,255,255,0.03); padding: 4px; border-radius: 8px; border: 1px solid var(--admin-border);">
-                    <button id="btn-mode-mobile" onclick="promeniRezimSimulatora('mobile')"
+                    <button id="btn-mode-mobile"
                         style="background: var(--admin-accent); color: var(--admin-sidebar); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer;">
                         <i class="fa-solid fa-mobile-screen-button"></i> Mobile View
                     </button>
-                    <button id="btn-mode-pc" onclick="promeniRezimSimulatora('pc')"
+                    <button id="btn-mode-pc"
                         style="background: transparent; color: var(--admin-muted); border: none; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; border-radius: 6px; cursor: pointer;">
                         <i class="fa-solid fa-desktop"></i> Desktop View
                     </button>
                 </div>
                 <span id="preview-status-tag"
                     style="font-size: 9px; background: rgba(212,180,131,0.1); color: var(--admin-accent); padding: 3px 6px; border-radius: 4px;">Stage:
-                    Intro Loader</span>
+                    Intro</span>
             </div>
             <div class="device-simulator" id="live-simulator-screen">
                 <div id="simulator-content-target"></div>
             </div>
         </div>
 
-    </div>
-
-    <div id="zoom-editor-overlay">
-        <div class="zoom-window">
-            <div class="zoom-header">
-                <h3 id="zoom-module-title"
-                    style="color: var(--admin-accent); font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">
-                    EDIT MATRIX BLOCK Content</h3>
-                <button onclick="zatvoriZoomEditor()" class="btn-action"
-                    style="border-color:#b81d24; color:#b81d24; font-weight:700;">X CLOSE WINDOW</button>
-            </div>
-            <div class="zoom-body" id="zoom-dynamic-body"></div>
-            <div class="zoom-footer">
-                <button class="btn-action" onclick="zatvoriZoomEditor()" style="padding:10px 20px;">Cancel</button>
-                <button class="btn-save" onclick="potvrdiIZatvoriZoom()" style="margin:0; padding:10px 25px;"><i
-                        class="fa-solid fa-check"></i> Save & Apply Changes</button>
+        <div id="zoom-editor-overlay">
+            <div class="zoom-window">
+                <div class="zoom-header">
+                    <h3 id="zoom-module-title"
+                        style="color: var(--admin-accent); font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">
+                        EDIT MATRIX BLOCK Content</h3>
+                    <button id="btn-zoom-close-header" class="btn-action"
+                        style="border-color:#b81d24; color:#b81d24; font-weight:700;">X CLOSE WINDOW</button>
+                </div>
+                <div class="zoom-body" id="zoom-dynamic-body"></div>
+                <div class="zoom-footer">
+                    <button class="btn-action" id="btn-zoom-cancel" style="padding:10px 20px;">Cancel</button>
+                    <button class="btn-save" id="btn-zoom-save" style="margin:0; padding:10px 25px;"><i
+                            class="fa-solid fa-check"></i> Save & Apply Changes</button>
+                </div>
             </div>
         </div>
-    </div>
 
+    </div>
     <div id="master-control-plane-overlay" class="master-control-plane-overlay" style="display: none;">
         <div
             style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--admin-border); padding-bottom: 20px; margin-bottom: 30px;">
@@ -211,7 +205,7 @@
                 <label style="color: var(--admin-accent); font-weight: 600;">Client Email Identity</label>
                 <input type="email" id="master-novi-email" placeholder="client@domain.com" style="background: #070b0e;">
             </div>
-            <button onclick="masterKreirajNovogKorisnika()"
+            <button id="btn-master-provision-submit"
                 style="background: #d4b483; color: #0f171e; border: none; padding: 12px 25px; border-radius: 8px; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; cursor: pointer; height: 38px;">
                 <i class="fa-solid fa-plus"></i> Provision Tenant
             </button>
@@ -266,7 +260,7 @@
         </div>
     </div>
 
-    <script type="module" src="shell-core.js?v=2.5.0"></script>
+    <script type="module" src="shell-core.js?v=2.6.0"></script>
 </body>
 
 </html>
