@@ -181,9 +181,11 @@ body {
     font-size: 0.8rem;
 }
 
-/* --- SREDNJI PANEL: RADNI PROSTOR --- */
+/* --- 🧱 SREDNJI PANEL: RADNI PROSTOR (Uzima tačno 50% monitorskog prostora) --- */
 .main-workspace {
     flex: 1 !important;
+    width: 50% !important;
+    /* Gvozdeno diktiramo polovinu ekrana */
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -338,19 +340,21 @@ body {
     color: #b81d24;
 }
 
-/* --- 📺 POTPUNO SLOBODAN PREVIEW PANEL --- */
+/* --- 📺 DESNI PANEL: PREVIEW AREA (Uzima preostalih 50% monitorskog prostora i širi se) --- */
 .preview-panel {
-    flex: 1.2 !important;
+    flex: 1 !important;
+    width: 50% !important;
+    /* Savršena simetrija sa srednjim panelom */
     background-color: #070b0e;
     height: 100%;
     max-height: 100vh;
-    /* Zalepljeno za ivicu */
     overflow: hidden;
     position: relative;
     padding: 0;
     display: flex;
-    /* Gvozdeno poravnanje za unutrašnji iframe */
-    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* Centriramo sadržaj unutar ove ogromne polovine */
 }
 
 /* 🎯 PLUTAJUĆI HOLDER ZA EDGE DUGMAD (Dole desno na ekranu) */
@@ -511,13 +515,13 @@ body {
     /* Savršeno centriranje kapsule na desnoj polovini */
 }
 
-/* 📱 Gvozdena kapsula uređaja — Štiti layout i garantuje proporcije sajta */
+/* 📱 Unutrašnja kapsula (Sada možeš da je pustiš da bude široka koliko god želiš) */
 #live-simulator-screen {
-    width: 420px;
-    /* Možeš podesiti na 420px ili koliko god želiš za širinu prikaza */
-    height: 85vh;
-    /* Elegantno odvojeno od ivica ekrana gornje i donje */
-    border-radius: 20px;
+    width: 90%;
+    /* Sada puni 90% te cele desne polovine monitorskog ekrana! */
+    height: 90vh;
+    /* Puni visinu elegantno */
+    border-radius: 12px;
     background-color: #0f171e;
     border: 1px solid rgba(255, 255, 255, 0.05);
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
@@ -525,7 +529,6 @@ body {
     display: flex;
     flex-direction: column;
     position: relative;
-    transition: all 0.3s ease;
 }
 
 #simulator-content-target {
