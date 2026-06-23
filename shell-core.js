@@ -10,7 +10,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const masterBlok = document.getElementById('master-admin-blok');
 
-    // 👑 MASTER ENGINE ŽIVA REGISTRACIJA
     if (sessionProfile.userRole === 'master') {
         console.log("👑 Escalating local system clearance to Master Level...");
         if (masterBlok) masterBlok.style.setProperty('display', 'block', 'important');
@@ -54,60 +53,63 @@ function inicijalizujLokalneDugmiceILepljenja() {
     const zoomOverlay = document.getElementById('zoom-editor-overlay');
 
     document.addEventListener('click', (e) => {
+        // 📡 DEBUG DIJAGNOSTIKA: Pratimo tačan kliknuti element u konzoli
+        console.log("🔍 CLICK DETECTED ON TARGET:", e.target);
+
         const card = e.target.closest('.cms-block-card');
 
-        // Ako klik uopšte nije unutar lego kockica, nastavi regularno rutiranje dole
         if (card) {
-            const btnDelete = e.target.closest('.btn-delete');
-            const btnEdit = e.target.closest('.btn-edit-zoom');
-            const btnMoveUp = e.target.textContent.trim() === '▲';
-            const btnMoveDown = e.target.textContent.trim() === '▼';
-            const idx = parseInt(card.getAttribute('data-index'));
+            const idx = Number(card.getAttribute('data-index')) || 0;
 
-            // A. Ako je klik na DELETE dugme
-            if (btnDelete) {
-                e.preventDefault(); e.stopPropagation();
-                if (window.obrisiBlok) window.obrisiBlok(idx);
-                return;
-            }
+            // 👑 1. EDIT UVEK IMA APSOLUTNI PRIORITET (Tvoj poboljšani filter)
+            if (e.target.closest('.btn-edit-zoom,[data-action="edit"]')) {
+                e.preventDefault();
+                e.stopPropagation();
 
-            // B. Ako je klik na KRETANJE GORE
-            if (btnMoveUp) {
-                e.preventDefault(); e.stopPropagation();
-                if (window.pomeriBlok) window.pomeriBlok(idx, -1);
-                return;
-            }
+                console.log("✏️ EDIT MATRIX NODE OKINUT ZA BLOK INDEKS:", card.id === 'splash-config-card' ? -1 : idx);
 
-            // C. Ako je klik na KRETANJE DOLE
-            if (btnMoveDown) {
-                e.preventDefault(); e.stopPropagation();
-                if (window.pomeriBlok) window.pomeriBlok(idx, 1);
-                return;
-            }
-
-            // D. Ako je klik na dugme EDIT (ili unutar njega) -> OTVORI ZOOM
-            if (btnEdit) {
-                e.preventDefault(); e.stopPropagation();
                 if (card.id === 'splash-config-card') {
                     if (window.otvoriCoreZoomEditor) window.otvoriCoreZoomEditor();
                 } else {
                     if (window.otvoriZoomEditorZaBlok) window.otvoriZoomEditorZaBlok(idx);
                 }
-                if (zoomOverlay) zoomOverlay.style.setProperty('display', 'flex', 'important');
+
+                requestAnimationFrame(() => {
+                    if (zoomOverlay) zoomOverlay.style.setProperty('display', 'flex', 'important');
+                });
                 return;
             }
 
-            // E. Ako je klik na prazan prostor kartice -> SAMO JE SELEKTUJ (FOKUS)
+            // 2. Klik na DELETE dugme
+            if (e.target.closest('.btn-delete')) {
+                e.preventDefault(); e.stopPropagation();
+                if (window.obrisiBlok) window.obrisiBlok(idx);
+                return;
+            }
+
+            // 3. Kretanje GORE (▲)
+            if (e.target.textContent.trim() === '▲') {
+                e.preventDefault(); e.stopPropagation();
+                if (window.pomeriBlok) window.pomeriBlok(idx, -1);
+                return;
+            }
+
+            // 4. Kretanje DOLE (▼)
+            if (e.target.textContent.trim() === '▼') {
+                e.preventDefault(); e.stopPropagation();
+                if (window.pomeriBlok) window.pomeriBlok(idx, 1);
+                return;
+            }
+
+            // 5. Ako nije ništa od dugmića -> OBIČNA SELEKCIJA BLOKA (FOKUS)
             e.preventDefault();
-            if (card.id === 'splash-config-card') {
-                if (window.postaviAktivniBlok) window.postaviAktivniBlok(-1);
-            } else {
-                if (window.postaviAktivniBlok) window.postaviAktivniBlok(idx);
+            if (window.postaviAktivniBlok) {
+                window.postaviAktivniBlok(card.id === 'splash-config-card' ? -1 : idx);
             }
             return;
         }
 
-        // --- OSTALE GLOBALNE KONTROLE PANEL ---
+        // --- GLOBALNI SISTEMSKI RUTER KLIKOVA (Master & Ostalo) ---
         if (e.target.closest('#btn-master-console-trigger')) { window.otvoriMasterControlPlane?.(); return; }
         if (e.target.closest('#btn-master-console-close')) { window.zatvoriMasterControlPlane?.(); return; }
 
@@ -120,7 +122,7 @@ function inicijalizujLokalneDugmiceILepljenja() {
         if (e.target.closest('#btn-mode-mobile')) { window.promeniRezimSimulatora?.('mobile'); return; }
         if (e.target.closest('#btn-mode-pc')) { window.promeniRezimSimulatora?.('pc'); return; }
 
-        // Zatvaranje Zoom Modala na tastere
+        // Zatvaranje modala
         if (e.target.closest('#btn-zoom-close-header') || e.target.closest('#btn-zoom-cancel')) {
             if (zoomOverlay) zoomOverlay.style.setProperty('display', 'none', 'important');
             window.zatvoriZoomEditor?.();
@@ -132,24 +134,20 @@ function inicijalizujLokalneDugmiceILepljenja() {
             return;
         }
 
+        // Upload sekcije sidebara
         if (e.target.closest('#drop-global-pozadina')) { window.okiniLokalniKlikFajla?.('slika'); return; }
         if (e.target.closest('#drop-global-loader-muzika')) { window.okiniLokalniKlikFajla?.('loader-mp3'); return; }
         if (e.target.closest('#drop-global-ss-muzika')) { window.okiniLokalniKlikFajla?.('ss-mp3'); return; }
     });
 
-    // 🔒 GVOZDENI ESCAPE OKIDAČ (Zatvara Zoom u bilo kom trenutku na dugme ESC)
+    // Gvozdeni ESC ključ za zatvaranje modala nazad
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             const masterOverlay = document.getElementById('master-control-plane-overlay');
-
-            // Ako je otvoren Zoom editor, ugasi ga
             if (zoomOverlay && zoomOverlay.style.display === 'flex') {
                 zoomOverlay.style.setProperty('display', 'none', 'important');
                 window.zatvoriZoomEditor?.();
-                console.log("⌨️ ESC detektovan: Zoom utišan i zatvoren.");
             }
-
-            // Ako je otvorena Master Konzola, ugasi i nju
             if (masterOverlay && masterOverlay.style.display === 'block') {
                 window.zatvoriMasterControlPlane?.();
             }
