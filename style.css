@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SELECTION CANVAS ARCHITECTURE — style.css (Production Armored Engine)
+   SELECTION CANVAS ARCHITECTURE — style.css (Production Stable Layer)
    ========================================================================== */
 
 :root {
@@ -38,7 +38,7 @@ body {
     height: 100vh;
 }
 
-/* Otključavanje troslojne arhitekture - strogo horizontalno poravnanje panela */
+/* Otključavanje troslojne arhitekture - strogo vodoravno poravnanje panela s leva na desno */
 .main-workspace-container[data-status="approved"] {
     display: flex !important;
     flex-direction: row !important;
@@ -75,11 +75,11 @@ body {
     margin: 0 auto !important;
 }
 
-/* --- LEVI PANEL: KONTROLNA TABLA (FIKSNO 320px) --- */
+/* --- LEVI PANEL: KONTROLNA TABLA (FIKSNO 320px - Nema mrdanja levo-desno) --- */
 .sidebar {
-    width: 320px;
-    min-width: 320px;
-    max-width: 320px;
+    width: 320px !important;
+    min-width: 320px !important;
+    max-width: 320px !important;
     background-color: var(--admin-sidebar);
     padding: 22px;
     display: flex;
@@ -182,6 +182,11 @@ body {
     font-size: 0.8rem;
 }
 
+.sidebar-drop-zone:hover {
+    border-color: var(--admin-accent);
+    background: rgba(212, 180, 131, 0.03);
+}
+
 /* --- SREDNJI PANEL: RADNI PROSTOR SA KOCKICAMA --- */
 .main-workspace {
     flex: 1 !important;
@@ -225,6 +230,16 @@ body {
     transition: all 0.2s;
 }
 
+.btn-add:hover {
+    border-color: var(--admin-accent);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-splash-trigger {
+    border: 1px dashed var(--admin-accent) !important;
+    background: rgba(212, 180, 131, 0.03);
+}
+
 .blocks-container {
     flex: 1;
     padding: 30px;
@@ -239,7 +254,7 @@ body {
     background-color: var(--admin-card);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 12px;
-    padding: 16px 20px;
+    padding: 18px 22px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -251,6 +266,12 @@ body {
 
 .cms-block-card:hover {
     border-color: rgba(212, 180, 131, 0.4);
+}
+
+.cms-block-card.active-block {
+    border-color: var(--admin-accent) !important;
+    background: rgba(28, 42, 57, 0.99);
+    box-shadow: 0 0 15px rgba(212, 180, 131, 0.15);
 }
 
 .block-info-side {
@@ -289,24 +310,40 @@ body {
 
 .block-actions {
     display: flex;
-    gap: 8px;
+    gap: 10px;
+    /* Povećan razmak izmedju akcija */
     align-items: center;
 }
 
+/* 🎯 VEĆI I ČVRŠĆI TASTERI ZA LAKŠI KLIK */
 .btn-action {
     background: var(--btn-glass);
     border: 1px solid var(--admin-border);
     color: var(--admin-text);
-    padding: 6px 12px;
+    padding: 8px 16px;
+    /* Povećana dugmad */
     cursor: pointer;
-    font-size: 0.75rem;
-    border-radius: 6px;
-    font-weight: 600;
+    font-size: 0.8rem;
+    border-radius: 8px;
+    font-weight: 700;
+    transition: 0.2s;
+}
+
+.btn-action:hover {
+    color: white;
+    border-color: var(--admin-accent);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .btn-delete {
-    border-color: rgba(184, 29, 36, 0.3);
+    border-color: rgba(184, 29, 36, 0.4);
     color: #b81d24;
+}
+
+.btn-delete:hover {
+    background: #b81d24;
+    color: #fff;
+    border-color: #b81d24;
 }
 
 /* --- DESNI PANEL & SIMULATOR --- */
@@ -393,12 +430,26 @@ body {
     gap: 12px;
 }
 
+/* --- 👑 PREMIUM GOLD MASTER CARD (Zakovano čvrsto zlato) --- */
 .master-card {
     background: rgba(212, 180, 131, 0.03) !important;
     border: 1px solid #d4b483 !important;
     border-radius: 12px;
     padding: 18px;
     margin: 10px 0 20px 0;
+    box-shadow: 0 0 20px rgba(212, 180, 131, 0.15), inset 0 0 10px rgba(212, 180, 131, 0.05) !important;
+}
+
+.master-card h3 {
+    color: #d4b483 !important;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 0 8px rgba(212, 180, 131, 0.3);
 }
 
 .master-control-plane-overlay {
@@ -411,4 +462,14 @@ body {
     z-index: 99999 !important;
     overflow-y: auto !important;
     padding: 40px !important;
+}
+
+/* --- ⛔ TOTAL STOP HORIZONTAL SCROLLBAR --- */
+html,
+body {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    overflow: hidden !important;
 }
