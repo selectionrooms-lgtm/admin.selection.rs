@@ -70,7 +70,7 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
             aktivniSubdomain = "admin";
         }
 
-        // 🧱 BOOKING.COM STYLE SPLASH GATE (Koristi novu .global-splash-lockout klasu iz CSS-a)
+        // 🧱 BOOKING.COM STYLE SPLASH GATE (Korisnik je na čekanju)
         if (korisnickaUloga !== "master" && korisnickiStatus !== "approved") {
             console.warn(`🔒 Korisnik na čekanju [Status: ${korisnickiStatus}]. Blokiram radni prostor.`);
 
@@ -116,13 +116,27 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         localStorage.setItem('userSubdomain', aktivniSubdomain);
         window.currentSubdomain = aktivniSubdomain;
 
+        // 👑 INTERFEJS RASKRSNICA: Master vs Klijent Guard
         if (korisnickaUloga === "master") {
+            console.log(`👑 Access Granted [System Master]. Deploying Core Control Plane...`);
             if (masterBlok) masterBlok.style.display = "block";
-            console.log(`📂 Access Granted [System Master]. Routing terminal to alocated admin canvas.`);
             ucitajConfig("admin");
         } else {
-            if (masterBlok) masterBlok.style.display = "none";
-            console.log(`📂 Access Granted [Tenant Client]. Bootstrapping live config matrix for: ${aktivniSubdomain}`);
+            console.log(`🛡️ Access Granted [Tenant Client]. Bootstrapping workspace for: ${aktivniSubdomain}`);
+
+            // 🔥 BRUTALNO UNIŠTAVANJE: Čupamo Master blok iz HTML memorije brauzera!
+            if (masterBlok) {
+                masterBlok.remove();
+            }
+
+            // 🛑 SABOTAŽA KONZOLE: Kompletna neutralizacija funkcija ako klijent pokuša ručni poziv
+            window.otvoriMasterControlPlane = function () {
+                console.warn("🔒 Security Engine Exception: Hierarchy restriction active.");
+                return false;
+            };
+            window.promeniStatusKlijentaMaster = null;
+            window.osveziMasterTabeluKorisnika = null;
+
             ucitajConfig(aktivniSubdomain);
         }
 
@@ -141,7 +155,6 @@ async function proveriKorisnikaIUpravljajInterfejsom() {
         ucitajConfig(klijentovSubdomain);
     }
 }
-
 // 📂 SINHRONIZOVANO: Povlačenje konfiguracije sa Edge baze podataka
 function ucitajConfig(subdomain) {
     const cisceniSubdomain = subdomain || "admin";
