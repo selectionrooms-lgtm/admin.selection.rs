@@ -27,7 +27,7 @@ body {
     padding-bottom: 60px;
 }
 
-/* 🌌 Header Style */
+/* 🌌 Header Style - Popravljeno */
 .master-header {
     background-color: rgba(20, 20, 22, 0.8);
     backdrop-filter: blur(20px);
@@ -36,7 +36,11 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    sticky: top;
+
+    /* 🎯 ISPRAVKA: Pravilno deklarisanje sticky pozicije */
+    position: sticky;
+    top: 0;
+
     z-index: 100;
 }
 
