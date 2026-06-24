@@ -1,16 +1,21 @@
-/* 👑 SELECTION CONTROL PLANE VISUAL ENGINE */
+/* 👑 SELECTION CONTROL PLANE VISUAL ENGINE — Production Premium V3.0.0 */
 
 :root {
-    --bg-main: #0a0a0a;
-    --bg-card: #141416;
-    --border-color: #232326;
+    --bg-main: #0b0f14;
+    /* Duboki modro-crni antracit ton */
+    --bg-card: #11161d;
+    /* Čist radni boks ton */
+    --border-color: #1e2631;
+    /* Svedene mikro linije */
     --text-primary: #ffffff;
-    --text-secondary: #8e8e93;
-    --gold: #d4af37;
-    --gold-hover: #f3cf65;
+    --text-secondary: #7e8e9f;
+    --gold: #d4b483;
+    /* Luksuzno mat Selection zlato */
+    --gold-hover: #e5c9a3;
     --red-alert: #ff453a;
     --green-success: #30d158;
-    --font-apple: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-header: 'Cinzel', serif;
+    --font-body: 'Montserrat', sans-serif;
 }
 
 * {
@@ -22,217 +27,151 @@
 body {
     background-color: var(--bg-main);
     color: var(--text-primary);
-    font-family: var(--font-apple);
+    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
-    padding-bottom: 60px;
+    padding-top: 80px;
+    /* Pravi prostor ispod fiksiranog top-bar-a */
 }
 
-/* 🌌 Header Style - Popravljeno */
-.master-header {
-    background-color: rgba(20, 20, 22, 0.8);
-    backdrop-filter: blur(20px);
+/* ==========================================================================
+   🌌 FIKSIRANI HORIZONTALNI TOP BAR (UPRAVLJAČKA TRAKA)
+   ========================================================================== */
+.master-navigation-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 75px;
+    background-color: rgba(17, 22, 29, 0.92);
+    backdrop-filter: blur(15px);
     border-bottom: 1px solid var(--border-color);
-    padding: 16px 40px;
+    padding: 0 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-
-    /* 🎯 ISPRAVKA: Pravilno deklarisanje sticky pozicije */
-    position: sticky;
-    top: 0;
-
-    z-index: 100;
+    z-index: 1000;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4);
 }
 
-.brand {
-    font-size: 20px;
-    font-weight: 600;
-    letter-spacing: -0.5px;
+.brand-zone {
+    font-family: var(--font-header);
+    font-size: 18px;
+    letter-spacing: 1px;
+    white-space: nowrap;
 }
 
 .logo-gold {
     color: var(--gold);
-    margin-right: 4px;
+    font-weight: 700;
+    margin-right: 6px;
+    text-transform: uppercase;
 }
 
 .logo-sub {
     color: var(--text-primary);
-    font-weight: 300;
-}
-
-.user-badge {
-    font-size: 13px;
-    color: var(--text-secondary);
-    background-color: #1c1c1e;
-    padding: 6px 14px;
-    border-radius: 20px;
-    border: 1px solid var(--border-color);
-}
-
-/* 📊 Dashboard Grid */
-.dashboard-container {
-    max-width: 1400px;
-    margin: 40px auto;
-    padding: 0 20px;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 30px;
-}
-
-@media (min-width: 900px) {
-    .dashboard-container {
-        grid-template-columns: 380px 1fr;
-    }
-
-    .full-width {
-        grid-column: span 1;
-    }
-}
-
-/* 🧱 Card UI */
-.control-card {
-    background-color: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 30px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-}
-
-@media (min-width: 900px) {
-    .full-width {
-        grid-column: span 2;
-    }
-}
-
-.card-header {
-    margin-bottom: 24px;
-}
-
-.card-header h2 {
-    font-size: 22px;
     font-weight: 500;
-    letter-spacing: -0.5px;
-    margin-bottom: 6px;
+    opacity: 0.8;
 }
 
-.subtitle {
-    color: var(--text-secondary);
-    font-size: 14px;
-}
-
-/* 🎛️ Form Components */
-.control-form {
+/* 🎛️ HORIZONTALNA FORMA ZA PROVIŽONING (REDUKOVANI RED) */
+.inline-provision-form {
     display: flex;
-    flex-direction: column;
-    gap: 20px;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    max-width: 800px;
+    margin: 0 40px;
 }
 
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.form-group label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.form-group input,
-.form-group select {
-    background-color: #1c1c1e;
+.inline-provision-form input {
+    background-color: #090d10;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 12px 16px;
+    border-radius: 6px;
+    padding: 9px 14px;
     color: #fff;
-    font-size: 15px;
-    font-family: var(--font-apple);
+    font-size: 14px;
+    font-family: var(--font-body);
+    outline: none;
     transition: border-color 0.2s;
+    width: 260px;
 }
 
-.form-group input:focus,
-.form-group select:focus {
-    outline: none;
+.inline-provision-form input:focus {
     border-color: var(--gold);
 }
 
-.input-addon-wrapper {
+.inline-input-addon {
     display: flex;
     align-items: center;
 }
 
-.input-addon-wrapper input {
-    flex: 1;
+.inline-input-addon input {
+    width: 150px;
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
 }
 
-.addon-text {
-    background-color: #1c1c1e;
+.addon-tag {
+    background-color: #090d10;
     border: 1px solid var(--border-color);
     border-left: none;
-    padding: 12px 16px;
-    font-size: 15px;
+    padding: 9px 12px;
+    font-size: 13px;
     color: var(--text-secondary);
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
 }
 
-/* ⚡ Buttons */
-.btn {
-    font-family: var(--font-apple);
-    font-size: 14px;
-    font-weight: 500;
-    padding: 12px 24px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-align: center;
-}
-
-.btn-gold {
-    background-color: var(--gold);
-    color: #000;
-}
-
-.btn-gold:hover {
-    background-color: var(--gold-hover);
-}
-
-.btn-sm {
-    padding: 6px 12px;
+.user-badge-gold {
     font-size: 12px;
-    border-radius: 6px;
+    color: var(--gold);
+    background-color: rgba(212, 180, 131, 0.05);
+    padding: 6px 14px;
+    border-radius: 30px;
+    border: 1px solid rgba(212, 180, 131, 0.2);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.5s ease;
 }
 
-.btn-approve {
-    background-color: rgba(48, 209, 88, 0.15);
-    color: var(--green-success);
-    border: 1px solid rgba(48, 209, 88, 0.3);
-    margin-right: 6px;
+/* ==========================================================================
+   📊 RADNI PROSTOR TABELE
+   ========================================================================== */
+.dashboard-workspace {
+    max-width: 1600px;
+    margin: 40px auto;
+    padding: 0 40px;
 }
 
-.btn-approve:hover {
-    background-color: var(--green-success);
-    color: #000;
+.control-table-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
-.btn-revoke {
-    background-color: rgba(255, 69, 58, 0.15);
-    color: var(--red-alert);
-    border: 1px solid rgba(255, 69, 58, 0.3);
+.table-title-area {
+    margin-bottom: 25px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    padding-bottom: 15px;
 }
 
-.btn-revoke:hover {
-    background-color: var(--red-alert);
-    color: #000;
+.table-title-area h2 {
+    font-family: var(--font-header);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--gold);
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
 }
 
-/* 📊 Forensics Table */
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+/* 📊 FORENSICS FOREGROUND TABLE */
 .table-responsive {
     width: 100%;
     overflow-x: auto;
@@ -247,53 +186,112 @@ body {
 
 .master-table th {
     color: var(--text-secondary);
-    font-weight: 500;
+    font-weight: 600;
     padding: 16px;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 12px;
+    border-bottom: 2px solid var(--border-color);
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
 }
 
 .master-table td {
-    padding: 16px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--border-color);
-    color: #e5e5ea;
+    color: #e2e8f0;
 }
 
 .master-table tr:hover td {
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: rgba(255, 255, 255, 0.01);
 }
 
-/* Badges */
+/* ==========================================================================
+    🎛️ DUGMADI I BEDŽEVI
+   ========================================================================== */
+.btn {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 20px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-gold {
+    background-color: var(--gold);
+    color: #0b0f14;
+}
+
+.btn-gold:hover {
+    background-color: var(--gold-hover);
+    box-shadow: 0 0 15px rgba(212, 180, 131, 0.3);
+}
+
+.btn-sm {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 5px;
+}
+
+.btn-approve {
+    background-color: rgba(48, 209, 88, 0.1);
+    color: var(--green-success);
+    border: 1px solid rgba(48, 209, 88, 0.25);
+    margin-right: 6px;
+}
+
+.btn-approve:hover {
+    background-color: var(--green-success);
+    color: #000;
+}
+
+.btn-revoke {
+    background-color: rgba(255, 69, 58, 0.1);
+    color: var(--red-alert);
+    border: 1px solid rgba(255, 69, 58, 0.25);
+}
+
+.btn-revoke:hover {
+    background-color: var(--red-alert);
+    color: #fff;
+}
+
 .badge {
     display: inline-block;
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 11px;
     font-weight: 600;
-    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .badge-approved {
-    background-color: rgba(48, 209, 88, 0.15);
+    background-color: rgba(48, 209, 88, 0.08);
     color: var(--green-success);
+    border: 1px solid rgba(48, 209, 88, 0.15);
 }
 
 .badge-pending {
-    background-color: rgba(212, 175, 55, 0.15);
+    background-color: rgba(212, 180, 131, 0.08);
     color: var(--gold);
+    border: 1px solid rgba(212, 180, 131, 0.15);
 }
 
 .badge-revoked {
-    background-color: rgba(255, 69, 58, 0.15);
+    background-color: rgba(255, 69, 58, 0.08);
     color: var(--red-alert);
+    border: 1px solid rgba(255, 69, 58, 0.15);
 }
 
 .badge-version {
-    background-color: #232326;
+    background-color: #161b22;
     color: var(--text-secondary);
     font-family: monospace;
+    font-size: 11px;
+    border: 1px solid var(--border-color);
 }
 
 .text-center {

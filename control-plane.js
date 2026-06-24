@@ -1,20 +1,23 @@
-// SELECTION MASTER CONTROL PLANE — Control Plane Engine (V2.0.0)
-import { verifyIdentityAndGetProfile } from './auth.js';
+// SELECTION MASTER CONTROL PLANE — Control Plane Engine (V3.1.0)
+import { bootstrapAdmin } from './bootstrap.js';
 
 const API_BASE = "https://shell.selection.rs";
 
-// 🚀 INICIJALIZACIJA PANEL SVEUČILIŠTA
-document.addEventListener("DOMContentLoaded", async () => {
-    // 🛡️ Korak 1: Prvo pokrećemo gvozdenu proveru mrežnog identiteta
-    const identity = await verifyIdentityAndGetProfile();
+// Pokrećemo asinhroni bootstrap u vrhu
+const me = await bootstrapAdmin();
 
-    // Ako identitet nije rešen ili korisnik nije master, auth.js preuzima ekran i blokira dalji rad
-    if (!identity) return;
+// Ako bootstrap vrati null, prekidamo izvršavanje — bootstrap.js je već preuzeo ekran
+if (me) {
+    initControlPlane();
+}
 
-    // 🔄 Korak 2: Ti si verifikovan, odmah inicijalizujemo tabelu i hvatamo formu
-    await osveziMasterTabeluKorisnika();
+function initControlPlane() {
+    console.log("🚀 [Control Plane] Inicijalizujem komandni interfejs za Mastera...");
+
+    // Odmah punimo tabelu i vezujemo slušaoce na formu u vrhu ekrana
+    osveziMasterTabeluKorisnika();
     setupEventListeners();
-});
+}
 
 function setupEventListeners() {
     const form = document.getElementById('provision-form');
@@ -26,24 +29,19 @@ function setupEventListeners() {
     }
 }
 
-// 📊 SKENIRANJE BAZE KORISNIKA NA IVICI MREŽE
 async function osveziMasterTabeluKorisnika() {
     const tbody = document.getElementById('users-table-body');
     if (!tbody) return;
 
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--gold); padding: 30px;">⚡ Skeniram Edge KV magistralu, sakupljam žurnale korisnika...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--gold); padding: 40px; font-weight:500;">⚡ Skeniram Edge KV magistralu, sakupljam žurnale korisnika...</td></tr>`;
 
     try {
-        // Više ne šaljemo ručne Bearer tokene, Cloudflare Access sam lepi sesiju
-        const res = await fetch(`${API_BASE}/api/master/users`, {
-            method: 'GET'
-        });
-
+        const res = await fetch(`${API_BASE}/api/master/users`, { method: 'GET' });
         if (!res.ok) throw new Error(`Edge ruter vratio status: ${res.status}`);
 
         const data = await res.json();
         if (!data.success || !data.users || data.users.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--text-secondary); padding: 30px;">U bazi trenutno nema registrovanih klijentskih matrica.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--text-secondary); padding: 40px;">U bazi trenutno nema registrovanih klijentskih matrica.</td></tr>`;
             return;
         }
 
@@ -52,7 +50,6 @@ async function osveziMasterTabeluKorisnika() {
             const tr = document.createElement('tr');
             const cleanEmailId = user.email.replace(/[@.]/g, '_');
 
-            // Formiranje vizuelnih bedževa za status vize
             let statusBadge = '';
             if (user.status === 'approved') {
                 statusBadge = `<span class="badge badge-approved">✔️ Odobren</span>`;
@@ -62,31 +59,30 @@ async function osveziMasterTabeluKorisnika() {
                 statusBadge = `<span class="badge badge-pending">⏳ Na čekanju</span>`;
             }
 
-            // Formiranje verzionog pečata za Temporal Guard reviziju
-            const verzijaPecat = `<span class="badge badge-version">${user.version || 'v1-legacy'}</span>`;
+            const fieldTenant = user.tenant || user.subdomain || '';
+            const verzijaPecat = `<span class="badge badge-version">${user.version || 'v2-edge'}</span>`;
 
-            // Kreiranje akcionih dugmića na osnovu trenutnog stanja vize
             let actionButtons = '';
             if (user.email === "selectionrooms@gmail.com") {
-                actionButtons = `<span style="color: var(--gold); font-size: 12px; font-style: italic; font-weight: 500;">Centralno Jezgro Sistema</span>`;
+                actionButtons = `<span style="color: var(--gold); font-size: 12px; font-style: italic; font-weight: 500;">Centralno Jezgro</span>`;
             } else {
                 if (user.status === 'approved') {
-                    actionButtons = `<button class="btn btn-sm btn-revoke" data-email="${user.email}" data-tenant="${user.tenant}">Oduzmi Vizu</button>`;
+                    actionButtons = `<button class="btn btn-sm btn-revoke" data-email="${user.email}" data-tenant="${fieldTenant}">Oduzmi Vizu</button>`;
                 } else {
                     actionButtons = `
-                        <button class="btn btn-sm btn-approve" data-email="${user.email}" data-tenant="${user.tenant}">Odobri</button>
-                        <button class="btn btn-sm btn-revoke" data-email="${user.email}" data-tenant="${user.tenant}">Blokiraj</button>
+                        <button class="btn btn-sm btn-approve" data-email="${user.email}" data-tenant="${fieldTenant}">Odobri</button>
+                        <button class="btn btn-sm btn-revoke" data-email="${user.email}" data-tenant="${fieldTenant}">Blokiraj</button>
                     `;
                 }
             }
 
             tr.innerHTML = `
-                <td style="font-weight: 500;">${user.email}</td>
+                <td style="font-weight: 600; color: #fff;">${user.email}</td>
                 <td>
-                    <input type="text" id="tenant-input-${cleanEmailId}" value="${user.tenant || ''}" 
-                           style="background: #1c1c1e; color: #fff; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 6px; font-size: 13px; width: 160px;">
+                    <input type="text" id="tenant-input-${cleanEmailId}" value="${fieldTenant}" 
+                           style="background: #090d10; color: #fff; border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 6px; font-size: 13px; width: 180px; outline:none;">
                 </td>
-                <td style="text-transform: uppercase; font-size: 12px; color: var(--text-secondary); font-weight: 600;">${user.role || 'client'}</td>
+                <td style="text-transform: uppercase; font-size: 11px; color: var(--text-secondary); font-weight: 600; letter-spacing:0.5px;">${user.role || 'client'}</td>
                 <td>${statusBadge}</td>
                 <td>${verzijaPecat}</td>
                 <td style="text-align: right;">${actionButtons}</td>
@@ -94,7 +90,6 @@ async function osveziMasterTabeluKorisnika() {
             tbody.appendChild(tr);
         });
 
-        // Kačimo event listenere na dinamički generisana dugmad u tabeli
         tbody.querySelectorAll('.btn-approve').forEach(btn => {
             btn.addEventListener('click', () => promeniStatusKlijentaMaster(btn.dataset.email, 'approved', btn.dataset.tenant));
         });
@@ -103,11 +98,10 @@ async function osveziMasterTabeluKorisnika() {
         });
 
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--red-alert); padding: 30px; font-weight: 500;">❌ Greška prilikom skeniranja magistrale: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--red-alert); padding: 40px; font-weight: 500;">❌ Greška prilikom komunikacije sa magistralom: ${err.message}</td></tr>`;
     }
 }
 
-// 🐣 PROVIŽONING (LANSER) NOVOG KLIJENTSKOG PROSTORA
 async function masterKreirajNovogKorisnika() {
     const emailInput = document.getElementById('client-email');
     const subInput = document.getElementById('client-subdomain');
@@ -120,68 +114,62 @@ async function masterKreirajNovogKorisnika() {
     if (!email || !subdomain) return;
 
     if (!/^[a-z0-9-]+$/.test(subdomain)) {
-        alert("❌ Greška u formatu: Poddomen sme da sadrži samo mala slova, brojeve i crtice.");
+        alert("❌ Format greška: Poddomen sme da sadrži samo mala slova, brojeve i crtice.");
         return;
     }
 
-    if (!confirm(`Lansirati potpuno izolovani prostor na ivici mreže za korisnika: ${email} na adresi https://${subdomain}.selection.rs?`)) return;
+    if (!confirm(`Alocirati prostor na ivici za: ${email} na adresi https://${subdomain}.selection.rs?`)) return;
 
     try {
-        const response = await fetch(`${API_BASE}/provision_user`, {
+        const response = await fetch(`${API_BASE}/api/master/provision-user`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, subdomain, role: "client" })
+            body: JSON.stringify({ email, tenant: subdomain })
         });
 
         const rez = await response.json();
         if (response.ok && rez.success) {
-            alert(`🎉 USPEŠNO: Prostor za ${subdomain}.selection.rs uspešno alociran u pending statusu!`);
+            alert(`🎉 USPEŠNO: Korisnik ${email} upisan kao PENDING na tenantu [${subdomain}]!`);
             emailInput.value = '';
             subInput.value = '';
             await osveziMasterTabeluKorisnika();
         } else {
-            alert(`❌ Odbijeno sa ivice: ${rez.error || "Nepoznata validaciona greška."}`);
+            alert(`❌ Greška: ${rez.error || "Odbijeno sa servera."}`);
         }
     } catch (error) {
-        alert("❌ Greška u komunikaciji sa bezbednosnim provajderom.");
+        alert("❌ Prekid veze sa centralnim Shell ruterom.");
     }
 }
 
-// 🔑 MUTACIJA STATUSI / VIZE I AKTIVACIJA TEMPORALNOG ŠTITA
 async function promeniStatusKlijentaMaster(email, status, oldTenant) {
     const cleanEmailId = email.replace(/[@.]/g, '_');
     const inputElement = document.getElementById(`tenant-input-${cleanEmailId}`);
     const targetSubdomain = inputElement ? inputElement.value.trim().toLowerCase() : oldTenant;
 
     if (!targetSubdomain) {
-        alert("❌ Operaciona greška: Validno mapiranje poddomena je obavezno.");
+        alert("❌ Greška: Poddomen mora biti popunjen.");
         return;
     }
 
-    const confirmMessage = status === 'approved'
-        ? `Odobriti vizu i aktivirati radni prostor za ${email} na domenu https://${targetSubdomain}.selection.rs?`
-        : `Prekinuti sistemsku vizu za ${email}? Ova izmena kroz naš Temporal Guard trenutno poništava sve aktivne tokene klijenta na internetu.`;
+    const poruka = status === 'approved'
+        ? `Odobriti vizu klijentu ${email} na domenu https://${targetSubdomain}.selection.rs?`
+        : `Prekinuti sistemsku vizu i blokirati nalog za ${email}?`;
 
-    if (!confirm(confirmMessage)) return;
+    if (!confirm(poruka)) return;
 
     try {
-        const response = await fetch(`${API_BASE}/api/master/update_status`, {
+        const response = await fetch(`${API_BASE}/api/master/approve-user`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                klijentEmail: email,
-                noviStatus: status,
-                noviTenant: targetSubdomain,
-                novaUloga: "client"
-            })
+            body: JSON.stringify({ klijentEmail: email, noviStatus: status, noviTenant: targetSubdomain })
         });
 
         if (response.ok) {
             await osveziMasterTabeluKorisnika();
         } else {
-            alert("🔒 Odbijeno sa Security Gateway kapije.");
+            alert("🔒 Bezbednosna kapija odbila promenu prava.");
         }
     } catch (e) {
-        alert("❌ Veza sa Control Plane-om je prekinuta.");
+        alert("❌ Veza sa Control Plane panelom je prekinuta.");
     }
 }

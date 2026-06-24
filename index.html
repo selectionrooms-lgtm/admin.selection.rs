@@ -5,51 +5,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Selection Master Control Plane</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=3.0.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600&display=swap"
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Montserrat:wght@300;400;500;600&display=swap"
         rel="stylesheet">
 </head>
 
 <body>
 
-    <header class="master-header">
-        <div class="brand">
+    <header class="master-navigation-bar">
+        <div class="brand-zone">
             <span class="logo-gold">Selection</span>
-            <span class="logo-sub">Master Control</span>
+            <span class="logo-sub">Shell Core</span>
         </div>
-        <div id="admin-identity" class="user-badge">Učitavanje identiteta...</div>
+
+        <form id="provision-form" class="inline-provision-form">
+            <input type="email" id="client-email" placeholder="Email klijenta (npr. ime@gmail.com)" required>
+            <div class="inline-input-addon">
+                <input type="text" id="client-subdomain" placeholder="poddomen" required>
+                <span class="addon-tag">.selection.rs</span>
+            </div>
+            <button type="submit" class="btn btn-gold">Lansiraj Klijenta</button>
+        </form>
+
+        <div id="admin-identity" class="user-badge-gold">Verifikacija...</div>
     </header>
 
-    <main class="dashboard-container">
-
-        <section class="control-card">
-            <div class="card-header">
-                <h2>Lansiranje Novog Klijenta</h2>
-                <p class="subtitle">Kreiranje izolovanog prostora na ivici mreže (KV/R2)</p>
-            </div>
-            <form id="provision-form" class="control-form">
-                <div class="form-group">
-                    <label for="client-email">Email klijenta</label>
-                    <input type="email" id="client-email" placeholder="ime.prezime@gmail.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="client-subdomain">Dodeljeni poddomen (Tenant)</label>
-                    <div class="input-addon-wrapper">
-                        <input type="text" id="client-subdomain" placeholder="apartman-centar" required>
-                        <span class="addon-text">.selection.rs</span>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-gold">Inicijalizuj Tenant Space</button>
-            </form>
-        </section>
-
-        <section class="control-card full-width">
-            <div class="card-header">
+    <main class="dashboard-workspace">
+        <section class="control-table-card">
+            <div class="table-title-area">
                 <h2>Sistemski Žurnal Korisnika</h2>
-                <p class="subtitle">Upravljanje vizama, ulogama i temporalnim pečatima</p>
+                <p class="subtitle">Pregled aktivnih viza, dodeljenih resursa i Temporal Guard pečata na ivici mreže</p>
             </div>
+
             <div class="table-responsive">
                 <table class="master-table">
                     <thead>
@@ -59,22 +49,23 @@
                             <th>Uloga</th>
                             <th>Status Vize</th>
                             <th>Verzija Zapisa</th>
-                            <th>Akcije</th>
+                            <th style="text-align: right;">Akcije</th>
                         </tr>
                     </thead>
                     <tbody id="users-table-body">
                         <tr>
-                            <td colspan="6" class="text-center">Skeniranje baze na ivici mreže...</td>
+                            <td colspan="6" class="text-center" style="padding: 40px; color: var(--gold);">
+                                ⚡ Inicijalizujem skeniranje Edge KV magistrale...
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </section>
-
     </main>
 
-    <script src="auth.js"></script>
-    <script src="control-plane.js"></script>
+    <script type="module" src="bootstrap.js?v=3.0.0"></script>
+    <script type="module" src="control-plane.js?v=3.0.0"></script>
 </body>
 
 </html>
