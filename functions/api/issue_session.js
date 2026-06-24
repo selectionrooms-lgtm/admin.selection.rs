@@ -1,71 +1,40 @@
-// SELECTION ADMIN FRONT — Functions Gateway Proxy (V19.0.2 - Outbound Forensic Probing)
+// SELECTION ADMIN FRONT — Functions Gateway Proxy (V19.0.5 - Access Assertion Proxy)
 
 export async function onRequestGet(context) {
-    const { request, env } = context;
+    const { request } = context;
+
+    // Uzimamo jedini stvarni kriptografski dokaz identiteta koji nam Cloudflare šalje
+    const accessJwt = request.headers.get("cf-access-jwt-assertion");
+
+    if (!accessJwt) {
+        return new Response(JSON.stringify({ error: "🔒 Bezbednosna rampa: Cloudflare Access JWT nije pronađen." }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" }
+        });
+    }
 
     try {
-        // 🔍 PAGES OUTBOUND OSCILOSKOP: Skeniramo šta ulazi i šta se pakuje za eksport
-        console.log("========== [PAGES OUTBOUND] ==========");
-        console.log("CF email inbound:", request.headers.get("Cf-Access-Authenticated-User-Email"));
-
-        const outboundHeaders = {
-            "Cf-Access-Jwt-Assertion": request.headers.get("Cf-Access-Jwt-Assertion") || "",
-            "Cf-Access-Authenticated-User-Email": request.headers.get("Cf-Access-Authenticated-User-Email") || "",
-            "Content-Type": "application/json"
-        };
-
-        console.log("Outbound header keys:", Object.keys(outboundHeaders));
-        console.log("Outbound email present:", !!outboundHeaders["Cf-Access-Authenticated-User-Email"]);
-        console.log("======================================");
-
-        // Ispaljujemo fetch sa spakovanim zaglavljima ka centralnom API-ju
+        // Ispaljujemo fetch ka centralnom API-ju i prosleđujemo sirovi CF Access token
         const apiResponse = await fetch("https://api.selection.rs/api/me", {
             method: "GET",
-            headers: outboundHeaders
+            headers: {
+                "X-Selection-Access-Assertion": accessJwt,
+                "Content-Type": "application/json"
+            }
         });
 
         if (!apiResponse.ok) {
-            return new Response(JSON.stringify({ error: "🔒 Centralni API je odbio verifikaciju." }), {
+            const errTekst = await apiResponse.text();
+            return new Response(JSON.stringify({ error: `🔒 Centralni API odbio verifikaciju: ${errTekst}` }), {
                 status: apiResponse.status,
                 headers: { "Content-Type": "application/json" }
             });
         }
 
+        // API nam vraća profil i već iskovani dugotrajni unutrašnji token za brauzer!
         const responseData = await apiResponse.json();
-        const identityData = responseData.identity || responseData;
 
-        if (!identityData || !identityData.email) {
-            throw new Error("Centralni API nije vratio validan identitet korisnika.");
-        }
-
-        const tajnaKljuca = env.JWT_SECRET;
-        if (!tajnaKljuca) {
-            return new Response(JSON.stringify({ user: identityData }), {
-                status: 200,
-                headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
-            });
-        }
-
-        // Klesanje tokena za klijentsku upotrebu (12 sati važnosti)
-        const sessionPayload = {
-            email: identityData.email,
-            tenant: identityData.tenant,
-            role: identityData.role,
-            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 12)
-        };
-
-        const encoder = new TextEncoder();
-        const secretKeyData = encoder.encode(tajnaKljuca);
-        const key = await crypto.subtle.importKey("raw", secretKeyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-
-        const stringifiedPayload = JSON.stringify(sessionPayload);
-        const base64Payload = btoa(unescape(encodeURIComponent(stringifiedPayload))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-        const signatureBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(base64Payload));
-        const base64Signature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-
-        const potpisaniToken = `${base64Payload}.${base64Signature}`;
-
-        return new Response(JSON.stringify({ token: potpisaniToken, user: identityData }), {
+        return new Response(JSON.stringify(responseData), {
             status: 200,
             headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
         });
