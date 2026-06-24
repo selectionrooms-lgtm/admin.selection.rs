@@ -1,4 +1,4 @@
-// SELECTION ADMIN FRONT — Functions Gateway Proxy (V19.0.5 - Access Assertion Proxy)
+// SELECTION ADMIN FRONT — Functions Gateway Proxy (V19.0.8 - Aligned Transport Pipe)
 
 export async function onRequestGet(context) {
     const { request } = context;
@@ -14,11 +14,11 @@ export async function onRequestGet(context) {
     }
 
     try {
-        // Ispaljujemo fetch ka centralnom API-ju i prosleđujemo sirovi CF Access token
+        // 📡 Šaljemo kroz x-cf-access-jwt-assertion koji backend app.js garantovano hvata i čisti
         const apiResponse = await fetch("https://api.selection.rs/api/me", {
             method: "GET",
             headers: {
-                "X-Selection-Access-Assertion": accessJwt,
+                "x-cf-access-jwt-assertion": accessJwt,
                 "Content-Type": "application/json"
             }
         });
@@ -31,7 +31,7 @@ export async function onRequestGet(context) {
             });
         }
 
-        // API nam vraća profil i već iskovani dugotrajni unutrašnji token za brauzer!
+        // Centralni API vraća profil { identity, token }
         const responseData = await apiResponse.json();
 
         return new Response(JSON.stringify(responseData), {
