@@ -1,4 +1,4 @@
-// SELECTION MASTER CONTROL PLANE — Bootstrap Engine (V3.1.0)
+// SELECTION MASTER CONTROL PLANE — Bootstrap Engine (V3.1.1 - Loop Breaker)
 const API_BASE = "https://shell.selection.rs";
 
 export async function bootstrapAdmin() {
@@ -12,7 +12,7 @@ export async function bootstrapAdmin() {
 
         const response = await fetch(`${API_BASE}/api/me`, {
             method: 'GET',
-            credentials: "include" // Osigurava prolaz kolačića kroz CORS tunel
+            credentials: "include" // Ključno za CORS kolačiće sa shell.selection.rs
         });
 
         if (response.status === 403) {
@@ -21,10 +21,11 @@ export async function bootstrapAdmin() {
             throw new Error("MASTER_ROLE_REQUIRED");
         }
 
+        // 🛠️ PREKID LOOP-A: Ako je 401, ne radimo reload odmah, nego ispisujemo poruku da se vidi status
         if (response.status === 401) {
             root.setAttribute("data-status", "unauthorized");
-            console.warn("⚠️ Sesija prekinuta. Preusmeravam na Cloudflare Access kapiju...");
-            window.location.reload();
+            console.warn("⚠️ Sesija nevažeća na centralnom ruteru.");
+            prikažiEkranPrijave();
             return null;
         }
 
@@ -56,6 +57,22 @@ export async function bootstrapAdmin() {
         return null;
     }
 }
+
+// Nova pomoćna funkcija koja lomi beskonačni reload
+function prikažiEkranPrijave() {
+    document.body.innerHTML = `
+        <div style="min-height: 100vh; background-color: #0b0f14; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #fff; text-align: center; padding: 20px;">
+            <div style="font-size: 40px; margin-bottom: 20px;">🔑</div>
+            <h1 style="color: #d4b483; font-size: 20px; margin-bottom: 10px; font-weight: 500;">Cloudflare Access Sesija Istekla</h1>
+            <p style="color: #7e8e9f; max-width: 450px; font-size: 13px; margin-bottom: 20px; line-height: 1.6;">
+                Centralni ruter zahteva ponovnu verifikaciju vašeg administrativnog identiteta.
+            </p>
+            <button onclick="window.location.reload()" style="background-color: #d4b483; color: #0b0f14; border: none; padding: 10px 24px; font-weight: 600; border-radius: 6px; cursor: pointer; font-size: 13px;">Autorizuj se</button>
+        </div>
+    `;
+}
+
+
 
 function prikažiEkranZabrane() {
     document.body.innerHTML = `
