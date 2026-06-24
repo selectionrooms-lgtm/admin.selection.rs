@@ -1,100 +1,67 @@
-// SELECTION MASTER CONTROL PLANE — Bootstrap Engine (V3.1.1 - Loop Breaker)
+// SELECTION MASTER CONTROL PLANE — Bootstrap Engine (V5.2.0 - Absolute DOM Isolation)
 const API_BASE = "https://shell.selection.rs";
 
 export async function bootstrapAdmin() {
-    const root = document.getElementById("selection-admin-root") || document.body;
-    const identityBadge = document.getElementById('admin-identity');
-
+    const root = document.getElementById("selection-admin-root");
+    if (!root) {
+        console.error("Fatal: Očekivani element #selection-admin-root nije pronađen u DOM-u.");
+        return null;
+    }
     root.setAttribute("data-status", "loading");
 
     try {
-        console.log("🛡️ [Master Bootstrap] Proveravam mrežne kapacitete na Edge-u...");
+        console.log("🛡️ [Master Boot] Proveravam mrežni identitet preko Cloudflare Access-a...");
 
-        const response = await fetch(`${API_BASE}/api/me`, {
-            method: 'GET',
-            credentials: "include" // Ključno za CORS kolačiće sa shell.selection.rs
-        });
+        const res = await fetch(`${API_BASE}/api/me`, { method: 'GET', credentials: "include" });
 
-        if (response.status === 403) {
+        if (res.status === 401 || res.status === 403) {
             root.setAttribute("data-status", "forbidden");
-            prikažiEkranZabrane();
-            throw new Error("MASTER_ROLE_REQUIRED");
-        }
-
-        // 🛠️ PREKID LOOP-A: Ako je 401, ne radimo reload odmah, nego ispisujemo poruku da se vidi status
-        if (response.status === 401) {
-            root.setAttribute("data-status", "unauthorized");
-            console.warn("⚠️ Sesija nevažeća na centralnom ruteru.");
-            prikažiEkranPrijave();
+            renderSistemskiEkran(root, "Pristup Odbijen", "Autorizacija neuspešna ili nemate administrativni nivo ovlašćenja.", "#ff453a");
             return null;
         }
 
-        if (!response.ok) {
-            root.setAttribute("data-status", "error");
-            prikažiEkranKvara(response.status);
-            throw new Error(`BOOTSTRAP_FAILED_HTTP_${response.status}`);
-        }
+        if (!res.ok) throw new Error(`HTTP_ERROR_${res.status}`);
 
-        const profile = await response.json();
-
-        if (profile.role !== "master") {
-            root.setAttribute("data-status", "forbidden");
-            prikažiEkranZabrane();
-            throw new Error("INVALID_ROLE_REJECTION");
-        }
+        const profile = await res.json();
 
         root.setAttribute("data-status", "ready");
+        console.log("👑 USPEH: Cloudflare Access verifikovao identitet:", profile.email);
 
-        if (identityBadge) {
-            identityBadge.innerHTML = `👑 <span style="color: #fff; font-weight: 600;">${profile.email}</span>`;
-            identityBadge.style.opacity = "1";
-        }
-
-        return Object.freeze(profile);
+        document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: profile }));
+        return profile;
 
     } catch (err) {
-        console.error("❌ Admin bootstrap hard fail:", err.message);
+        console.error("❌ Bootstrap fail:", err);
+        root.setAttribute("data-status", "error");
+        renderSistemskiEkran(root, "Sistemski prekid", "Prekinuta veza sa centralnim Edge ruterom. Osvežite panel.", "#d4b483", true);
         return null;
     }
 }
 
-// Nova pomoćna funkcija koja lomi beskonačni reload
-function prikažiEkranPrijave() {
-    document.body.innerHTML = `
-        <div style="min-height: 100vh; background-color: #0b0f14; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #fff; text-align: center; padding: 20px;">
-            <div style="font-size: 40px; margin-bottom: 20px;">🔑</div>
-            <h1 style="color: #d4b483; font-size: 20px; margin-bottom: 10px; font-weight: 500;">Cloudflare Access Sesija Istekla</h1>
-            <p style="color: #7e8e9f; max-width: 450px; font-size: 13px; margin-bottom: 20px; line-height: 1.6;">
-                Centralni ruter zahteva ponovnu verifikaciju vašeg administrativnog identiteta.
-            </p>
-            <button onclick="window.location.reload()" style="background-color: #d4b483; color: #0b0f14; border: none; padding: 10px 24px; font-weight: 600; border-radius: 6px; cursor: pointer; font-size: 13px;">Autorizuj se</button>
-        </div>
-    `;
-}
+// 🛡️ Hirurški precizno menjanje stanja isključivo unutar našeg admin root-a (Bez innerHTML-a)
+function renderSistemskiEkran(rootElement, naslov, opis, bojaNaslova, prikaziDugme = false) {
+    const kontejner = document.createElement("div");
+    kontejner.style.cssText = "min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #fff; text-align: center; padding: 20px;";
 
+    const h1 = document.createElement("h1");
+    h1.style.cssText = `font-size: 22px; margin-bottom: 10px; font-weight: 500; letter-spacing: -0.5px; color: ${bojaNaslova};`;
+    h1.textContent = naslov;
 
+    const p = document.createElement("p");
+    p.style.cssText = "color: #7e8e9f; max-width: 450px; font-size: 13px; line-height: 1.6; margin-bottom: 20px;";
+    p.textContent = opis;
 
-function prikažiEkranZabrane() {
-    document.body.innerHTML = `
-        <div style="min-height: 100vh; background-color: #0b0f14; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #fff; text-align: center; padding: 20px;">
-            <div style="font-size: 50px; margin-bottom: 20px;">🚫</div>
-            <h1 style="color: #ff453a; font-size: 22px; margin-bottom: 10px; letter-spacing: -0.5px; font-weight: 500;">Pristup Odbijen (403)</h1>
-            <p style="color: #7e8e9f; max-width: 500px; font-size: 13px; line-height: 1.6;">
-                Vaš nivo ovlašćenja ne dozvoljava pristup Master Control Plane sistemu.
-            </p>
-        </div>
-    `;
-}
+    kontejner.appendChild(h1);
+    kontejner.appendChild(p);
 
-function prikažiEkranKvara(status) {
-    document.body.innerHTML = `
-        <div style="min-height: 100vh; background-color: #0b0f14; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #fff; text-align: center; padding: 20px;">
-            <div style="font-size: 40px; margin-bottom: 20px;">🔒</div>
-            <h1 style="color: #d4b483; font-size: 20px; margin-bottom: 10px; font-weight: 500;">Sistemsko održavanje u toku</h1>
-            <p style="color: #7e8e9f; max-width: 450px; font-size: 13px; margin-bottom: 20px; line-height: 1.6;">
-                Došlo je do prekida veze sa centralnim ruterom (Greška: ${status}). Pokušajte ponovo za nekoliko trenutaka.
-            </p>
-            <button onclick="window.location.reload()" style="background-color: #d4b483; color: #0b0f14; border: none; padding: 10px 24px; font-weight: 600; border-radius: 6px; cursor: pointer; font-size: 13px;">Osveži</button>
-        </div>
-    `;
+    if (prikaziDugme) {
+        const btn = document.createElement("button");
+        btn.style.cssText = "background-color: #d4b483; color: #0b0f14; border: none; padding: 10px 24px; font-weight: 600; border-radius: 6px; cursor: pointer; font-size: 13px;";
+        btn.textContent = "Osveži";
+        btn.addEventListener("click", () => window.location.reload());
+        kontejner.appendChild(btn);
+    }
+
+    // 🛠️ FIX: Izolovano menjamo decu samo unutar admin root-a, ne diramo ostatak tela stranice
+    rootElement.replaceChildren(kontejner);
 }
