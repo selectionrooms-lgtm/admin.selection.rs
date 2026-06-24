@@ -3,7 +3,13 @@
 export async function onRequestGet(context) {
     const { request, env } = context;
 
-    // 1. Pokupiš mrežne Access podatke koji su stigli na admin.selection.rs
+    // 🔍 FRONTEND OSCILOSKOP: Proveravamo šta Pages uopšte dobija od Cloudflare Access-a
+    console.log("==================== [PAGES ACCESS INBOUND] ====================");
+    console.log("[PAGES] CF Access email:", request.headers.get("Cf-Access-Authenticated-User-Email"));
+    console.log("[PAGES] CF Access JWT exists:", !!request.headers.get("Cf-Access-Jwt-Assertion"));
+    console.log("[PAGES] Svi primljeni ključevi hedera:", [...request.headers.keys()]);
+    console.log("================================================================");
+
     const cfAccessJwt = request.headers.get('Cf-Access-Jwt-Assertion');
     const cfAccessEmail = request.headers.get('Cf-Access-Authenticated-User-Email');
 
