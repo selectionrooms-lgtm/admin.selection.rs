@@ -1,9 +1,10 @@
-// admin.selection.rs/src/control-plane.js (V5.4.0 - Dynamic DOM References)
+// admin.selection.rs/src/control-plane.js (V19.0.0 - API Gateway Aligned)
 import { bootstrapAdmin } from './bootstrap.js';
 
-const API_BASE = "https://shell.selection.rs";
+// ⚡ USTAVNA ISPRAVKA: Preusmeravamo sve UI zahteve na novi centralni API Gateway
+const API_BASE = "https://api.selection.rs";
 
-// Inicijalizacija i blokiranje UI-ja do potvrde identiteta
+// Inicijalizacija i blokiranje UI-ja do potvrde identiteta na Edge kapiji
 const user = await bootstrapAdmin();
 
 if (user) {
@@ -11,7 +12,14 @@ if (user) {
 }
 
 function initControlPlane() {
-    console.log("🚀 [Control Plane] Komandna stanica podignuta preko mrežnog Access autoriteta.");
+    console.log("🚀 [Control Plane] Komandna stanica podignuta.");
+
+    // ⚡ DODATAK: Upisujemo ulogovani email u gornji desni zlatni bedž
+    const identityBadge = document.getElementById('admin-identity');
+    if (identityBadge && user) {
+        identityBadge.textContent = user.email;
+    }
+
     osveziMasterTabeluKorisnika();
     setupEventListeners();
 }
@@ -60,7 +68,7 @@ async function osveziMasterTabeluKorisnika() {
             emptyTd.style.cssText = "color: var(--text-secondary); padding: 40px;";
             emptyTd.textContent = "U bazi trenutno nema registrovanih klijentskih matrica.";
             emptyTr.appendChild(emptyTd);
-            tbody.replaceChildren(emptyTr);
+            emptyTr.appendChild(emptyTd);
             return;
         }
 
@@ -75,7 +83,7 @@ async function osveziMasterTabeluKorisnika() {
             tdEmail.textContent = user.email;
             tr.appendChild(tdEmail);
 
-            // 2. Ćelija za Tenant Input (Uklonjen krhki ID baziran na email-u)
+            // 2. Ćelija za Tenant Input
             const tdTenant = document.createElement('td');
             const tenantInput = document.createElement('input');
             tenantInput.type = "text";
@@ -108,11 +116,11 @@ async function osveziMasterTabeluKorisnika() {
             tdStatus.appendChild(statusBadge);
             tr.appendChild(tdStatus);
 
-            // 5. Ćelija za Verziju Pečata
+            // 5. Ćelija za Verziju Pečata (Sada ispisuje našu novu v19-gateway oznaku)
             const tdVersion = document.createElement('td');
             const versionBadge = document.createElement('span');
             versionBadge.className = "badge badge-version";
-            versionBadge.textContent = user.version || 'v2-edge';
+            versionBadge.textContent = user.version || 'v19-edge';
             tdVersion.appendChild(versionBadge);
             tr.appendChild(tdVersion);
 
@@ -126,7 +134,6 @@ async function osveziMasterTabeluKorisnika() {
                 centralCoreSpan.textContent = "Centralno Jezgro";
                 tdActions.appendChild(centralCoreSpan);
             } else {
-                // 🛠️ AMANDMAN 1 & 2: Čitamo input direktno iz reference u trenutku klika, bez oslanjanja na closure zamrzavanje ili DOM ID-jeve
                 if (user.status === 'approved') {
                     const btnRevoke = document.createElement('button');
                     btnRevoke.className = "btn btn-sm btn-revoke";
@@ -205,7 +212,6 @@ async function masterKreirajNovogKorisnika() {
     }
 }
 
-// 🛠️ Primamo direktnu referencu na HTMLInputElement i čitamo živu vrednost sa ekrana
 async function promeniStatusKlijentaMaster(email, status, inputElement) {
     if (!inputElement) return;
     const targetSubdomain = inputElement.value.trim().toLowerCase();

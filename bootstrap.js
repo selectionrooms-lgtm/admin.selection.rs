@@ -1,5 +1,7 @@
-// SELECTION MASTER CONTROL PLANE — Bootstrap Engine (V5.2.0 - Absolute DOM Isolation)
-const API_BASE = "https://shell.selection.rs";
+// SELECTION MASTER CONTROL PLANE — Bootstrap Engine (V19.0.0 - API Gateway Aligned)
+
+// ⚡ USTAVNA ISPRAVKA: Sve mrežne cevi sada gađaju centralni, zaštićeni API Gateway
+const API_BASE = "https://api.selection.rs";
 
 export async function bootstrapAdmin() {
     const root = document.getElementById("selection-admin-root");
@@ -10,13 +12,17 @@ export async function bootstrapAdmin() {
     root.setAttribute("data-status", "loading");
 
     try {
-        console.log("🛡️ [Master Boot] Proveravam mrežni identitet preko Cloudflare Access-a...");
+        console.log("🛡️ [Master Boot] Proveravam mrežni identitet preko novog API Gateway-a...");
 
-        const res = await fetch(`${API_BASE}/api/me`, { method: 'GET', credentials: "include" });
+        // Šaljemo credentials: "include" kako bi brauzer preneo Cloudflare Access kolačiće na api.selection.rs
+        const res = await fetch(`${API_BASE}/api/me`, {
+            method: 'GET',
+            credentials: "include"
+        });
 
         if (res.status === 401 || res.status === 403) {
             root.setAttribute("data-status", "forbidden");
-            renderSistemskiEkran(root, "Pristup Odbijen", "Autorizacija neuspešna ili nemate administrativni nivo ovlašćenja.", "#ff453a");
+            renderSistemskiEkran(root, "Pristup Odbijen", "Autorizacija neuspešna na kapiji API Gateway-a ili nemate administratorski nivo ovlašćenja.", "#ff453a");
             return null;
         }
 
@@ -25,20 +31,21 @@ export async function bootstrapAdmin() {
         const profile = await res.json();
 
         root.setAttribute("data-status", "ready");
-        console.log("👑 USPEH: Cloudflare Access verifikovao identitet:", profile.email);
+        console.log("👑 USPEH: Centralni API verifikovao identitet:", profile.email);
 
+        // Obaveštavamo ceo frontend sistem (tabelu i skripte) da su stigli ustavni podaci o korisniku
         document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: profile }));
         return profile;
 
     } catch (err) {
         console.error("❌ Bootstrap fail:", err);
         root.setAttribute("data-status", "error");
-        renderSistemskiEkran(root, "Sistemski prekid", "Prekinuta veza sa centralnim Edge ruterom. Osvežite panel.", "#d4b483", true);
+        renderSistemskiEkran(root, "Sistemski prekid", "Prekinuta veza sa centralnim Edge ruterom (api.selection.rs). Osvežite panel.", "#d4b483", true);
         return null;
     }
 }
 
-// 🛡️ Hirurški precizno menjanje stanja isključivo unutar našeg admin root-a (Bez innerHTML-a)
+// 🛡️ Menjanje stanja isključivo unutar našeg admin root-a (Zadržana Apple-like estetika gold na anthracite)
 function renderSistemskiEkran(rootElement, naslov, opis, bojaNaslova, prikaziDugme = false) {
     const kontejner = document.createElement("div");
     kontejner.style.cssText = "min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #fff; text-align: center; padding: 20px;";
@@ -56,12 +63,11 @@ function renderSistemskiEkran(rootElement, naslov, opis, bojaNaslova, prikaziDug
 
     if (prikaziDugme) {
         const btn = document.createElement("button");
-        btn.style.cssText = "background-color: #d4b483; color: #0b0f14; border: none; padding: 10px 24px; font-weight: 600; border-radius: 6px; cursor: pointer; font-size: 13px;";
+        btn.style.cssText = "background-color: #d4b483; color: #0b0f14; border: none; padding: 10px 24px; font-weight: 600; border-radius: 6px; cursor: pointer; font-size: 13px; transition: opacity 0.2s;";
         btn.textContent = "Osveži";
         btn.addEventListener("click", () => window.location.reload());
         kontejner.appendChild(btn);
     }
 
-    // 🛠️ FIX: Izolovano menjamo decu samo unutar admin root-a, ne diramo ostatak tela stranice
     rootElement.replaceChildren(kontejner);
 }

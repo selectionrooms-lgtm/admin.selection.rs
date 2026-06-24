@@ -1,4 +1,4 @@
-/* 👑 SELECTION CONTROL PLANE VISUAL ENGINE — Production Premium V3.1.0 */
+/* 👑 SELECTION CONTROL PLANE VISUAL ENGINE — Production Premium V19.0.0 */
 
 :root {
     --bg-main: #0b0f14;
@@ -28,7 +28,7 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     padding-top: 75px;
-    /* Savršen clearance ispod fiksne trake */
+    /* Razmak ispod fiksne navigacije */
 }
 
 /* ==========================================================================
@@ -118,6 +118,7 @@ body {
     white-space: nowrap;
 }
 
+/* ⚡ POPRAVKA: Uklonjen opacity:0 da bi se tvoj admin identitet zapravo video na ekranu */
 .user-badge-gold {
     font-size: 12px;
     color: var(--gold);
@@ -126,8 +127,7 @@ body {
     border-radius: 30px;
     border: 1px solid rgba(212, 180, 131, 0.2);
     white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.4s ease;
+    transition: all 0.4s ease;
 }
 
 /* ==========================================================================
@@ -166,7 +166,7 @@ body {
     font-size: 13px;
 }
 
-/* 📊 FORENSICS FOREGROUND TABLE */
+/* 📊 RESPONSIVE TABELA */
 .table-responsive {
     width: 100%;
     overflow-x: auto;
