@@ -359,21 +359,23 @@ body {
     /* Razmak između telefona i dugmića ispod */
 }
 
-/* 📱 MOBILNA KAPSULA (Zakucana širina unutar panela) */
+//* 📱 MOBILNA KAPSULA (Sada je relativna baza za unutrašnju dugmad) */
 #live-simulator-screen {
     width: 360px !important;
-    height: 72vh !important;
-    /* Malo podignut prozor da oslobodi dno */
-    min-height: 520px;
+    height: 82vh !important;
+    /* Vraćamo punu, elegantnu visinu */
     border-radius: 24px;
     background-color: #0f171e;
     border: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
     overflow: hidden;
     position: relative;
-    flex: none;
+    /* Ključno: omogućava unutrašnje fiksiranje */
+    display: flex;
+    flex-direction: column;
 }
 
+/* 🎯 POKLOPAC: Unutrašnji target viewport dobija padding na dnu da dugmad ne prekriju tekst kockica */
 #simulator-content-target {
     width: 100%;
     height: 100%;
@@ -381,21 +383,28 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 24px;
+    padding: 24px 24px 130px 24px;
+    /* Dodatnih 130px prostora na dnu čuva tekst od preklapanja */
     box-sizing: border-box;
     overflow-y: auto;
 }
 
-/* 🎯 OTKLJUČANI HOLDER ZA EDGE DUGMAD (Sada ide prirodno ispod telefona) */
+/* 🔒 UNUTRAŠNJE ZAKLJUČANA DUGMAD (Zakucana na dno telefona, leže unutra desno/levo savršeno) */
 #floating-action-holder {
-    width: 360px !important;
-    /* Savršeno se ravna sa širinom telefona iznad */
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    /* Puni tačnu širinu ekrana od 360px */
+    background: linear-gradient(to top, #0f171e 80%, rgba(15, 23, 30, 0));
+    /* Nežan blend sa modrom pozadinom */
+    padding: 20px 24px 24px 24px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    flex: none;
+    z-index: 999;
     pointer-events: auto;
-    margin-bottom: 10px;
+    box-sizing: border-box;
 }
 
 /* --- 🔍 ZOOM ENGINE --- */
