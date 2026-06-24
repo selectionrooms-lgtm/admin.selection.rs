@@ -359,7 +359,7 @@ body {
     /* Razmak između telefona i dugmića ispod */
 }
 
-//* 📱 MOBILNA KAPSULA (Sada je relativna baza za unutrašnju dugmad) */
+/* 📱 MOBILNA KAPSULA (Sada je relativna baza za unutrašnju dugmad) */
 #live-simulator-screen {
     width: 360px !important;
     height: 82vh !important;
