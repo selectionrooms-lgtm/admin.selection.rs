@@ -5,15 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Selection Master Control Plane</title>
-    <link rel="stylesheet" href="style.css?v=3.0.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Montserrat:wght@300;400;500;600&display=swap"
-        rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=3.1.0">
 </head>
 
-<body>
+<body id="selection-admin-root" data-status="loading">
 
     <header class="master-navigation-bar">
         <div class="brand-zone">
@@ -22,9 +17,10 @@
         </div>
 
         <form id="provision-form" class="inline-provision-form">
-            <input type="email" id="client-email" placeholder="Email klijenta (npr. ime@gmail.com)" required>
+            <input type="email" id="client-email" class="shell-input" placeholder="Email klijenta (npr. ime@gmail.com)"
+                required>
             <div class="inline-input-addon">
-                <input type="text" id="client-subdomain" placeholder="poddomen" required>
+                <input type="text" id="client-subdomain" class="shell-input" placeholder="poddomen" required>
                 <span class="addon-tag">.selection.rs</span>
             </div>
             <button type="submit" class="btn btn-gold">Lansiraj Klijenta</button>
@@ -64,8 +60,7 @@
         </section>
     </main>
 
-    <script type="module" src="bootstrap.js?v=3.0.0"></script>
-    <script type="module" src="control-plane.js?v=3.0.0"></script>
+    <script type="module" src="control-plane.js?v=3.1.0"></script>
 </body>
 
 </html>

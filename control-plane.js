@@ -76,11 +76,11 @@ async function osveziMasterTabeluKorisnika() {
                 }
             }
 
+            // Integrisana klasa .shell-input za inpute unutar tabele radi vizuelne unifikacije
             tr.innerHTML = `
                 <td style="font-weight: 600; color: #fff;">${user.email}</td>
                 <td>
-                    <input type="text" id="tenant-input-${cleanEmailId}" value="${fieldTenant}" 
-                           style="background: #090d10; color: #fff; border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 6px; font-size: 13px; width: 180px; outline:none;">
+                    <input type="text" id="tenant-input-${cleanEmailId}" value="${fieldTenant}" class="shell-input" style="width: 180px; padding: 5px 10px;">
                 </td>
                 <td style="text-transform: uppercase; font-size: 11px; color: var(--text-secondary); font-weight: 600; letter-spacing:0.5px;">${user.role || 'client'}</td>
                 <td>${statusBadge}</td>
