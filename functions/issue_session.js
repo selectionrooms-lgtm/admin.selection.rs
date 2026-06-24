@@ -1,4 +1,4 @@
-// SELECTION ADMIN FRONT — Functions Gateway Proxy (V19.0.0)
+// SELECTION ADMIN FRONT — Functions Gateway Proxy (V19.0.0 - Identity Mapping Fix)
 
 export async function onRequestGet(context) {
     const { request, env } = context;
@@ -7,9 +7,8 @@ export async function onRequestGet(context) {
     const cfAccessJwt = request.headers.get('Cf-Access-Jwt-Assertion');
     const cfAccessEmail = request.headers.get('Cf-Access-Authenticated-User-Email');
 
-    // 🌐 2. Šaljemo upit našem vrhovnom carinskom skladištu (Centralni API)
-    // Ne čitamo bazu odavde, pitamo direktno api.selection.rs koji je jedini ustavni izvor!
     try {
+        // 🌐 2. Šaljemo upit našem vrhovnom carinskom skladištu (Centralni API)
         const apiResponse = await fetch("https://api.selection.rs/api/me", {
             method: "GET",
             headers: {
@@ -26,14 +25,17 @@ export async function onRequestGet(context) {
             });
         }
 
-        // Centralni API nam vraća proverene podatke o tebi (email, role, tenant)
-        const identityData = await apiResponse.json();
+        const responseData = await apiResponse.json();
 
-        // ⏳ Ako nam u budućnosti zatreba klesanje kratkotrajnog tokena za Studio direktno sa fronta:
-        // Koristimo isti gvozdeni JWT_SECRET koji je unet u Pages environment variables.
+        // 🛡️ POPRAVKA: Pravilno mapiranje podataka iz centralnog Identity objekta Workera
+        const identityData = responseData.identity || responseData;
+
+        if (!identityData || !identityData.email) {
+            throw new Error("Centralni API nije vratio validan identitet korisnika.");
+        }
+
         const tajnaKljuca = env.JWT_SECRET;
         if (!tajnaKljuca) {
-            // Ako Pages nema JWT_SECRET, samo prosleđujemo odgovor centralnog API-ja brauzeru
             return new Response(JSON.stringify({ user: identityData }), {
                 status: 200,
                 headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
@@ -45,7 +47,7 @@ export async function onRequestGet(context) {
             email: identityData.email,
             tenant: identityData.tenant,
             role: identityData.role,
-            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 12) // Važi 12 sati (Unix timestamp standard!)
+            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 12) // 12 sati važnosti
         };
 
         const encoder = new TextEncoder();
