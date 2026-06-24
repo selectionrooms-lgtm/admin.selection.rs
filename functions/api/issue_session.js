@@ -1,27 +1,27 @@
-// SELECTION ADMIN FRONT — Functions Gateway Proxy (V19.0.0 - Identity Mapping Fix)
+// SELECTION ADMIN FRONT — Functions Gateway Proxy (V19.0.2 - Outbound Forensic Probing)
 
 export async function onRequestGet(context) {
     const { request, env } = context;
 
-    // 🔍 FRONTEND OSCILOSKOP: Proveravamo šta Pages uopšte dobija od Cloudflare Access-a
-    console.log("==================== [PAGES ACCESS INBOUND] ====================");
-    console.log("[PAGES] CF Access email:", request.headers.get("Cf-Access-Authenticated-User-Email"));
-    console.log("[PAGES] CF Access JWT exists:", !!request.headers.get("Cf-Access-Jwt-Assertion"));
-    console.log("[PAGES] Svi primljeni ključevi hedera:", [...request.headers.keys()]);
-    console.log("================================================================");
-
-    const cfAccessJwt = request.headers.get('Cf-Access-Jwt-Assertion');
-    const cfAccessEmail = request.headers.get('Cf-Access-Authenticated-User-Email');
-
     try {
-        // 🌐 2. Šaljemo upit našem vrhovnom carinskom skladištu (Centralni API)
+        // 🔍 PAGES OUTBOUND OSCILOSKOP: Skeniramo šta ulazi i šta se pakuje za eksport
+        console.log("========== [PAGES OUTBOUND] ==========");
+        console.log("CF email inbound:", request.headers.get("Cf-Access-Authenticated-User-Email"));
+
+        const outboundHeaders = {
+            "Cf-Access-Jwt-Assertion": request.headers.get("Cf-Access-Jwt-Assertion") || "",
+            "Cf-Access-Authenticated-User-Email": request.headers.get("Cf-Access-Authenticated-User-Email") || "",
+            "Content-Type": "application/json"
+        };
+
+        console.log("Outbound header keys:", Object.keys(outboundHeaders));
+        console.log("Outbound email present:", !!outboundHeaders["Cf-Access-Authenticated-User-Email"]);
+        console.log("======================================");
+
+        // Ispaljujemo fetch sa spakovanim zaglavljima ka centralnom API-ju
         const apiResponse = await fetch("https://api.selection.rs/api/me", {
             method: "GET",
-            headers: {
-                "Cf-Access-Jwt-Assertion": cfAccessJwt || "",
-                "Cf-Access-Authenticated-User-Email": cfAccessEmail || "",
-                "Content-Type": "application/json"
-            }
+            headers: outboundHeaders
         });
 
         if (!apiResponse.ok) {
@@ -32,8 +32,6 @@ export async function onRequestGet(context) {
         }
 
         const responseData = await apiResponse.json();
-
-        // 🛡️ POPRAVKA: Pravilno mapiranje podataka iz centralnog Identity objekta Workera
         const identityData = responseData.identity || responseData;
 
         if (!identityData || !identityData.email) {
@@ -48,12 +46,12 @@ export async function onRequestGet(context) {
             });
         }
 
-        // Kriptografski potpisujemo token za Composer Sandbox (Isti HMAC SHA-256 algoritam)
+        // Klesanje tokena za klijentsku upotrebu (12 sati važnosti)
         const sessionPayload = {
             email: identityData.email,
             tenant: identityData.tenant,
             role: identityData.role,
-            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 12) // 12 sati važnosti
+            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 12)
         };
 
         const encoder = new TextEncoder();
