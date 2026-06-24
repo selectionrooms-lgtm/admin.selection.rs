@@ -1,7 +1,6 @@
-// admin.selection.rs/src/control-plane.js (V19.0.0 - API Gateway Aligned)
+// admin.selection.rs/src/control-plane.js (V19.0.0 - Token Bearer Aware)
 import { bootstrapAdmin } from './bootstrap.js';
 
-// ⚡ USTAVNA ISPRAVKA: Preusmeravamo sve UI zahteve na novi centralni API Gateway
 const API_BASE = "https://api.selection.rs";
 
 // Inicijalizacija i blokiranje UI-ja do potvrde identiteta na Edge kapiji
@@ -14,7 +13,6 @@ if (user) {
 function initControlPlane() {
     console.log("🚀 [Control Plane] Komandna stanica podignuta.");
 
-    // ⚡ DODATAK: Upisujemo ulogovani email u gornji desni zlatni bedž
     const identityBadge = document.getElementById('admin-identity');
     if (identityBadge && user) {
         identityBadge.textContent = user.email;
@@ -34,9 +32,19 @@ function setupEventListeners() {
     }
 }
 
-const fetchOptions = {
-    credentials: 'include'
-};
+// 🧠 POMOĆNA FUNKCIJA: Izlačenje tokena koji je iskovao issue_session.js ili tvoj bootstrap proces
+function uzmiUstavniToken() {
+    // Ako token držiš u localStorage pod ključem 'CF_Authorization' ili slično, ovde ga čitamo
+    return localStorage.getItem('selection_session_token') || "";
+}
+
+// Dinamičko sklapanje mrežne vize (Nema više credentials: 'include')
+function generisiBffHeaders() {
+    return {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${uzmiUstavniToken()}`
+    };
+}
 
 async function osveziMasterTabeluKorisnika() {
     const tbody = document.getElementById('users-table-body');
@@ -54,7 +62,7 @@ async function osveziMasterTabeluKorisnika() {
     try {
         const res = await fetch(`${API_BASE}/api/master/users`, {
             method: 'GET',
-            ...fetchOptions
+            headers: generisiBffHeaders() // 🛡️ Ustavno lepljenje tokena
         });
 
         if (!res.ok) throw new Error(`Edge ruter vratio status: ${res.status}`);
@@ -68,7 +76,7 @@ async function osveziMasterTabeluKorisnika() {
             emptyTd.style.cssText = "color: var(--text-secondary); padding: 40px;";
             emptyTd.textContent = "U bazi trenutno nema registrovanih klijentskih matrica.";
             emptyTr.appendChild(emptyTd);
-            emptyTr.appendChild(emptyTd);
+            tbody.replaceChildren(emptyTr);
             return;
         }
 
@@ -77,13 +85,11 @@ async function osveziMasterTabeluKorisnika() {
         data.users.forEach(user => {
             const tr = document.createElement('tr');
 
-            // 1. Ćelija za Email
             const tdEmail = document.createElement('td');
             tdEmail.style.cssText = "font-weight: 600; color: #fff;";
             tdEmail.textContent = user.email;
             tr.appendChild(tdEmail);
 
-            // 2. Ćelija za Tenant Input
             const tdTenant = document.createElement('td');
             const tenantInput = document.createElement('input');
             tenantInput.type = "text";
@@ -93,13 +99,11 @@ async function osveziMasterTabeluKorisnika() {
             tdTenant.appendChild(tenantInput);
             tr.appendChild(tdTenant);
 
-            // 3. Ćelija za Ulogu
             const tdRole = document.createElement('td');
             tdRole.style.cssText = "text-transform: uppercase; font-size: 11px; color: var(--text-secondary); font-weight: 600; letter-spacing:0.5px;";
             tdRole.textContent = user.role || 'client';
             tr.appendChild(tdRole);
 
-            // 4. Ćelija za Status Bedž
             const tdStatus = document.createElement('td');
             const statusBadge = document.createElement('span');
             statusBadge.className = "badge";
@@ -116,7 +120,6 @@ async function osveziMasterTabeluKorisnika() {
             tdStatus.appendChild(statusBadge);
             tr.appendChild(tdStatus);
 
-            // 5. Ćelija za Verziju Pečata (Sada ispisuje našu novu v19-gateway oznaku)
             const tdVersion = document.createElement('td');
             const versionBadge = document.createElement('span');
             versionBadge.className = "badge badge-version";
@@ -124,7 +127,6 @@ async function osveziMasterTabeluKorisnika() {
             tdVersion.appendChild(versionBadge);
             tr.appendChild(tdVersion);
 
-            // 6. Ćelija za Akcije
             const tdActions = document.createElement('td');
             tdActions.style.textAlign = "right";
 
@@ -193,8 +195,7 @@ async function masterKreirajNovogKorisnika() {
     try {
         const response = await fetch(`${API_BASE}/api/master/provision-user`, {
             method: 'POST',
-            ...fetchOptions,
-            headers: { 'Content-Type': 'application/json' },
+            headers: generisiBffHeaders(), // 🛡️ Ustavno lepljenje tokena
             body: JSON.stringify({ email, tenant: subdomain })
         });
 
@@ -226,8 +227,7 @@ async function promeniStatusKlijentaMaster(email, status, inputElement) {
     try {
         const response = await fetch(`${API_BASE}/api/master/approve-user`, {
             method: 'POST',
-            ...fetchOptions,
-            headers: { 'Content-Type': 'application/json' },
+            headers: generisiBffHeaders(), // 🛡️ Ustavno lepljenje tokena
             body: JSON.stringify({ klijentEmail: email, noviStatus: status, noviTenant: targetSubdomain })
         });
 
