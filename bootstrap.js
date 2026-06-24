@@ -1,4 +1,4 @@
-// admin.selection.rs/src/bootstrap.js (V19.0.0 - Token Acquisition Engine)
+// admin.selection.rs/src/bootstrap.js (V19.0.1 - Advanced Forensic Diagnostic)
 const API_BASE = "https://api.selection.rs";
 
 export async function bootstrapAdmin() {
@@ -7,27 +7,36 @@ export async function bootstrapAdmin() {
     root.setAttribute("data-status", "loading");
 
     try {
-        console.log("🕵️‍♂️ [Bootstrap] Uzimam potpisani token sa klijentskog session servera...");
+        console.log("🕵️‍♂️ [1/4] Pokrećem bootstrap... Gađam lokalni session server na: /api/issue_session");
 
-        // 1. Gađamo lokalnu Pages funkciju koja je pod Access štitom i koja nam vraća token
         const sessionRes = await fetch("/api/issue_session", { method: "GET" });
 
-        if (!sessionRes.ok) {
-            throw new Error(`Sistemska autorizacija neuspešna (Status: ${sessionRes.status})`);
+        console.log(`📡 [2/4] Lokalni server odgovorio sa HTTP statusom: ${sessionRes.status}`);
+
+        const rawText = await sessionRes.text();
+        console.log("📄 [Sirovi tekst sa lokala]:", rawText);
+
+        let sessionData;
+        try {
+            sessionData = JSON.parse(rawText);
+        } catch (e) {
+            throw new Error(`Lokalni endpoint nije vratio JSON, već sirovi tekst/HTML! Proveri functions logove.`);
         }
 
-        const sessionData = await sessionRes.json();
+        if (sessionData.error) {
+            throw new Error(`Lokalni proksi vratio grešku: ${sessionData.error}`);
+        }
 
         if (!sessionData.token) {
-            throw new Error("Funkcija issue_session.js nije isporučila kriptografski token.");
+            throw new Error("Funkcija issue_session.js uspešno izvršena, ali nije isporučila token.");
         }
 
-        // 🔥 KLJUČNI AMANDMAN: Skladištimo token u memoriju brauzera za control-plane!
+        // Deponovanje tokena u sef brauzera
         localStorage.setItem("selection_session_token", sessionData.token);
-        console.log("🔑 [Bootstrap] Token uspešno deponovan u localStorage.");
+        console.log("🔑 [3/4] Token uspešno zaključan u localStorage.");
 
-        // 2. Sada sa tim tokenom u ruci idemo na centralni API Gateway
-        console.log("🛡️ [Bootstrap] Verifikujem deponovanu vizu na centralnom API-ju...");
+        // Odlazak na centralni API
+        console.log("🛡️ [4/4] Šaljem potpisani Bearer token na centralni API Gateway...");
         const res = await fetch(`${API_BASE}/api/me`, {
             method: 'GET',
             headers: {
@@ -35,28 +44,32 @@ export async function bootstrapAdmin() {
             }
         });
 
-        if (res.status === 401 || res.status === 403) {
-            root.setAttribute("data-status", "forbidden");
-            return null;
+        if (!res.ok) {
+            const apiErrorText = await res.text();
+            console.error(`🚨 Centralni API vratio grešku [${res.status}]:`, apiErrorText);
+            throw new Error(`API_GATEWAY_FAIL_${res.status}`);
         }
-
-        if (!res.ok) throw new Error(`API Gateway vratio status: ${res.status}`);
 
         const profile = await res.json();
         root.setAttribute("data-status", "ready");
 
-        // Palimo gornji desni zlatni bedž
         const identityBadge = document.getElementById('admin-identity');
-        if (identityBadge) {
-            identityBadge.textContent = profile.email;
+        if (identityBadge && profile.identity) {
+            identityBadge.textContent = profile.identity.email;
         }
 
-        document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: profile }));
-        return profile;
+        document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: profile.identity }));
+        return profile.identity;
 
     } catch (err) {
-        console.error("❌ Bootstrap prekid:", err);
+        console.error("❌ CRTIČNI PREKID BOOTSTRAP-A:", err.message);
         root.setAttribute("data-status", "error");
+
+        // Prikazujemo grešku direktno na ekranu u tabeli da odmah vidiš šta piše
+        const tbody = document.getElementById('users-table-body');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:var(--red-alert); padding:40px;">💥 Inicijalizacija prekinuta: ${err.message}</td></tr>`;
+        }
         return null;
     }
 }
