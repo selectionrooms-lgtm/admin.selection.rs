@@ -1,528 +1,297 @@
-/* ==========================================================================
-   SELECTION CANVAS ARCHITECTURE — style.css (Production Stable V7.0)
-   ========================================================================== */
+/* 👑 SELECTION CONTROL PLANE VISUAL ENGINE */
 
 :root {
-    --admin-bg: #0f171e;
-    --admin-card: rgba(28, 42, 57, 0.95);
-    --admin-sidebar: #0a1015;
-    --admin-accent: #d4b483;
-    --admin-text: #eee;
-    --admin-muted: #a0acb8;
-    --admin-border: rgba(255, 255, 255, 0.08);
-    --btn-glass: rgba(255, 255, 255, 0.06);
+    --bg-main: #0a0a0a;
+    --bg-card: #141416;
+    --border-color: #232326;
+    --text-primary: #ffffff;
+    --text-secondary: #8e8e93;
+    --gold: #d4af37;
+    --gold-hover: #f3cf65;
+    --red-alert: #ff453a;
+    --green-success: #30d158;
+    --font-apple: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
 }
 
-html,
 body {
-    width: 100% !important;
-    height: 100% !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
-    background-color: var(--admin-bg);
-    font-family: 'Segoe UI', Roboto, sans-serif;
-    color: var(--admin-text);
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: var(--font-apple);
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 60px;
 }
 
-/* --- 🛡️ SHIELD SYSTEM --- */
-.main-workspace-container {
-    display: none;
-    width: 100vw;
-    height: 100vh;
+/* 🌌 Header Style */
+.master-header {
+    background-color: rgba(20, 20, 22, 0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    sticky: top;
+    z-index: 100;
 }
 
-.main-workspace-container[data-status="approved"] {
-    display: flex !important;
-    flex-direction: row !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    overflow: hidden !important;
+.brand {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
 }
 
-/* --- ⏳ GLOBAL SPLASH LOCK SCREEN --- */
-.global-splash-lockout {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    background-color: #0f171e !important;
-    z-index: 999999 !important;
+.logo-gold {
+    color: var(--gold);
+    margin-right: 4px;
 }
 
-.global-splash-wrapper {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-    width: 100%;
-    max-width: 600px;
-    padding: 20px;
-    margin: 0 auto !important;
+.logo-sub {
+    color: var(--text-primary);
+    font-weight: 300;
 }
 
-/* --- LEVI PANEL: KONTROLNA TABLA (FIKSNO 320px) --- */
-.sidebar {
-    width: 320px !important;
-    min-width: 320px !important;
-    max-width: 320px !important;
-    background-color: var(--admin-sidebar);
-    padding: 22px;
+.user-badge {
+    font-size: 13px;
+    color: var(--text-secondary);
+    background-color: #1c1c1e;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+}
+
+/* 📊 Dashboard Grid */
+.dashboard-container {
+    max-width: 1400px;
+    margin: 40px auto;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+}
+
+@media (min-width: 900px) {
+    .dashboard-container {
+        grid-template-columns: 380px 1fr;
+    }
+
+    .full-width {
+        grid-column: span 1;
+    }
+}
+
+/* 🧱 Card UI */
+.control-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 900px) {
+    .full-width {
+        grid-column: span 2;
+    }
+}
+
+.card-header {
+    margin-bottom: 24px;
+}
+
+.card-header h2 {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* 🎛️ Form Components */
+.control-form {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    overflow-y: auto;
-    height: 100%;
-    border-right: 1px solid var(--admin-border);
-}
-
-.admin-brand {
-    text-align: center;
-    margin-bottom: 5px;
-    text-transform: uppercase;
-}
-
-.brand-main {
-    display: block;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 4px;
-    color: var(--admin-accent);
-    background: linear-gradient(to right, #d4b483 20%, #fff 50%, #d4b483 80%);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.brand-sub {
-    display: block;
-    font-size: 10px;
-    color: #fff;
-    letter-spacing: 1px;
-    margin-top: 2px;
-    opacity: 0.7;
-}
-
-.sidebar h2 {
-    font-size: 0.75rem;
-    color: var(--admin-accent);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    border-bottom: 1px solid var(--admin-border);
-    padding-bottom: 5px;
-    margin-top: 8px;
+    gap: 20px;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
 }
 
 .form-group label {
-    font-size: 0.65rem;
-    color: var(--admin-muted);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.color-picker-wrapper {
+.form-group input,
+.form-group select {
+    background-color: #1c1c1e;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: #fff;
+    font-size: 15px;
+    font-family: var(--font-apple);
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--gold);
+}
+
+.input-addon-wrapper {
     display: flex;
-    gap: 8px;
     align-items: center;
 }
 
-.color-picker-wrapper input[type="color"] {
-    width: 45px;
-    height: 32px;
-    border: 1px solid var(--admin-border);
-    background: none;
+.input-addon-wrapper input {
+    flex: 1;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.addon-text {
+    background-color: #1c1c1e;
+    border: 1px solid var(--border-color);
+    border-left: none;
+    padding: 12px 16px;
+    font-size: 15px;
+    color: var(--text-secondary);
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+/* ⚡ Buttons */
+.btn {
+    font-family: var(--font-apple);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
     cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.btn-gold {
+    background-color: var(--gold);
+    color: #000;
+}
+
+.btn-gold:hover {
+    background-color: var(--gold-hover);
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
     border-radius: 6px;
 }
 
-.form-group select,
-.form-group input[type="text"],
-.form-group input[type="email"],
-.form-group input[type="number"],
-.form-group textarea {
+.btn-approve {
+    background-color: rgba(48, 209, 88, 0.15);
+    color: var(--green-success);
+    border: 1px solid rgba(48, 209, 88, 0.3);
+    margin-right: 6px;
+}
+
+.btn-approve:hover {
+    background-color: var(--green-success);
+    color: #000;
+}
+
+.btn-revoke {
+    background-color: rgba(255, 69, 58, 0.15);
+    color: var(--red-alert);
+    border: 1px solid rgba(255, 69, 58, 0.3);
+}
+
+.btn-revoke:hover {
+    background-color: var(--red-alert);
+    color: #000;
+}
+
+/* 📊 Forensics Table */
+.table-responsive {
     width: 100%;
-    padding: 8px 12px;
-    background-color: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--admin-border);
-    color: white;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    outline: none;
+    overflow-x: auto;
 }
 
-.sidebar-drop-zone {
-    border: 1px dashed var(--admin-border);
-    padding: 12px;
-    text-align: center;
-    border-radius: 8px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.01);
-    transition: 0.2s;
-    font-size: 0.8rem;
+.master-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 14px;
 }
 
-/* --- 🧱 SREDNJI PANEL: RADNI PROSTOR (Maksimalno proširen na ostatak monitora) --- */
-.main-workspace {
-    flex: 1 !important;
-    /* Uzima sav preostali prostor monitora */
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    max-height: 100vh;
-    background-color: var(--admin-bg);
-    border-right: 1px solid var(--admin-border);
-    overflow: hidden;
-}
-
-.toolbar {
-    background-color: rgba(28, 42, 57, 0.4);
-    border-bottom: 1px solid var(--admin-border);
-    padding: 15px 30px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    backdrop-filter: blur(10px);
-}
-
-.toolbar-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--admin-accent);
+.master-table th {
+    color: var(--text-secondary);
+    font-weight: 500;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }
 
-.btn-add {
-    background: var(--btn-glass);
-    border: 1px solid var(--admin-border);
-    color: white;
-    padding: 8px 14px;
-    font-size: 0.75rem;
-    cursor: pointer;
-    border-radius: 8px;
+.master-table td {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    color: #e5e5ea;
+}
+
+.master-table tr:hover td {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
     font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.2s;
-}
-
-.blocks-container {
-    flex: 1;
-    padding: 30px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-/* --- 📦 LEGO KOCKICE SISTEM SA DRAG INDIKATOROM --- */
-.cms-block-card {
-    background-color: var(--admin-card);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    padding: 18px 22px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    cursor: grab;
-    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-    width: 100%;
-    user-select: none;
-}
-
-.cms-block-card:active {
-    cursor: grabbing;
-}
-
-.cms-block-card.drag-over-active {
-    box-shadow: 0 -4px 0 0 var(--admin-accent), 0 8px 20px rgba(0, 0, 0, 0.4) !important;
-    transform: scale(1.005);
-}
-
-.cms-block-card.active-block {
-    border-color: var(--admin-accent) !important;
-    background: rgba(28, 42, 57, 0.99);
-    box-shadow: 0 0 15px rgba(212, 180, 131, 0.15);
-}
-
-.block-info-side {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    flex: 1;
-}
-
-.block-num {
-    font-size: 0.8rem;
-    color: var(--admin-accent);
-    font-weight: 700;
-    min-width: 110px;
-}
-
-.block-meta-details {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.block-type-tag {
-    font-size: 0.65rem;
-    font-weight: 800;
-    color: var(--admin-muted);
-    letter-spacing: 1px;
     text-transform: uppercase;
 }
 
-.block-summary-text {
-    font-size: 0.9rem;
-    color: #fff;
-    font-weight: 600;
+.badge-approved {
+    background-color: rgba(48, 209, 88, 0.15);
+    color: var(--green-success);
 }
 
-.block-media-indicators {
-    display: flex;
-    gap: 10px;
-    font-size: 0.75rem;
-    color: var(--admin-muted);
-    margin-top: 2px;
+.badge-pending {
+    background-color: rgba(212, 175, 55, 0.15);
+    color: var(--gold);
 }
 
-.block-media-indicators span {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+.badge-revoked {
+    background-color: rgba(255, 69, 58, 0.15);
+    color: var(--red-alert);
 }
 
-.block-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
+.badge-version {
+    background-color: #232326;
+    color: var(--text-secondary);
+    font-family: monospace;
 }
 
-.btn-action {
-    background: var(--btn-glass);
-    border: 1px solid var(--admin-border);
-    color: var(--admin-text);
-    padding: 8px 16px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    border-radius: 8px;
-    font-weight: 700;
-}
-
-.btn-delete {
-    border-color: rgba(184, 29, 36, 0.4);
-    color: #b81d24;
-}
-
-/* --- 📺 DESNI PANEL: PREVIEW AREA (Fiksno 420px, organizovan kao vertikalni stub) --- */
-.preview-panel {
-    flex: none !important;
-    width: 420px !important;
-    /* Gvozdeno zaključana širina panela */
-    min-width: 420px !important;
-    max-width: 420px !important;
-    background-color: #070b0e;
-    height: 100%;
-    max-height: 100vh;
-    overflow-y: auto;
-    /* Dozvoljava skrol ako je monitorska visina mala */
-    padding: 30px 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    /* Sadržaj se ređa od vrha nadole */
-    gap: 25px;
-    /* Razmak između telefona i dugmića ispod */
-}
-
-/* 📱 MOBILNA KAPSULA (Sada je relativna baza za unutrašnju dugmad) */
-#live-simulator-screen {
-    width: 360px !important;
-    height: 82vh !important;
-    /* Vraćamo punu, elegantnu visinu */
-    border-radius: 24px;
-    background-color: #0f171e;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-    overflow: hidden;
-    position: relative;
-    /* Ključno: omogućava unutrašnje fiksiranje */
-    display: flex;
-    flex-direction: column;
-}
-
-/* 🎯 POKLOPAC: Unutrašnji target viewport dobija padding na dnu da dugmad ne prekriju tekst kockica */
-#simulator-content-target {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 24px 24px 130px 24px;
-    /* Dodatnih 130px prostora na dnu čuva tekst od preklapanja */
-    box-sizing: border-box;
-    overflow-y: auto;
-}
-
-/* 🔒 UNUTRAŠNJE ZAKLJUČANA DUGMAD (Zakucana na dno telefona, leže unutra desno/levo savršeno) */
-#floating-action-holder {
-    position: absolute !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    /* Puni tačnu širinu ekrana od 360px */
-    background: linear-gradient(to top, #0f171e 80%, rgba(15, 23, 30, 0));
-    /* Nežan blend sa modrom pozadinom */
-    padding: 20px 24px 24px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    z-index: 999;
-    pointer-events: auto;
-    box-sizing: border-box;
-}
-
-/* --- 🔍 ZOOM ENGINE --- */
-#zoom-editor-overlay {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    background: rgba(10, 16, 21, 0.98) !important;
-    backdrop-filter: blur(15px) !important;
-    z-index: 10000 !important;
-    display: none !important;
-    justify-content: center !important;
-    align-items: center !important;
-    padding: 40px !important;
-}
-
-.zoom-window {
-    width: 100%;
-    max-width: 900px;
-    height: 100%;
-    max-height: 80vh;
-    background: var(--admin-card);
-    border: 1px solid var(--admin-border);
-    border-radius: 20px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.zoom-header {
-    padding: 18px 25px;
-    border-bottom: 1px solid var(--admin-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.zoom-body {
-    flex: 1;
-    padding: 25px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
-.zoom-body .form-group select,
-.zoom-body .form-group input[type="text"],
-.zoom-body .form-group input[type="email"],
-.zoom-body .form-group input[type="number"],
-.zoom-body .form-group textarea {
-    width: 100% !important;
-    padding: 12px 14px !important;
-    background-color: rgba(7, 11, 14, 0.6) !important;
-    border: 1px solid var(--admin-border) !important;
-    color: white !important;
-    border-radius: 8px !important;
-    font-size: 0.9rem !important;
-    outline: none !important;
-}
-
-.zoom-footer {
-    padding: 18px 25px;
-    border-top: 1px solid var(--admin-border);
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 12px;
-}
-
-.zoom-drop-zone {
-    border: 2px dashed var(--admin-border);
-    padding: 22px;
+.text-center {
     text-align: center;
-    border-radius: 10px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.01);
-}
-
-.grid-2 {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-}
-
-/* --- 👑 CLEAN MASTER CARD --- */
-.master-card {
-    background: rgba(212, 180, 131, 0.02) !important;
-    border: 1px solid #d4b483 !important;
-    border-radius: 12px;
-    padding: 18px;
-    margin: 10px 0 20px 0;
-    text-align: center !important;
-    box-shadow: 0 0 20px rgba(212, 180, 131, 0.12);
-}
-
-.master-card h3 {
-    color: #d4b483 !important;
-    font-size: 0.95rem;
-    margin-bottom: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center !important;
-    gap: 8px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.master-control-plane-overlay {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    background: rgba(7, 11, 14, 0.99) !important;
-    z-index: 99999 !important;
-    overflow-y: auto !important;
-    padding: 40px !important;
 }

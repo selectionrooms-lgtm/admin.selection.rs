@@ -1,107 +1,75 @@
-// auth.js — Identity & Security Gateway Layer
+// SELECTION MASTER CONTROL PLANE — Auth Engine (V2.0.0)
 const API_BASE = "https://shell.selection.rs";
 
 export async function verifyIdentityAndGetProfile() {
-    const rootShield = document.getElementById('selection-saas-root-shield');
-    const badge = document.getElementById('user-session-badge');
+    const identityBadge = document.getElementById('admin-identity');
 
     try {
-        console.log("🪙 Phase 1: Initiating Token Exchange...");
-        const tokenRes = await fetch("/issue_session", { credentials: "include" });
-        if (!tokenRes.ok) throw new Error("Cloudflare Access rejected local session issuance.");
+        console.log("🛡️ [Master Auth] Ispitujem mrežni identitet preko centralnog Shell-a...");
 
-        const tokenData = await tokenRes.json();
-        if (!tokenData.token) throw new Error("Token mint returned empty.");
-
-        localStorage.setItem('selection_session_token', tokenData.token);
-
-        console.log("📡 Phase 2: Authenticating to public gateway...");
+        // Gađamo direktno naš novi, armirani /get_user endpoint.
+        // Pošto smo podesili CORS credentials i Access, brauzer sam šalje Cf-Access-Jwt-Assertion.
         const res = await fetch(`${API_BASE}/get_user`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${tokenData.token}` }
+            method: 'GET'
         });
 
-        if (!res.ok) throw new Error(`Shell gateway error status: ${res.status}`);
+        if (!res.ok) {
+            throw new Error(`Mrežna kapija vratila status: ${res.status}`);
+        }
 
         const userData = await res.json();
-        if (userData.error) throw new Error(userData.error);
+        if (!userData.ok || !userData.user) {
+            throw new Error(userData.error || "Nevalidan odgovor Identity Kernela.");
+        }
 
-        const profil = userData.user || userData;
-        const userEmail = profil.email || localStorage.getItem('userEmail') || "selectionrooms@gmail.com";
-        const userRole = profil.role || "client";
-        const userStatus = profil.status || "pending";
-        let activeSubdomain = profil.tenant || profil.subdomain || "admin";
+        const identity = userData.user;
 
-        if (!activeSubdomain || activeSubdomain === "undefined") activeSubdomain = "admin";
-
-        // 🧱 ČEKAONICA ZA KLIJENTE (Fiksiran raspored bez trzanja)
-        if (userRole !== "master" && userStatus !== "approved") {
-            console.warn(`🔒 Identity parked in waiting room [Status: ${userStatus}].`);
-            if (rootShield) {
-                rootShield.setAttribute('data-status', 'pending');
-
-                // 🔄 POPRAVKA 1: Koristimo classList umesto grubog brisanja celog className-a
-                rootShield.classList.remove("main-workspace-container");
-                rootShield.classList.add("global-splash-lockout");
-
-                // ⏳ POPRAVKA 2: Menjamo FontAwesome ikonicu sa nativnim emoji-jem ⏳ da sprečimo CLS dok font kasni
-                rootShield.innerHTML = `
-                    <div class="global-splash-wrapper" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                        <div style="font-size: 50px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(214,180,131,0.15));">🔒</div>
-                        <h1 style="font-family: 'Cinzel', serif; color: #d4b483; font-size: 2.2rem; margin-bottom: 15px; letter-spacing: 1px; text-transform: uppercase;">Account Review in Progress</h1>
-                        <p style="color: #eeeeee; font-size: 1rem; line-height: 1.7; opacity: 0.95; max-width: 550px;">
-                            Hello <strong style="color:#d4b483; font-weight: 600;">${userEmail}</strong>. Your Selection SaaS space has been successfully reserved and provisioned on the Edge node, but it is currently awaiting administration approval.
-                            <br><br>
-                            <span style="color: #d4b483; font-weight: 600; font-size: 0.95rem; letter-spacing: 0.3px;">
-                                ⏳ Administration is verifying your metrics and will activate your panel shortly.
-                            </span>
-                        </p>
-                        <span style="font-size: 0.75rem; margin-top: 50px; opacity: 0.2; letter-spacing: 0.5px; display: block;">Selection SaaS Engine • Identity Verified at Edge</span>
-                    </div>
-                `;
-            }
-            if (badge) {
-                badge.innerHTML = `⏳ <span style="color: #d4b483; font-weight: 600;">Awaiting Approval</span>`;
-                // POPRAVKA 3: Glatko prikazivanje badge-a bez trzanja
-                badge.style.visibility = "visible";
-                badge.style.opacity = "1";
-            }
+        // 🛑 GVOZDENA KONTROLA ZA MASTER PANEL: Samo "master" uloga ovde sme da upravlja
+        if (identity.role !== "master") {
+            console.error("🚨 Sigurnosni proboj: Pokušaj pristupa Master panelu sa neadekvatnom ulogom!");
+            document.body.innerHTML = `
+                <div style="min-height: 100vh; background-color: #0a0a0a; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: sans-serif; color: #fff; text-align: center; padding: 20px;">
+                    <div style="font-size: 60px; margin-bottom: 20px;">🚫</div>
+                    <h1 style="color: #ff453a; font-size: 24px; margin-bottom: 10px; letter-spacing: -0.5px;">Pristup Odbijen (403)</h1>
+                    <p style="color: #8e8e93; max-width: 500px; font-size: 14px; line-height: 1.6;">
+                        Identitet <strong>${identity.email}</strong> uspešno proveren na Edge čvoru, ali vaš nivo ovlašćenja (${identity.role}) ne dozvoljava pristup Master Control Plane sistemu.
+                    </p>
+                </div>
+            `;
             return null;
         }
 
-        // 🔓 USPEŠAN PROLAZ ZA MASTER / ADMIN
-        if (rootShield) {
-            rootShield.setAttribute('data-status', 'approved');
+        // 👑 USPEŠAN PROLAZ: Ti si master i sve je čisto
+        console.log(`👑 Dobrodošao nazad, Master! [Epoch: ${identity.epoch}]`);
 
-            // 🔄 POPRAVKA 1: Hirurška zamena klase kroz classList
-            rootShield.classList.remove("global-splash-lockout");
-            rootShield.classList.add("main-workspace-container");
+        if (identityBadge) {
+            identityBadge.innerHTML = `👑 <span style="color: var(--gold); font-weight: 600;">${identity.email}</span>`;
+            identityBadge.style.visibility = "visible";
+            identityBadge.style.opacity = "1";
         }
 
-        if (badge) {
-            const icon = userRole === "master" ? "👑" : "🔒";
-            badge.innerHTML = `${icon} <span style="color: var(--admin-accent); font-weight: 600;">${userEmail}</span>`;
-
-            // POPRAVKA 3: Glatko prikazivanje bez pomeranja layout-a
-            badge.style.visibility = "visible";
-            badge.style.opacity = "1";
-        }
-
-        localStorage.setItem('userEmail', userEmail);
-        localStorage.setItem('userSubdomain', activeSubdomain);
-        window.currentSubdomain = activeSubdomain;
-
-        return { userEmail, userRole, userStatus, activeSubdomain };
+        // Keširamo u lokalni storage radi brzog vizuelnog učitavanja kod osvežavanja
+        localStorage.setItem('master_email', identity.email);
+        return identity;
 
     } catch (err) {
-        console.error("❌ Gateway failure. Sandbox recovery...", err);
-        if (rootShield) {
-            rootShield.setAttribute('data-status', 'approved');
-            rootShield.classList.remove("global-splash-lockout");
-            rootShield.classList.add("main-workspace-container");
+        console.error("❌ Kvar na Identity Gateway-u Master Panela:", err.message);
+
+        if (identityBadge) {
+            identityBadge.innerHTML = `<span style="color: var(--red-alert);">🚨 Greška Autentifikacije</span>`;
         }
-        const fallbackSubdomain = localStorage.getItem('userSubdomain') || 'admin';
-        window.currentSubdomain = fallbackSubdomain;
-        return { userEmail: "fallback@selection.rs", userRole: "master", userStatus: "approved", activeSubdomain: fallbackSubdomain };
+
+        // Prikazujemo elegantan lock-screen ako mreža skroz pukne ili istekne Cloudflare sesija
+        document.body.innerHTML = `
+            <div style="min-height: 100vh; background-color: #0a0a0a; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: sans-serif; color: #fff; text-align: center; padding: 20px;">
+                <div style="font-size: 50px; margin-bottom: 20px;">🔒</div>
+                <h1 style="color: var(--gold); font-size: 22px; margin-bottom: 10px; font-weight: 500;">Sesija Prekinuta</h1>
+                <p style="color: #8e8e93; max-width: 450px; font-size: 14px; margin-bottom: 20px;">
+                    Nije moguće verifikovati vaš mrežni potpis. Osvežite stranicu ili proverite Cloudflare Access sesiju.
+                </p>
+                <button onclick="window.location.reload()" style="background-color: var(--gold); color: #000; border: none; padding: 10px 20px; font-weight: 500; border-radius: 6px; cursor: pointer;">Osveži Vezu</button>
+            </div>
+        `;
+        return null;
     }
 }

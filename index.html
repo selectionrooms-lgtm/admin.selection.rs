@@ -1,246 +1,80 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sr">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Selection Canvas - Workspace Control</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.8.0">
-    <style>
-        #selection-saas-root-shield[data-status="loading"] {
-            display: none !important;
-        }
-
-        body {
-            background-color: #0f171e !important;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-    </style>
+    <title>Selection Master Control Plane</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
 </head>
 
 <body>
 
-    <div class="main-workspace-container" id="selection-saas-root-shield" data-status="loading">
-
-        <div class="sidebar">
-            <div class="admin-brand">
-                <span class="brand-main">SELECTION</span>
-                <span class="brand-sub">Creative Innovation Space</span>
-                <div id="user-session-badge" style="display: none;"></div>
-            </div>
-
-            <div id="master-admin-blok" class="master-card" style="display: none;">
-                <h3><i class="fa-solid fa-crown"></i> Master Engine</h3>
-                <button type="button" id="btn-master-console-trigger"
-                    style="width: 100%; background: linear-gradient(135deg, #d4b483 0%, #aa8c5e 100%); color: #0a1015; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family:'Montserrat',sans-serif; text-transform:uppercase; font-size:0.75rem; letter-spacing:1px; box-shadow: 0 4px 15px rgba(212, 180, 131, 0.2); margin-top: 5px;">
-                    <i class="fa-solid fa-sliders"></i> Control Plane Console
-                </button>
-            </div>
-
-            <h2>Typography & Styling</h2>
-            <div class="form-group">
-                <label>MAIN HEADINGS (H1)</label>
-                <div class="color-picker-wrapper">
-                    <input type="color" id="color-h1" value="#d4b483">
-                    <select id="font-h1" style="flex: 1;">
-                        <option value="Cinzel">Cinzel (Elegant Academic)</option>
-                        <option value="Playfair Display">Playfair Display</option>
-                        <option value="Cormorant Garamond">Cormorant Garamond</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>SUBHEADINGS & QUOTES (H2)</label>
-                <div class="color-picker-wrapper">
-                    <input type="color" id="color-h2" value="#d4b483">
-                    <select id="font-h2" style="flex: 1;">
-                        <option value="Cormorant Garamond">Cormorant Garamond</option>
-                        <option value="Cinzel">Cinzel</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>BODY TEXT (P)</label>
-                <div class="color-picker-wrapper">
-                    <input type="color" id="color-p" value="#eeeeee">
-                    <select id="font-p" style="flex: 1;">
-                        <option value="Montserrat">Montserrat</option>
-                        <option value="Inter">Inter</option>
-                    </select>
-                </div>
-            </div>
-
-            <h2>Canvas Environment</h2>
-            <div class="form-group">
-                <label>Screen Background Color</label>
-                <input type="color" id="input-boja-pozadina" value="#0f171e">
-            </div>
-            <div class="form-group">
-                <label>Screen Background Image</label>
-                <div class="sidebar-drop-zone" id="drop-global-pozadina">
-                    <i class="fa-solid fa-image"
-                        style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
-                    <span id="label-global-pozadina">Click or drag image here</span>
-                </div>
-                <input type="hidden" id="input-slika-pozadina" value="">
-            </div>
-            <div class="form-group">
-                <label>Inner Container Background Color</label>
-                <input type="color" id="input-boja-kontejner" value="#1c2a39">
-            </div>
-
-            <h2>Atmosphere & Automation</h2>
-            <div class="form-group">
-                <label>Intro Loader Audio (.mp3)</label>
-                <div class="sidebar-drop-zone" id="drop-global-loader-muzika">
-                    <i class="fa-solid fa-music"
-                        style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
-                    <span id="label-global-loader-muzika">Click or drag .mp3 file</span>
-                </div>
-                <input type="hidden" id="input-loader-muzika" value="">
-            </div>
-            <div class="form-group">
-                <label>Idle Screensaver Audio (.mp3)</label>
-                <div class="sidebar-drop-zone" id="drop-global-ss-muzika">
-                    <i class="fa-solid fa-lock"
-                        style="color:var(--admin-accent); margin-bottom:4px; display:block; font-size:16px;"></i>
-                    <span id="label-global-ss-muzika">Click or drag .mp3 file</span>
-                </div>
-                <input type="hidden" id="input-ss-muzika" value="">
-            </div>
-            <div class="form-group">
-                <label>Screensaver Timeout (seconds)</label>
-                <input type="number" id="input-ss-tajmer" min="5" max="600" value="60">
-            </div>
+    <header class="master-header">
+        <div class="brand">
+            <span class="logo-gold">Selection</span>
+            <span class="logo-sub">Master Control</span>
         </div>
+        <div id="admin-identity" class="user-badge">Učitavanje identiteta...</div>
+    </header>
 
-        <div class="main-workspace" id="main-saas-workspace">
-            <div class="toolbar">
-                <span class="toolbar-title">Build Node:</span>
-                <button class="btn-add btn-splash-trigger" id="btn-shortcut-intro"><i
-                        class="fa-solid fa-wand-magic-sparkles"></i> + Intro</button>
-                <button class="btn-add" id="btn-add-video"><i class="fa-solid fa-circle-play"></i> + Video</button>
-                <button class="btn-add" id="btn-add-chapter"><i class="fa-solid fa-book-open"></i> + Chapter</button>
-                <button class="btn-add" id="btn-add-gate"><i class="fa-solid fa-key"></i> + Gate</button>
-                <button class="btn-add" id="btn-add-finale"><i class="fa-solid fa-crown"></i> + Outro</button>
+    <main class="dashboard-container">
+
+        <section class="control-card">
+            <div class="card-header">
+                <h2>Lansiranje Novog Klijenta</h2>
+                <p class="subtitle">Kreiranje izolovanog prostora na ivici mreže (KV/R2)</p>
             </div>
-            <div class="blocks-container" id="cms-blocks-list"></div>
-        </div>
-
-        <div class="preview-panel" id="global-preview-panel">
-            <div id="live-simulator-screen">
-                <div id="simulator-content-target"></div>
-            </div>
-        </div>
-
-        <div id="floating-action-holder"></div>
-
-        <div id="zoom-editor-overlay">
-            <div class="zoom-window">
-                <div class="zoom-header">
-                    <h3 id="zoom-module-title">EDIT MATRIX BLOCK Content</h3>
-                    <button id="btn-zoom-close-header" class="btn-action"
-                        style="border-color:#b81d24; color:#b81d24; font-weight:700;">X CLOSE WINDOW</button>
+            <form id="provision-form" class="control-form">
+                <div class="form-group">
+                    <label for="client-email">Email klijenta</label>
+                    <input type="email" id="client-email" placeholder="ime.prezime@gmail.com" required>
                 </div>
-                <div class="zoom-body" id="zoom-dynamic-body"></div>
-                <div class="zoom-footer">
-                    <button class="btn-action" id="btn-zoom-cancel" style="padding:10px 20px;">Cancel</button>
-                    <button class="btn-save" id="btn-zoom-save" style="margin:0; padding:10px 25px;"><i
-                            class="fa-solid fa-check"></i> Save & Apply Changes</button>
+                <div class="form-group">
+                    <label for="client-subdomain">Dodeljeni poddomen (Tenant)</label>
+                    <div class="input-addon-wrapper">
+                        <input type="text" id="client-subdomain" placeholder="apartman-centar" required>
+                        <span class="addon-text">.selection.rs</span>
+                    </div>
                 </div>
-            </div>
-        </div>
+                <button type="submit" class="btn btn-gold">Inicijalizuj Tenant Space</button>
+            </form>
+        </section>
 
-    </div>
+        <section class="control-card full-width">
+            <div class="card-header">
+                <h2>Sistemski Žurnal Korisnika</h2>
+                <p class="subtitle">Upravljanje vizama, ulogama i temporalnim pečatima</p>
+            </div>
+            <div class="table-responsive">
+                <table class="master-table">
+                    <thead>
+                        <tr>
+                            <th>Korisnik</th>
+                            <th>Tenant (Poddomen)</th>
+                            <th>Uloga</th>
+                            <th>Status Vize</th>
+                            <th>Verzija Zapisa</th>
+                            <th>Akcije</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <tr>
+                            <td colspan="6" class="text-center">Skeniranje baze na ivici mreže...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-    <div id="master-control-plane-overlay" class="master-control-plane-overlay" style="display: none;">
-        <div
-            style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--admin-border); padding-bottom: 20px; margin-bottom: 30px;">
-            <div>
-                <h1
-                    style="font-family: 'Cinzel', serif; color: var(--admin-accent); font-size: 2.2rem; margin: 0; letter-spacing: 1px;">
-                    Selection Control Plane</h1>
-                <p style="color: var(--admin-muted); margin: 5px 0 0 0; font-size: 0.9rem;">Central registry of Edge
-                    tenants and security visas</p>
-            </div>
-            <button id="btn-master-console-close"
-                style="background: var(--btn-glass); border: 1px solid var(--admin-border); color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s;">
-                <i class="fa-solid fa-xmark"></i> Close Panel
-            </button>
-        </div>
+    </main>
 
-        <div
-            style="background: var(--admin-sidebar); padding: 25px; border-radius: 12px; border: 1px solid rgba(214,180,131,0.25); margin-bottom: 30px; display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 200px;" class="form-group">
-                <label style="color: var(--admin-accent); font-weight: 600;">Assigned Subdomain Name</label>
-                <input type="text" id="master-novi-subdomain" placeholder="e.g. luxury-apartment"
-                    style="background: #070b0e;">
-            </div>
-            <div style="flex: 1; min-width: 200px;" class="form-group">
-                <label style="color: var(--admin-accent); font-weight: 600;">Client Email Identity</label>
-                <input type="email" id="master-novi-email" placeholder="client@domain.com" style="background: #070b0e;">
-            </div>
-            <button id="btn-master-provision-submit"
-                style="background: #d4b483; color: #0f171e; border: none; padding: 12px 25px; border-radius: 8px; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; cursor: pointer; height: 38px;">
-                <i class="fa-solid fa-plus"></i> Provision Tenant
-            </button>
-            <div id="master-status-poruka"
-                style="width: 100%; font-weight: 600; font-size: 13px; color: #d4b483; display: none; margin-top: 5px;">
-            </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;">
-            <div
-                style="background: var(--admin-sidebar); padding: 20px; border-radius: 12px; border: 1px solid var(--admin-border);">
-                <span
-                    style="font-size: 0.8rem; color: var(--admin-muted); text-transform: uppercase; letter-spacing: 0.5px;">Total
-                    Tenants</span>
-                <h3 id="stat-total-users" style="font-size: 1.8rem; margin: 10px 0 0 0; color: #fff; font-weight: 700;">
-                    0</h3>
-            </div>
-            <div
-                style="background: var(--admin-sidebar); padding: 20px; border-radius: 12px; border: 1px solid var(--admin-accent);">
-                <span
-                    style="font-size: 0.8rem; color: var(--admin-accent); text-transform: uppercase; letter-spacing: 0.5px;">Pending
-                    Queue</span>
-                <h3 id="stat-pending-users"
-                    style="font-size: 1.8rem; margin: 10px 0 0 0; color: var(--admin-accent); font-weight: 700;">0</h3>
-            </div>
-            <div
-                style="background: var(--admin-sidebar); padding: 20px; border-radius: 12px; border: 1px solid var(--admin-border);">
-                <span
-                    style="font-size: 0.8rem; color: #2ecc71; text-transform: uppercase; letter-spacing: 0.5px;">Active
-                    (Live)</span>
-                <h3 id="stat-approved-users"
-                    style="font-size: 1.8rem; margin: 10px 0 0 0; color: #2ecc71; font-weight: 700;">0</h3>
-            </div>
-        </div>
-
-        <div
-            style="background: rgba(28, 42, 57, 0.3); border-radius: 12px; border: 1px solid var(--admin-border); padding: 25px; backdrop-filter: blur(10px);">
-            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-                <thead>
-                    <tr
-                        style="border-bottom: 2px solid var(--admin-border); color: var(--admin-accent); font-weight: 700; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px;">
-                        <th style="padding: 14px;">Tenant Email</th>
-                        <th style="padding: 14px;">Assigned Subdomain</th>
-                        <th style="padding: 14px;">System Role</th>
-                        <th style="padding: 14px;">Activation Date</th>
-                        <th style="padding: 14px;">Security Status</th>
-                        <th style="padding: 14px; text-align: right;">Authorization Link</th>
-                    </tr>
-                </thead>
-                <tbody id="master-users-table-body"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <script type="module" src="shell-core.js?v=2.8.1"></script>
+    <script src="auth.js"></script>
+    <script src="control-plane.js"></script>
 </body>
 
 </html>
