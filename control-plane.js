@@ -150,7 +150,6 @@ async function osveziMasterTabeluKorisnika() {
                     const btnApprove = document.createElement('button');
                     btnApprove.className = "btn btn-sm btn-approve";
                     btnApprove.textContent = "Odobri Vizu";
-                    // Prosleđujemo id zahteva (D1 Primary Key) za izvršenje dvofaznog ugovora
                     btnApprove.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'approved'));
                     tdActions.appendChild(btnApprove);
                 } else if (klijent.status === 'active' || klijent.status === 'approved') {
@@ -160,6 +159,14 @@ async function osveziMasterTabeluKorisnika() {
                     btnBlock.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'blocked'));
                     tdActions.appendChild(btnBlock);
                 }
+
+                // Dugme za brisanje — dostupno za sve statuse (osim master naloga)
+                const btnDelete = document.createElement('button');
+                btnDelete.className = "btn btn-sm btn-delete";
+                btnDelete.textContent = "🗑 Obriši";
+                btnDelete.style.cssText = "margin-left: 8px; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #f07070;";
+                btnDelete.addEventListener('click', () => obrisiKlijentaMaster(klijent.id, klijent.email));
+                tdActions.appendChild(btnDelete);
             }
             tr.appendChild(tdActions);
             noviRedovi.push(tr);
@@ -249,6 +256,30 @@ async function promeniStatusKlijentaMaster(requestId, status) {
             await osveziMasterTabeluKorisnika();
         } else {
             alert(`🔒 Bezbednosna kapija odbila promenu prava: ${rez.error || ''}`);
+        }
+    } catch (e) {
+        alert("❌ Veza sa Control Plane panelom je prekinuta.");
+    }
+}
+
+/**
+ * BRISANJE KLIJENTA: Trajno briše sve D1 zapise vezane za klijenta
+ */
+async function obrisiKlijentaMaster(requestId, email) {
+    if (!confirm(`⚠️ TRAJNO BRISANJE\n\nOvo će obrisati sve podatke za:\n${email}\n\nAkcija je nepovratna. Nastaviti?`)) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/api/master/delete-request`, {
+            method: 'POST',
+            headers: generisiBffHeaders(),
+            body: JSON.stringify({ requestId })
+        });
+
+        const rez = await response.json();
+        if (response.ok && rez.success) {
+            await osveziMasterTabeluKorisnika();
+        } else {
+            alert(`❌ Greška pri brisanju: ${rez.error || 'Nepoznata greška'}`);
         }
     } catch (e) {
         alert("❌ Veza sa Control Plane panelom je prekinuta.");
