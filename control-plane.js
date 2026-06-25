@@ -1,4 +1,4 @@
-// admin.selection.rs/src/control-plane.js (V19.0.0 - Token Bearer Aware)
+// admin.selection.rs/src/control-plane.js (V20.0.0 - D1 Alignment Layer)
 import { bootstrapAdmin } from './bootstrap.js';
 
 const API_BASE = "https://api.selection.rs";
@@ -11,7 +11,7 @@ if (user) {
 }
 
 function initControlPlane() {
-    console.log("🚀 [Control Plane] Komandna stanica podignuta.");
+    console.log("🚀 [Control Plane] Komandna stanica podignuta na D1 šini.");
 
     const identityBadge = document.getElementById('admin-identity');
     if (identityBadge && user) {
@@ -25,20 +25,20 @@ function initControlPlane() {
 function setupEventListeners() {
     const form = document.getElementById('provision-form');
     if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await masterKreirajNovogKorisnika();
-        });
+        form.removeEventListener('submit', handleFormSubmit); // Prevent dupliranja
+        form.addEventListener('submit', handleFormSubmit);
     }
 }
 
-// 🧠 POMOĆNA FUNKCIJA: Izlačenje tokena koji je iskovao issue_session.js ili tvoj bootstrap proces
+async function handleFormSubmit(e) {
+    e.preventDefault();
+    await masterKreirajNovogKorisnika();
+}
+
 function uzmiUstavniToken() {
-    // Ako token držiš u localStorage pod ključem 'CF_Authorization' ili slično, ovde ga čitamo
     return localStorage.getItem('selection_session_token') || "";
 }
 
-// Dinamičko sklapanje mrežne vize (Nema više credentials: 'include')
 function generisiBffHeaders() {
     return {
         "Content-Type": "application/json",
@@ -46,114 +46,118 @@ function generisiBffHeaders() {
     };
 }
 
+/**
+ * SKENIRANJE ČEKAONICE: Vuče sirove `tenant_requests` zahteve iz D1 baze podataka
+ */
 async function osveziMasterTabeluKorisnika() {
     const tbody = document.getElementById('users-table-body');
     if (!tbody) return;
 
+    // Loading Držanje
     const loadingTr = document.createElement('tr');
     const loadingTd = document.createElement('td');
     loadingTd.colSpan = 6;
     loadingTd.className = "text-center";
     loadingTd.style.cssText = "color: var(--gold); padding: 40px; font-weight:500;";
-    loadingTd.textContent = "⚡ Autorizujem viza kanal, skeniram Edge KV magistralu...";
+    loadingTd.textContent = "⚡ Povezujem se na D1 relej, povlačim stanje iz čekaonice...";
     loadingTr.appendChild(loadingTd);
     tbody.replaceChildren(loadingTr);
 
     try {
+        // NAPOMENA: Ovde u praksi možeš gađati i svoj novi /api/master/users, 
+        // ali pošto sada pratimo pipeline čekaonice, povlačimo zahteve iz tabele tenant_requests
         const res = await fetch(`${API_BASE}/api/master/users`, {
             method: 'GET',
-            headers: generisiBffHeaders() // 🛡️ Ustavno lepljenje tokena
+            headers: generisiBffHeaders()
         });
 
         if (!res.ok) throw new Error(`Edge ruter vratio status: ${res.status}`);
 
         const data = await res.json();
+
+        // D1 vraća niz u data.users (promenili smo backend da vraća clients redove)
         if (!data.success || !data.users || data.users.length === 0) {
-            const emptyTr = document.createElement('tr');
-            const emptyTd = document.createElement('td');
-            emptyTd.colSpan = 6;
-            emptyTd.className = "text-center";
-            emptyTd.style.cssText = "color: var(--text-secondary); padding: 40px;";
-            emptyTd.textContent = "U bazi trenutno nema registrovanih klijentskih matrica.";
-            emptyTr.appendChild(emptyTd);
-            tbody.replaceChildren(emptyTr);
+            PrikaziPraznuTabelu(tbody, "U D1 bazi trenutno nema registrovanih klijenata.");
             return;
         }
 
         const noviRedovi = [];
 
-        data.users.forEach(user => {
+        data.users.forEach(klijent => {
             const tr = document.createElement('tr');
 
+            // 1. Email klijenta
             const tdEmail = document.createElement('td');
             tdEmail.style.cssText = "font-weight: 600; color: #fff;";
-            tdEmail.textContent = user.email;
+            tdEmail.textContent = klijent.email;
             tr.appendChild(tdEmail);
 
+            // 2. Alocirani / Rezervisani prostor (Tenant ID)
             const tdTenant = document.createElement('td');
             const tenantInput = document.createElement('input');
             tenantInput.type = "text";
-            tenantInput.value = user.tenant || user.subdomain || '';
+            tenantInput.value = klijent.tenant_id || klijent.requested_subdomain || 'Nije alociran';
             tenantInput.className = "shell-input";
             tenantInput.style.cssText = "width: 180px; padding: 5px 10px;";
+            tenantInput.disabled = true; // Zabrana direktne mutacije bez pipeline-a
             tdTenant.appendChild(tenantInput);
             tr.appendChild(tdTenant);
 
+            // 3. Uloga (Sistemski nivo)
             const tdRole = document.createElement('td');
             tdRole.style.cssText = "text-transform: uppercase; font-size: 11px; color: var(--text-secondary); font-weight: 600; letter-spacing:0.5px;";
-            tdRole.textContent = user.role || 'client';
+            tdRole.textContent = klijent.role || 'client';
             tr.appendChild(tdRole);
 
+            // 4. Status Vize
             const tdStatus = document.createElement('td');
             const statusBadge = document.createElement('span');
             statusBadge.className = "badge";
-            if (user.status === 'approved') {
+
+            if (klijent.status === 'active' || klijent.status === 'approved') {
                 statusBadge.classList.add('badge-approved');
-                statusBadge.textContent = "✔️ Odobren";
-            } else if (user.status === 'blocked' || user.status === 'revoked') {
+                statusBadge.textContent = "✔️ Aktivan / Odobren";
+            } else if (klijent.status === 'blocked' || klijent.status === 'rejected') {
                 statusBadge.classList.add('badge-revoked');
-                statusBadge.textContent = "⛔ Blokiran";
+                statusBadge.textContent = "⛔ Blokiran / Odbijen";
             } else {
                 statusBadge.classList.add('badge-pending');
-                statusBadge.textContent = "⏳ Na čekanju";
+                statusBadge.textContent = "⏳ Čekaonica";
             }
             tdStatus.appendChild(statusBadge);
             tr.appendChild(tdStatus);
 
-            const tdVersion = document.createElement('td');
-            const versionBadge = document.createElement('span');
-            versionBadge.className = "badge badge-version";
-            versionBadge.textContent = user.version || 'v19-edge';
-            tdVersion.appendChild(versionBadge);
-            tr.appendChild(tdVersion);
+            // 5. Datum kreiranja matrice (D1 Timestamp umesto KV verzije)
+            const tdDate = document.createElement('td');
+            const dateBadge = document.createElement('span');
+            dateBadge.className = "badge badge-version";
+            dateBadge.textContent = klijent.created_at ? klijent.created_at.split(' ')[0] : 'Uživo';
+            tdDate.appendChild(dateBadge);
+            tr.appendChild(tdDate);
 
+            // 6. Akcije / Komandni dugmići
             const tdActions = document.createElement('td');
             tdActions.style.textAlign = "right";
 
-            if (user.email === "selectionrooms@gmail.com") {
+            if (klijent.email === "selectionrooms@gmail.com") {
                 const centralCoreSpan = document.createElement('span');
                 centralCoreSpan.style.cssText = "color: var(--gold); font-size: 12px; font-style: italic; font-weight: 500;";
                 centralCoreSpan.textContent = "Centralno Jezgro";
                 tdActions.appendChild(centralCoreSpan);
             } else {
-                if (user.status === 'approved') {
-                    const btnRevoke = document.createElement('button');
-                    btnRevoke.className = "btn btn-sm btn-revoke";
-                    btnRevoke.textContent = "Oduzmi Vizu";
-                    btnRevoke.addEventListener('click', () => promeniStatusKlijentaMaster(user.email, 'blocked', tenantInput));
-                    tdActions.appendChild(btnRevoke);
-                } else {
+                // Ako klijent još nije odobren, daj opciju za brzu aktivaciju
+                if (klijent.status === 'pending') {
                     const btnApprove = document.createElement('button');
                     btnApprove.className = "btn btn-sm btn-approve";
-                    btnApprove.textContent = "Odobri";
-                    btnApprove.addEventListener('click', () => promeniStatusKlijentaMaster(user.email, 'approved', tenantInput));
-
+                    btnApprove.textContent = "Odobri Vizu";
+                    // Prosleđujemo id zahteva (D1 Primary Key) za izvršenje dvofaznog ugovora
+                    btnApprove.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'approved'));
+                    tdActions.appendChild(btnApprove);
+                } else if (klijent.status === 'active' || klijent.status === 'approved') {
                     const btnBlock = document.createElement('button');
                     btnBlock.className = "btn btn-sm btn-revoke";
-                    btnBlock.textContent = "Blokiraj";
-                    btnBlock.addEventListener('click', () => promeniStatusKlijentaMaster(user.email, 'blocked', tenantInput));
-
-                    tdActions.appendChild(btnApprove);
+                    btnBlock.textContent = "Oduzmi Vizu";
+                    btnBlock.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'blocked'));
                     tdActions.appendChild(btnBlock);
                 }
             }
@@ -169,15 +173,30 @@ async function osveziMasterTabeluKorisnika() {
         errorTd.colSpan = 6;
         errorTd.className = "text-center";
         errorTd.style.cssText = "color: var(--red-alert); padding: 40px; font-weight: 500;";
-        errorTd.textContent = `❌ Greška prilikom komunikacije sa magistralom: ${err.message}`;
+        errorTd.textContent = `❌ Greška prilikom komunikacije sa D1 šinom: ${err.message}`;
         errorTr.appendChild(errorTd);
         tbody.replaceChildren(errorTr);
     }
 }
 
+function PrikaziPraznuTabelu(tbody, tekst) {
+    const emptyTr = document.createElement('tr');
+    const emptyTd = document.createElement('td');
+    emptyTd.colSpan = 6;
+    emptyTd.className = "text-center";
+    emptyTd.style.cssText = "color: var(--text-secondary); padding: 40px;";
+    emptyTd.textContent = tekst;
+    emptyTr.appendChild(emptyTd);
+    tbody.replaceChildren(emptyTr);
+}
+
+/**
+ * RUČNA ALOKACIJA: Kada ti iz admina želiš direktno da gurneš nekoga u čekaonicu
+ */
 async function masterKreirajNovogKorisnika() {
     const emailInput = document.getElementById('client-email');
     const subInput = document.getElementById('client-subdomain');
+    const companyInput = document.getElementById('client-company') || { value: "Ručni unos" };
 
     if (!emailInput || !subInput) return;
     const email = emailInput.value.trim();
@@ -185,23 +204,22 @@ async function masterKreirajNovogKorisnika() {
 
     if (!email || !subdomain) return;
 
-    if (!/^[a-z0-9-]+$/.test(subdomain)) {
-        alert("❌ Format greška: Poddomen sme da sadrži samo mala slova, brojeve i crtice.");
-        return;
-    }
-
-    if (!confirm(`Alocirati prostor u čekaonici za: ${email} na adresi https://${subdomain}.selection.rs?`)) return;
-
     try {
-        const response = await fetch(`${API_BASE}/api/master/provision-user`, {
+        const response = await fetch(`${API_BASE}/api/onboarding/request`, {
             method: 'POST',
-            headers: generisiBffHeaders(), // 🛡️ Ustavno lepljenje tokena
-            body: JSON.stringify({ email, tenant: subdomain })
+            headers: { "Content-Type": "application/json" }, // Otvorena javna ruta
+            body: JSON.stringify({
+                company_name: companyInput.value || "Selection Klijent",
+                email: email,
+                phone: "+381",
+                requested_subdomain: subdomain,
+                message: "Kreirano sa Master Admin Panela"
+            })
         });
 
         const rez = await response.json();
         if (response.ok && rez.success) {
-            alert(`🎉 USPEŠNO: Korisnik ${email} upisan u sistemsku čekaonicu.`);
+            alert(`🎉 USPEŠNO: Zahtev alociran pod ID oznakom: ${rez.correlationId}`);
             emailInput.value = '';
             subInput.value = '';
             await osveziMasterTabeluKorisnika();
@@ -209,32 +227,28 @@ async function masterKreirajNovogKorisnika() {
             alert(`❌ Greška: ${rez.error || "Odbijeno sa servera."}`);
         }
     } catch (error) {
-        alert("❌ Prekid veze sa centralnim Shell ruterom.");
+        alert("❌ Prekid veze sa centralnim D1 ruterom.");
     }
 }
 
-async function promeniStatusKlijentaMaster(email, status, inputElement) {
-    if (!inputElement) return;
-    const targetSubdomain = inputElement.value.trim().toLowerCase();
-
-    if (!targetSubdomain) {
-        alert("❌ Greška: Poddomen mora biti popunjen.");
-        return;
-    }
-
-    if (!confirm(status === 'approved' ? `Odobriti aktivaciju za nalog ${email}?` : `Blokirati pristup za ${email}?`)) return;
+/**
+ * MUTACIJA STATUSU: Odobravanje vize kroz novu D1 /api/master/approve-user rutu
+ */
+async function promeniStatusKlijentaMaster(requestId, status) {
+    if (!confirm(status === 'approved' ? `Odobriti aktivaciju i pokrenuti automatski provisioning?` : `Suspendovati klijenta?`)) return;
 
     try {
         const response = await fetch(`${API_BASE}/api/master/approve-user`, {
             method: 'POST',
-            headers: generisiBffHeaders(), // 🛡️ Ustavno lepljenje tokena
-            body: JSON.stringify({ klijentEmail: email, noviStatus: status, noviTenant: targetSubdomain })
+            headers: generisiBffHeaders(),
+            body: JSON.stringify({ requestId, noviStatus: status })
         });
 
-        if (response.ok) {
+        const rez = await response.json();
+        if (response.ok && rez.success) {
             await osveziMasterTabeluKorisnika();
         } else {
-            alert("🔒 Bezbednosna kapija odbila promenu prava.");
+            alert(`🔒 Bezbednosna kapija odbila promenu prava: ${rez.error || ''}`);
         }
     } catch (e) {
         alert("❌ Veza sa Control Plane panelom je prekinuta.");
