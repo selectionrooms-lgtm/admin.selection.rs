@@ -17,7 +17,7 @@ export const AUTH_STATE = {
 async function safeFetch(url) {
     const res = await fetch(url, {
         method: "GET",
-        credentials: "include", // Automatski donosi i upisuje selection_session kolačić
+        credentials: "include", // 👈 KLJUČNO: Donosi i šalje kolačić automatski
         headers: { "Content-Type": "application/json" }
     });
 
@@ -80,7 +80,7 @@ export async function bootstrapAdmin() {
                 const exchangeRes = await fetch(`${API_BASE}/api/auth/exchange`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    credentials: "include", // KLJUČNO: Dozvoljava API-ju da uklesi Set-Cookie u pretraživač
+                    credentials: "include", // 👈 KLJUČNO: Dozvoljava API-ju da urezuje Set-Cookie
                     body: JSON.stringify({ cfToken: cfTokenAssertion })
                 });
 
