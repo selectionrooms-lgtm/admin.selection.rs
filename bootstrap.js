@@ -1,4 +1,4 @@
-// admin.selection.rs/bootstrap.js (V19.0.8 - Production Stable Bootstrap)
+// admin.selection.rs/bootstrap.js (V19.1.0 - Pure Cloudflare Access Native Bootstrap)
 const API_BASE = "https://api.selection.rs";
 
 export async function bootstrapAdmin() {
@@ -7,44 +7,23 @@ export async function bootstrapAdmin() {
     root.setAttribute("data-status", "loading");
 
     try {
-        console.log("🕵️‍♂️ [1/4] Pokrećem bootstrap... Gađam lokalni session server na: /api/issue_session");
+        console.log("🕵️‍♂️ [1/4] Pokrećem bootstrap... Proveravam potpisani Cloudflare Access identitet.");
 
-        // Poziv ka Pages funkciji u functions/api/issue_session.js
-        const sessionRes = await fetch("/api/issue_session", { method: "GET" });
-
-        console.log(`📡 [2/4] Lokalni server odgovorio sa HTTP statusom: ${sessionRes.status}`);
-
-        const rawText = await sessionRes.text();
-        console.log("📄 [Sirovi tekst sa lokala]:", rawText);
-
-        let sessionData;
-        try {
-            sessionData = JSON.parse(rawText);
-        } catch (e) {
-            throw new Error(`Lokalni endpoint nije vratio JSON, već sirovi tekst/HTML! Proveri functions logove.`);
-        }
-
-        if (sessionData.error) {
-            throw new Error(`Lokalni proksi vratio grešku: ${sessionData.error}`);
-        }
-
-        if (!sessionData.token) {
-            throw new Error("Funkcija issue_session.js uspešno izvršena, ali nije isporučila token.");
-        }
-
-        // Deponovanje iskovanog tokena u skladište brauzera
-        localStorage.setItem("selection_session_token", sessionData.token);
-        console.log("🔑 [3/4] Token uspešno zaključan u localStorage.");
-
-        // Odlazak na centralni API Gateway sa potpisanim Bearer tokenom radi finalne overe viza kanala
-        console.log("🛡️ [4/4] Šaljem potpisani Bearer token na centralni API Gateway...");
+        // 🛡️ Korak 2: Gađamo direktno centralni API mozak — browser sam šalje CF_Authorization kolačiće
         const res = await fetch(`${API_BASE}/api/me`, {
             method: 'GET',
+            credentials: 'include', // KLJUČNO: Omogućava prenos Access viza između poddomena
             headers: {
-                "Authorization": `Bearer ${sessionData.token}`,
                 "Content-Type": "application/json"
             }
         });
+
+        console.log(`📡 [2/4] Centralni API Gateway odgovorio sa HTTP statusom: ${res.status}`);
+
+        // Ako nas je sačekao Cloudflare login izazov ili nemamo dozvolu
+        if (res.status === 401 || res.status === 403) {
+            throw new Error(`🔒 Nemate pravo pristupa Control Plane sloju (Status: ${res.status}).`);
+        }
 
         if (!res.ok) {
             const apiErrorText = await res.text();
@@ -61,6 +40,12 @@ export async function bootstrapAdmin() {
             throw new Error("Sistem je overio token, ali profil ne sadrži validne podatke o identitetu.");
         }
 
+        // Gvozdena provera uloge na samom ulazu u klijentski panel
+        if (finalIdentity.role !== "master") {
+            throw new Error("Pristup odbijen: Vaš nalog nema Master administrativne privilegije.");
+        }
+
+        console.log("🔑 [3/4] Identitet uspešno verifikovan i potvrđen od strane D1 jezgra.");
         root.setAttribute("data-status", "ready");
 
         const identityBadge = document.getElementById('admin-identity');
@@ -68,6 +53,7 @@ export async function bootstrapAdmin() {
             identityBadge.textContent = finalIdentity.email;
         }
 
+        console.log(`🛡️ [4/4] Inicijalizacija uspešna. Dobrodošao nazad, ${finalIdentity.email}`);
         document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: finalIdentity }));
         return finalIdentity;
 
@@ -77,7 +63,7 @@ export async function bootstrapAdmin() {
 
         const tbody = document.getElementById('users-table-body');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:var(--red-alert); padding:40px; font-weight:600;">💥 Inicijalizacija prekinuta: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:var(--red-alert); padding:40px; font-weight:600;">💥 Inicijalizacija prekinuta: ${err.message}</td></tr>`;
         }
         return null;
     }
