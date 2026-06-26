@@ -1,4 +1,4 @@
-// admin.selection.rs/bootstrap.js (V25.0.0 - Twin-Engine Explicit Exchange)
+// admin.selection.rs/bootstrap.js (V25.1.0 - Hardened Twin-Engine Explicit Exchange)
 const API_BASE = "https://api.selection.rs";
 
 // 🪐 SSOT AUTH STATE MACHINE
@@ -11,20 +11,26 @@ export const AUTH_STATE = {
 
 /**
  * 🛡️ SAFE FETCH PRESRETAČ
- * Osigurava da ne pokušavamo da parsiramo HTML login stranice ako nešto pukne na mreži.
+ * Striktno kontroliše JSON parsiranje i seče HTML anomalije.
+ * Za bazične rute vraća sirovi odgovor kako bi bootstrap mogao sam da kontroliše statuse (401, 403).
  */
 async function safeFetch(url) {
     const res = await fetch(url, {
         method: "GET",
-        credentials: "include", // Donosi selection_session kolačić automatski
+        credentials: "include", // Automatski donosi i upisuje selection_session kolačić
         headers: { "Content-Type": "application/json" }
     });
 
     const text = await res.text();
     const looksLikeHtml = text.trim().startsWith("<!DOCTYPE") || text.trim().startsWith("<html");
 
-    if (looksLikeHtml || res.status === 401 || res.status === 403) {
-        throw new Error("NO_AUTH_SESSION");
+    if (looksLikeHtml) {
+        throw new Error("CRITICAL_MIGRATION_WALL: Received HTML response instead of JSON API contract.");
+    }
+
+    if (!res.ok) {
+        // Ako je 401 ili bilo šta drugo, pakujemo status u error poruku da bootstrap zna kako da ruta
+        throw new Error(`API_STATUS_${res.status}`);
     }
 
     try {
@@ -38,60 +44,71 @@ export async function bootstrapAdmin() {
     const root = document.getElementById("selection-admin-root");
     if (!root) return null;
 
-    // Inicijalizacija mašine stanja
+    // Inicijalizacija mašine stanja u LOADING režim
     root.setAttribute("data-status", AUTH_STATE.LOADING);
 
     try {
-        console.log("🕵️‍♂️ [1/4] Pokrećem bootstrap... Provera sistemske JWT sesije.");
+        console.log("🕵️‍♂️ [1/4] Pokrećem bootstrap... Provera sistemske JWT sesije na ivici.");
 
         let profile;
         try {
-            // Prvo proveravamo da li browser već ima važeći selection_session kolačić
+            // Korak A: Proveravamo da li browser već ima važeći selection_session kolačić
             profile = await safeFetch(`${API_BASE}/api/me`);
+            console.log("🟢 [Direct Auth] Aktivna sesija pronađena. Preskačem razmenu.");
         } catch (err) {
-            if (err.message === "NO_AUTH_SESSION") {
-                console.log("🔄 Sistemska sesija fali. Povlačim CF token iz lokalnog Pages proksija...");
+            // Ako sesije nema (API vratio 401), pokrećemo proces eksplicitne razmene tokena
+            if (err.message === "API_STATUS_401") {
+                console.log("🔄 Sistemska sesija fali na API-ju. Povlačim CF token iz lokalnog Pages proksija...");
 
-                // Gađamo lokalni Pages Functions proksi na ISTOM domenu da nam izvuče cf-access-jwt-assertion
+                // Korak B: Gađamo lokalni Pages Functions proksi na ISTOM domenu da nam izvuče cf-access-jwt-assertion
                 const localProxyRes = await fetch(`${window.location.origin}/api/me`);
                 if (!localProxyRes.ok) throw new Error("NO_AUTH_SESSION");
 
                 const proxyData = await localProxyRes.json();
 
-                // Uzimamo sirovi token iz proksija
-                const cfTokenAssertion = proxyData.token || proxyData.jwt || document.cookie.match(/CF_Authorization=([^;]+)/)?.[1];
+                // Korak C: Izvlačenje sirovog tokena iz proksija kroz sve ustavne kanale
+                const cfTokenAssertion = proxyData.token || proxyData.jwt || proxyData.assertion || document.cookie.match(/CF_Authorization=([^;]+)/)?.[1];
 
                 if (!cfTokenAssertion) {
+                    console.warn("⚠️ Cloudflare Access token nije pronađen na lokalnom proksiju.");
                     throw new Error("NO_AUTH_SESSION");
                 }
 
-                console.log("🚀 Pokrećem eksplicitnu razmenu na API sloju (Token Exchange)...");
+                console.log("🚀 [Token Bridge] Pokrećem eksplicitnu razmenu na API sloju (/api/auth/exchange)...");
+
+                // Korak D: Izvršavamo stvarni POST zahtev za razmenu koji upisuje kolačić sa ispravnim domenom
                 const exchangeRes = await fetch(`${API_BASE}/api/auth/exchange`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    credentials: "include", // Ključno: dozvoljava API-ju da upiše Set-Cookie
+                    credentials: "include", // KLJUČNO: Dozvoljava API-ju da uklesi Set-Cookie u pretraživač
                     body: JSON.stringify({ cfToken: cfTokenAssertion })
                 });
 
-                if (!exchangeRes.ok) throw new Error("NO_AUTH_SESSION");
+                if (!exchangeRes.ok) {
+                    const errData = await exchangeRes.json().catch(() => ({}));
+                    console.error("❌ Razmena tokena na API-ju odbijena:", errData.error || exchangeRes.statusText);
+                    throw new Error("NO_AUTH_SESSION");
+                }
 
-                console.log("🟢 Razmena uspešna. Re-entry verifikacija pokrenuta...");
-                profile = await safeFetch(`${API_BASE}/api/me`);
+                console.log("🟢 Razmena uspešna (Kolačić upisan). Pokrećem re-entry verifikaciju identiteta...");
+
+                // Korak E: Re-entry verifikacija profilnog konteksta nakon što je sesija uspešno uspostavljena
+                profile = await safeFetch(`${API_BASE}/api/me?t=${Date.now()}`);
             } else {
-                throw err;
+                throw err; // Propuštamo sve ostale stvarne krahove formata
             }
         }
 
         const finalIdentity = profile.identity || profile;
         console.log("🔑 [3/4] Identitet uspešno verifikovan kroz sistemsko jezgro.");
 
-        // Uspešna tranzicija u AUTHENTICATED
+        // Uspešna tranzicija cele aplikacije u AUTHENTICATED stanje
         root.setAttribute("data-status", AUTH_STATE.AUTHENTICATED);
 
         const identityBadge = document.getElementById('admin-identity');
         if (identityBadge) identityBadge.textContent = finalIdentity.email;
 
-        console.log(`🛡️ [4/4] Inicijalizacija uspešna. Dobrodošao nazad, ${finalIdentity.email}`);
+        console.log(`🛡️ [4/4] Inicijalizacija uspešna. Dobrodošao nazad u Selection štab, ${finalIdentity.email}`);
         document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: finalIdentity }));
         return finalIdentity;
 
