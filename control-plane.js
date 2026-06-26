@@ -1,60 +1,15 @@
-// SELECTION CONTROL PLANE — admin-core.js (V4.5.0 - Fully CF Access Grounded)
+// SELECTION CONTROL PLANE — admin-core.js (V4.6.0 - Anti-Race Condition Grounded)
 import { bootstrapAdmin } from './bootstrap.js';
 
 const API_BASE = "https://api.selection.rs";
-const user = await bootstrapAdmin();
 
-// 🧠 Globalni keš za munjevitu pretragu bez stalnog maltretiranja D1 baze podataka
+// 🧠 Globalni kontekst aplikacije (RAM keš i identitet)
+let trenutnoUlogovaniKorisnik = null;
 let sviKorisniciKes = [];
 
-if (user) {
-    initControlPlane();
-}
-
-function initControlPlane() {
-    console.log("🚀 [Control Plane] Komandna stanica podignuta na Native Cloudflare Access šini.");
-
-    const identityBadge = document.getElementById('admin-identity');
-    if (identityBadge && user) {
-        identityBadge.textContent = user.email;
-    }
-
-    osveziMasterTabeluKorisnika();
-    setupEventListeners();
-}
-
-function setupEventListeners() {
-    const form = document.getElementById('provision-form');
-    if (form) {
-        form.removeEventListener('submit', handleFormSubmit);
-        form.addEventListener('submit', handleFormSubmit);
-    }
-
-    // 🔍 Osluškivač za brzu pretragu unutar input polja
-    const searchInput = document.getElementById('master-search');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            const pojam = e.target.value.toLowerCase().trim();
-
-            const filtriraniKorisnici = sviKorisniciKes.filter(k => {
-                const emailMec = k.email ? k.email.toLowerCase().includes(pojam) : false;
-                const phoneMec = k.phone ? k.phone.toLowerCase().includes(pojam) : false;
-                return emailMec || phoneMec;
-            });
-
-            renderujTabelu(filtriraniKorisnici);
-        });
-    }
-}
-
-async function handleFormSubmit(e) {
-    e.preventDefault();
-    await masterKreirajNovogKorisnika();
-}
-
 /**
- * 🛡️ USTAVNI TRANSPORT: Potpuno izbačen stari Bearer/JWT šum.
- * Oslanjamo se isključivo na credentials: 'include' jer browser sam lepi CF Access vize.
+ * 🪐 USTAVNI TRANSPORT: Potpuno izbačen stari Bearer/JWT šum.
+ * Oslanjamo se isključivo na credentials: 'include' jer browser sam lepi Selection kolačiće.
  */
 export async function studioFetch(url, options = {}) {
     options.headers = {
@@ -83,6 +38,60 @@ export async function studioFetch(url, options = {}) {
     }
 }
 
+/**
+ * 🛡️ ZAUSTAVLJANJE RACE CONDITION-A
+ * Aplikacija ne sme da puca u prazno. Slušamo proglas iz bootstrap-a 
+ * i tek po uspešnoj verifikaciji identiteta otvaramo komandnu stanicu.
+ */
+document.addEventListener('ShellProvisionalReady', async (event) => {
+    trenutnoUlogovaniKorisnik = event.detail;
+    console.log("🚀 [Control Plane] Signal primljen! Identitet verifikovan na ivici mreže:", trenutnoUlogovaniKorisnik.email);
+
+    initControlPlane();
+});
+
+function initControlPlane() {
+    console.log("🎮 [Control Plane] Komandna stanica aktivirana u punom kapacitetu.");
+
+    const identityBadge = document.getElementById('admin-identity');
+    if (identityBadge && trenutnoUlogovaniKorisnik) {
+        identityBadge.textContent = trenutnoUlogovaniKorisnik.email;
+    }
+
+    // Pokrećemo punjenje tabela i vezivanje osluškivača tek kada imamo gvozdenu sesiju
+    osveziMasterTabeluKorisnika();
+    setupEventListeners();
+}
+
+function setupEventListeners() {
+    const form = document.getElementById('provision-form');
+    if (form) {
+        form.removeEventListener('submit', handleFormSubmit);
+        form.addEventListener('submit', handleFormSubmit);
+    }
+
+    // 🔍 Osluškivač za brzu pretragu unutar input polja (Čita direktno iz RAM keša)
+    const searchInput = document.getElementById('master-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const pojam = e.target.value.toLowerCase().trim();
+
+            const filtriraniKorisnici = sviKorisniciKes.filter(k => {
+                const emailMec = k.email ? k.email.toLowerCase().includes(pojam) : false;
+                const phoneMec = k.phone ? k.phone.toLowerCase().includes(pojam) : false;
+                return emailMec || phoneMec;
+            });
+
+            renderujTabelu(filtriraniKorisnici);
+        });
+    }
+}
+
+async function handleFormSubmit(e) {
+    e.preventDefault();
+    await masterKreirajNovogKorisnika();
+}
+
 async function osveziMasterTabeluKorisnika() {
     const tbody = document.getElementById('users-table-body');
     if (!tbody) return;
@@ -106,7 +115,7 @@ async function osveziMasterTabeluKorisnika() {
             return;
         }
 
-        sviKorisniciKes = data.users; // Sipamo sveže podatke u RAM keš
+        sviKorisniciKes = data.users;    // Sipamo sveže podatke u RAM keš
         renderujTabelu(sviKorisniciKes); // Pokrećemo crtanje prve iteracije
 
     } catch (err) {
@@ -193,7 +202,6 @@ function renderujTabelu(korisnici) {
             } else if (klijent.status === 'active' || klijent.status === 'approved') {
                 const btnBlock = document.createElement('button');
                 btnBlock.className = "btn btn-sm btn-revoke";
-                btnBlock.toggleAttribute
                 btnBlock.textContent = "Oduzmi Vizu";
                 btnBlock.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'blocked'));
                 tdActions.appendChild(btnBlock);
@@ -298,3 +306,6 @@ async function obrisiKlijentaMaster(requestId, email) {
         alert("❌ Veza sa Control Plane panelom je prekinuta.");
     }
 }
+
+// 🪐 INICIJALIZACIJA NA STARTU: Pokrećemo državnu mašinu iz bootstrap-a
+bootstrapAdmin();
