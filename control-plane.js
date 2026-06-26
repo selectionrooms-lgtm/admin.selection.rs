@@ -1,3 +1,4 @@
+// SELECTION CONTROL PLANE — admin-core.js (V4.5.0 - Fully CF Access Grounded)
 import { bootstrapAdmin } from './bootstrap.js';
 
 const API_BASE = "https://api.selection.rs";
@@ -11,7 +12,7 @@ if (user) {
 }
 
 function initControlPlane() {
-    console.log("🚀 [Control Plane] Komandna stanica podignuta na D1 šini.");
+    console.log("🚀 [Control Plane] Komandna stanica podignuta na Native Cloudflare Access šini.");
 
     const identityBadge = document.getElementById('admin-identity');
     if (identityBadge && user) {
@@ -51,32 +52,26 @@ async function handleFormSubmit(e) {
     await masterKreirajNovogKorisnika();
 }
 
-// 🛡️ Amandman 1: Unifikacija imena tokena sa ostatkom sistema (selection_jwt_token)
-function uzmiUstavniToken() {
-    return localStorage.getItem('selection_jwt_token') || "";
-}
-
-function generisiBffHeaders() {
-    return {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${uzmiUstavniToken()}`
-    };
-}
-
+/**
+ * 🛡️ USTAVNI TRANSPORT: Potpuno izbačen stari Bearer/JWT šum.
+ * Oslanjamo se isključivo na credentials: 'include' jer browser sam lepi CF Access vize.
+ */
 export async function studioFetch(url, options = {}) {
     options.headers = {
-        ...generisiBffHeaders(),
+        "Content-Type": "application/json",
         ...(options.headers || {})
     };
+
+    // Gvozdeni uslov za prenos autentifikacionih kolačića na api.selection.rs domenu
+    options.credentials = 'include';
 
     try {
         const response = await fetch(url, options);
 
         if (response.status === 401 || response.status === 403) {
-            console.warn("🚨 [Security Shield] Sesija prekinuta (401/403). Čišćenje...");
-            localStorage.removeItem("selection_jwt_token");
-            alert("🔒 Vaša sesija je istekla ili je nalog suspendovan. Bićete preusmereni na početni ekran.");
-            window.location.href = "/";
+            console.warn("🚨 [Security Shield] Saas kapija prekinula sesiju (401/403). Redirekcija...");
+            alert("🔒 Vaša administrativna sesija je istekla ili nemate Master privilegije.");
+            window.location.href = "https://selection.rs";
             throw new Error("Unauthorized_Bypass_Blocked");
         }
 
@@ -198,6 +193,7 @@ function renderujTabelu(korisnici) {
             } else if (klijent.status === 'active' || klijent.status === 'approved') {
                 const btnBlock = document.createElement('button');
                 btnBlock.className = "btn btn-sm btn-revoke";
+                btnBlock.toggleAttribute
                 btnBlock.textContent = "Oduzmi Vizu";
                 btnBlock.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'blocked'));
                 tdActions.appendChild(btnBlock);
@@ -237,9 +233,10 @@ async function masterKreirajNovogKorisnika() {
             body: JSON.stringify({
                 company_name: companyName,
                 email: email,
-                phone: "+381",
+                phone: "+38160000000", // 🛡️ FIX: Prosleđujemo validan E.164 placeholder umesto sirovog prefiksa da prođe backend regex kapiju
                 requested_subdomain: subdomain,
-                message: "Kreirano sa Master Admin Panela"
+                expected_launch: new Date().toISOString().split('T')[0], // Automatsko popunjavanje ustavnog polja baze
+                source_channel: "selection_gateway"
             })
         });
 
