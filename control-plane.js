@@ -177,20 +177,18 @@ function renderujTabelu(korisnici) {
         if (klijent.email === "selectionrooms@gmail.com") {
             tdActions.innerHTML = `<span style="color: var(--gold); font-size: 12px; font-style: italic; font-weight: 500;">Centralno Jezgro</span>`;
         } else {
-            let htmlAkcije = "";
-
-            // 👁️ Slanje ustavnih parametara ka Studiju
+            // Prvo dodajemo "Otvori Studio" link ako ispunjava uslove
             if ((klijent.status === 'active' || klijent.status === 'approved') && cistiTenantId) {
-                htmlAkcije += `
-                    <a href="https://composer.selection.rs?mode=admin&tenant=${cistiTenantId}" 
-                       target="_blank" 
-                       class="btn btn-sm" 
-                       style="background: var(--gold); color: #000; border: none; font-weight: 600; text-decoration: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
-                       👁️ Otvori Studio
-                    </a>
-                `;
+                const btnStudio = document.createElement('a');
+                btnStudio.href = `https://composer.selection.rs?mode=admin&tenant=${cistiTenantId}`;
+                btnStudio.target = "_blank";
+                btnStudio.className = "btn btn-sm";
+                btnStudio.style.cssText = "background: var(--gold); color: #000; border: none; font-weight: 600; text-decoration: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;";
+                btnStudio.innerHTML = `👁️ Otvori Studio`;
+                tdActions.appendChild(btnStudio);
             }
 
+            // Statusne akcije
             if (klijent.status === 'pending') {
                 const btnApprove = document.createElement('button');
                 btnApprove.className = "btn btn-sm btn-approve";
@@ -205,15 +203,12 @@ function renderujTabelu(korisnici) {
                 tdActions.appendChild(btnBlock);
             }
 
-            if (htmlAkcije) {
-                tdActions.insertAdjacentHTML('afterbegin', htmlAkcije);
-            }
-
+            // Brisanje klijenta
             if (klijent.status !== 'deleted') {
                 const btnDelete = document.createElement('button');
                 btnDelete.className = "btn btn-sm btn-delete";
                 btnDelete.textContent = "🗑 Obriši";
-                btnDelete.style.cssText = "background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #f07070; margin-left: 4px;";
+                btnDelete.style.cssText = "background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #f07070;";
                 btnDelete.addEventListener('click', () => obrisiKlijentaMaster(klijent.id, klijent.email));
                 tdActions.appendChild(btnDelete);
             }
@@ -227,11 +222,12 @@ function renderujTabelu(korisnici) {
 async function masterKreirajNovogKorisnika() {
     const emailInput = document.getElementById('client-email');
     const subInput = document.getElementById('client-subdomain');
-    const companyInput = document.getElementById('client-company') || { value: "Ručni unos" };
+    const companyInput = document.getElementById('client-company');
 
     if (!emailInput || !subInput) return;
     const email = emailInput.value.trim();
     const subdomain = subInput.value.trim().toLowerCase();
+    const companyName = (companyInput && companyInput.value.trim()) ? companyInput.value.trim() : "Selection Klijent";
 
     if (!email || !subdomain) return;
 
@@ -239,7 +235,7 @@ async function masterKreirajNovogKorisnika() {
         const response = await studioFetch(`${API_BASE}/api/onboarding/request`, {
             method: 'POST',
             body: JSON.stringify({
-                company_name: companyInput.value || "Selection Klijent",
+                company_name: companyName,
                 email: email,
                 phone: "+381",
                 requested_subdomain: subdomain,
@@ -252,6 +248,7 @@ async function masterKreirajNovogKorisnika() {
             alert(`🎉 USPEŠNO: Zahtev alociran!`);
             emailInput.value = '';
             subInput.value = '';
+            if (companyInput) companyInput.value = '';
             await osveziMasterTabeluKorisnika();
         } else {
             alert(`❌ Greška: ${rez.error || "Odbijeno sa servera."}`);
