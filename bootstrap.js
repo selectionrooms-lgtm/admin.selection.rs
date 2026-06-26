@@ -1,4 +1,4 @@
-// admin.selection.rs/bootstrap.js (V19.1.0 - Pure Cloudflare Access Native Bootstrap)
+// admin.selection.rs/bootstrap.js (V19.2.0 - Decoupled Access Native Bootstrap)
 const API_BASE = "https://api.selection.rs";
 
 export async function bootstrapAdmin() {
@@ -9,7 +9,7 @@ export async function bootstrapAdmin() {
     try {
         console.log("🕵️‍♂️ [1/4] Pokrećem bootstrap... Proveravam potpisani Cloudflare Access identitet.");
 
-        // 🛡️ Korak 2: Gađamo direktno centralni API mozak — browser sam šalje CF_Authorization kolačiće
+        // 🛡️ Gađamo direktno centralni API mozak — browser sam šalje CF_Authorization kolačiće
         const res = await fetch(`${API_BASE}/api/me`, {
             method: 'GET',
             credentials: 'include', // KLJUČNO: Omogućava prenos Access viza između poddomena
@@ -19,11 +19,6 @@ export async function bootstrapAdmin() {
         });
 
         console.log(`📡 [2/4] Centralni API Gateway odgovorio sa HTTP statusom: ${res.status}`);
-
-        // Ako nas je sačekao Cloudflare login izazov ili nemamo dozvolu
-        if (res.status === 401 || res.status === 403) {
-            throw new Error(`🔒 Nemate pravo pristupa Control Plane sloju (Status: ${res.status}).`);
-        }
 
         if (!res.ok) {
             const apiErrorText = await res.text();
@@ -40,10 +35,8 @@ export async function bootstrapAdmin() {
             throw new Error("Sistem je overio token, ali profil ne sadrži validne podatke o identitetu.");
         }
 
-        // Gvozdena provera uloge na samom ulazu u klijentski panel
-        if (finalIdentity.role !== "master") {
-            throw new Error("Pristup odbijen: Vaš nalog nema Master administrativne privilegije.");
-        }
+        // ❌ UKLONJENO: "if (finalIdentity.role !== 'master')" -> Frontend više ne donosi security odluke.
+        // API (baza/ruter) je jedina vrhovna istina i on je već morao da odbije zahtev ako uloga ne valja.
 
         console.log("🔑 [3/4] Identitet uspešno verifikovan i potvrđen od strane D1 jezgra.");
         root.setAttribute("data-status", "ready");
@@ -58,13 +51,23 @@ export async function bootstrapAdmin() {
         return finalIdentity;
 
     } catch (err) {
-        console.error("❌ CRITIČNI PREKID BOOTSTRAP-A:", err.message);
-        root.setAttribute("data-status", "error");
+        // 🔥 CATCH KAO SOURCE OF TRUTH (Amortizuje mrežne prekide i Cloudflare Access 302 skokove)
+        const isLikelyAuth = true;
 
+        console.warn("SESSION STATE UNKNOWN:", err);
+
+        root.setAttribute("data-status", "unauthenticated");
+
+        document.dispatchEvent(new CustomEvent('ShellAuthLost', {
+            detail: { reason: err.message }
+        }));
+
+        // Punjenje tabele se vrši tiho kao vizuelni fallback
         const tbody = document.getElementById('users-table-body');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:var(--red-alert); padding:40px; font-weight:600;">💥 Inicijalizacija prekinuta: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:var(--text-muted); padding:40px; font-weight:600;">🔒 Sesija nije prepoznata. Čekam autorizaciju na API sloju...</td></tr>`;
         }
+
         return null;
     }
 }
