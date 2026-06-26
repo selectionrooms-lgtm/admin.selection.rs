@@ -1,49 +1,30 @@
-// SELECTION ADMIN FRONT — Functions Gateway Proxy (V19.0.8 - Aligned Transport Pipe)
+// SELECTION ADMIN FRONT — Functions Gateway Proxy (V20.0.0 - Pure Token Extraction Pipe)
 
 export async function onRequestGet(context) {
     const { request } = context;
 
-    // Uzimamo jedini stvarni kriptografski dokaz identiteta koji nam Cloudflare šalje
+    // Uzimamo jedini stvarni kriptografski dokaz identiteta koji nam Cloudflare šalje na zaštićenom frontendu
     const accessJwt = request.headers.get("cf-access-jwt-assertion");
 
     if (!accessJwt) {
-        return new Response(JSON.stringify({ error: "🔒 Bezbednosna rampa: Cloudflare Access JWT nije pronađen." }), {
+        return new Response(JSON.stringify({
+            success: false,
+            error: "🔒 Bezbednosna rampa: Cloudflare Access JWT nije pronađen u mrežnim zaglavljima."
+        }), {
             status: 401,
-            headers: { "Content-Type": "application/json" }
+            headers: { "Content-Type": "application/json; charset=utf-8" }
         });
     }
 
-    try {
-        // 📡 Šaljemo kroz x-cf-access-jwt-assertion koji backend app.js garantovano hvata i čisti
-        const apiResponse = await fetch("https://api.selection.rs/api/me", {
-            method: "GET",
-            headers: {
-                "x-cf-access-jwt-assertion": accessJwt,
-                "Content-Type": "application/json"
-            }
-        });
-
-        if (!apiResponse.ok) {
-            const errTekst = await apiResponse.text();
-            return new Response(JSON.stringify({ error: `🔒 Centralni API odbio verifikaciju: ${errTekst}` }), {
-                status: apiResponse.status,
-                headers: { "Content-Type": "application/json" }
-            });
+    // Bez ijednog eksternog mrežnog poziva, samo pakujemo čist token u striktan JSON ugovor i vraćamo ga frontu
+    return new Response(JSON.stringify({
+        success: true,
+        token: accessJwt
+    }), {
+        status: 200,
+        headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "no-store, no-cache, must-revalidate"
         }
-
-        // Centralni API vraća profil { identity, token }
-        const responseData = await apiResponse.json();
-
-        return new Response(JSON.stringify(responseData), {
-            status: 200,
-            headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
-        });
-
-    } catch (err) {
-        console.error("💥 Admin Bootstrap Proxy Crash:", err.message);
-        return new Response(JSON.stringify({ error: "INTERNAL_PROXY_ERROR", details: err.message }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" }
-        });
-    }
+    });
 }
