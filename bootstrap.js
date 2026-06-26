@@ -17,24 +17,25 @@ export const AUTH_STATE = {
 async function safeFetch(url) {
     const res = await fetch(url, {
         method: "GET",
-        credentials: "include", // 👈 KLJUČNO: Donosi i šalje kolačić automatski
+        credentials: "include", // Donosi i šalje kolačić automatski na api.selection.rs
         headers: { "Content-Type": "application/json" }
     });
 
     const text = await res.text();
-    const looksLikeHtml = text.trim().startsWith("<!DOCTYPE") || text.trim().startsWith("<html");
+    const cleanText = text.trim();
+    const looksLikeHtml = cleanText.startsWith("<!DOCTYPE") || cleanText.startsWith("<html") || cleanText.startsWith("<head");
 
     if (looksLikeHtml) {
-        throw new Error("CRITICAL_MIGRATION_WALL: Received HTML response instead of JSON API contract.");
+        console.error("🚨 [Security Breach Attempt] Presretnut HTML odgovor na API ruti:", url);
+        throw new Error("HTML_FALLBACK_DETECTED");
     }
 
     if (!res.ok) {
-        // Ako je 401 ili bilo šta drugo, pakujemo status u error poruku da bootstrap zna kako da ruta
         throw new Error(`API_STATUS_${res.status}`);
     }
 
     try {
-        return JSON.parse(text);
+        return JSON.parse(cleanText);
     } catch {
         throw new Error("BAD_RESPONSE_FORMAT");
     }
@@ -62,17 +63,14 @@ export async function bootstrapAdmin() {
 
                 // Korak B: Gađamo lokalni Pages Functions proksi na ISTOM domenu da nam izvuče cf-access-jwt-assertion
                 const localProxyRes = await fetch(`${window.location.origin}/api/me`);
-                if (!localProxyRes.ok) throw new Error("NO_AUTH_SESSION");
 
-                const proxyData = await localProxyRes.json();
-
-                // Korak C: Izvlačenje sirovog tokena iz proksija kroz sve ustavne kanale
-                const cfTokenAssertion = proxyData.token || proxyData.jwt || proxyData.assertion || document.cookie.match(/CF_Authorization=([^;]+)/)?.[1];
-
-                if (!cfTokenAssertion) {
-                    console.warn("⚠️ Cloudflare Access token nije pronađen na lokalnom proksiju.");
+                const proxyContentType = localProxyRes.headers.get("Content-Type") || "";
+                if (!localProxyRes.ok || !proxyContentType.includes("application/json")) {
+                    console.error("❌ Lokalni proksi nije vratio JSON! Proveri functions/api/me.js strukturu.");
                     throw new Error("NO_AUTH_SESSION");
                 }
+
+                const proxyData = await localProxyRes.json();
 
                 console.log("🚀 [Token Bridge] Pokrećem eksplicitnu razmenu na API sloju (/api/auth/exchange)...");
 
