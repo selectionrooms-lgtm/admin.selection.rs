@@ -1,4 +1,4 @@
-// admin.selection.rs/bootstrap.js (V20.0.0 - State Machine & Fault-Tolerant Edge Bootstrap)
+// admin.selection.rs/bootstrap.js (V22.0.0 - Production Ready / HTML-Safe Inspected Engine)
 const API_BASE = "https://api.selection.rs";
 
 // 🪐 SSOT AUTH STATE MACHINE
@@ -10,57 +10,59 @@ export const AUTH_STATE = {
 };
 
 /**
- * ⚡ ATOMSKI RETRY MEHANIZAM: Amortizuje propagaciju i kašnjenje sesije na Cloudflare Edge čvorovima.
- * Ako mreža pukne ili Access privremeno ne prepozna kolačić, sistem vrši re-try pre proglašenja kapitulacije.
+ * 🛡️ SAFE FETCH GVOZDENI PRESRETAČ (HTML & STRING PROVERA):
+ * Čita sirovi tekst i detektuje Cloudflare Access HTML login blokade na samom ulazu.
+ * Osigurava stoprocentnu stabilnost pre nego što se pokrene JSON parser.
  */
-async function retryFetch(url, attempts = 3, delayMs = 600) {
-    for (let i = 0; i < attempts; i++) {
-        try {
-            const res = await fetch(url, {
-                method: 'GET',
-                credentials: 'include', // Obavezno slanje kolačića unutar CORS-a
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            });
-
-            // Ako je Cloudflare Access pustio zahtev i ruter vratio uspeh, vraćamo odgovor odmah
-            if (res.ok) return res;
-
-            // Ako dobijemo eksplicitan 401/403 sa mreže, nema potrebe da čekamo retry, sesija je definitivno mrtva
-            if (res.status === 401 || res.status === 403) {
-                throw new Error("EXPLICIT_UNAUTHORIZED");
-            }
-
-        } catch (e) {
-            // Ako je došlo do mrežnog kraha (Access 302 blokada) ili privremenog timeout-a, nastavljamo petlju
-            if (e.message === "EXPLICIT_UNAUTHORIZED") throw e;
-            console.warn(`⏳ [Retry Engine] Pokušaj ${i + 1}/${attempts} neuspešan. Rekonstrukcija veze za ${delayMs}ms...`);
+async function safeFetch(url) {
+    const res = await fetch(url, {
+        method: "GET",
+        credentials: "include", // Ključno za prenos kolačića unutar CORS-a
+        headers: {
+            "Content-Type": "application/json"
         }
+    });
 
-        // Čekanje pre sledećeg pokušaja
-        await new Promise(r => setTimeout(r, delayMs));
+    // Izvlačimo sirovi tekst zahteva za inspekciju tela
+    const text = await res.text();
+
+    // ❌ Detekcija strukture: Ako Cloudflare Access baci HTML login stranu umesto JSON-a
+    const looksLikeHtml = text.trim().startsWith("<!DOCTYPE") || text.trim().startsWith("<html");
+    if (looksLikeHtml) {
+        throw new Error("NO_AUTH_SESSION");
     }
 
-    throw new Error("AUTH_TIMEOUT");
+    // Eksplicitne HTTP zabrane sa mreže ili rutera
+    if (res.status === 401 || res.status === 403) {
+        throw new Error("NO_AUTH_SESSION");
+    }
+
+    // Pokušaj JSON parsovanja tek nakon što su sve kontrole prošle
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch (e) {
+        throw new Error("BAD_RESPONSE_FORMAT");
+    }
+
+    return data;
 }
 
 export async function bootstrapAdmin() {
     const root = document.getElementById("selection-admin-root");
     if (!root) return null;
 
-    // Postavljanje inicijalnog stanja mašine
+    // Inicijalno stanje mašine: Loading
     root.setAttribute("data-status", AUTH_STATE.LOADING);
 
     try {
-        console.log("🕵️‍♂️ [1/4] Pokrećem bootstrap... Aktiviram fault-tolerant ruter skeniranje.");
+        console.log("🕵️‍♂️ [1/4] Pokrećem bootstrap... Provera identiteta kroz HTML-safe prozor.");
 
-        // 🛡️ Pokrećemo elastični fetch umesto direktnog poziva
-        const res = await retryFetch(`${API_BASE}/api/me`);
+        // 🚨 KLJUČNI POZIV — safeFetch sam kontroliše strukturu i vraća parsovan JSON
+        const profile = await safeFetch(`${API_BASE}/api/me`);
 
-        console.log(`📡 [2/4] Centralni API Gateway uspešno odgovorio sa HTTP statusom: ${res.status}`);
+        console.log(`📡 [2/4] Centralni API Gateway uspešno odgovorio sa ispravnim JSON formatom.`);
 
-        const profile = await res.json();
         const finalIdentity = profile.identity || profile;
 
         if (!finalIdentity || !finalIdentity.email) {
@@ -69,7 +71,7 @@ export async function bootstrapAdmin() {
 
         console.log("🔑 [3/4] Identitet uspešno verifikovan i potvrđen od strane D1 jezgra.");
 
-        // Tranzicija mašine u AUTHENTICATED
+        // Uspešna tranzicija mašine u AUTHENTICATED
         root.setAttribute("data-status", AUTH_STATE.AUTHENTICATED);
 
         const identityBadge = document.getElementById('admin-identity');
@@ -84,15 +86,17 @@ export async function bootstrapAdmin() {
     } catch (err) {
         console.warn("⚠️ [State Machine Transition] Prekid inicijalizacije.");
 
-        if (err.message === "EXPLICIT_UNAUTHORIZED" || err.message === "AUTH_TIMEOUT") {
-            // ❌ NEMA ČEKANJA: Mašina momentalno prelazi u UNAUTHENTICATED
+        // 🚨 DVA SVETA U CATCH BLOKU — SVEDENO NA MAKSIMALNU DISCIPLINU
+        if (err.message === "NO_AUTH_SESSION") {
+
+            // STANJE 1: Čist Unauthenticated, bez rušenja UI-ja sa crvenim greškama
             root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
 
             document.dispatchEvent(new CustomEvent('ShellAuthLost', {
-                detail: { reason: "Cloudflare Access session missing or expired." }
+                detail: { reason: "Cloudflare Access session missing, expired or returned HTML." }
             }));
 
-            // 🧱 RENDERUJEMO LOGIN CTA / RECONNECT DUGME DIREKTNO U UI KOSTUR
+            // Tihi vizuelni render dugmeta za ručni reconnect na frontend entry point
             const tbody = document.getElementById('users-table-body');
             if (tbody) {
                 tbody.innerHTML = `
@@ -101,24 +105,25 @@ export async function bootstrapAdmin() {
                             <div style="margin-bottom: 20px; font-weight: 600; color: var(--text-muted);">
                                 🔒 Vaša sesija je istekla ili nije sinhronizovana na API ivici.
                             </div>
-                            <a href="${API_BASE}/cdn-cgi/access/login?redirect_url=${encodeURIComponent(window.location.href)}" 
-                               class="btn-reconnect" 
-                               style="display: inline-block; padding: 10px 20px; background: var(--accent-color, #0070f3); color: #fff; border-radius: 6px; text-decoration: none; font-weight: 500; box-shadow: 0 4px 14px rgba(0,112,243,0.3);">
-                                Ponovo poveži nalog (Reconnect)
-                            </a>
+                            <button onclick="window.location.href = window.location.origin" 
+                                    class="btn-reconnect" 
+                                    style="display: inline-block; padding: 10px 20px; background: var(--accent-color, #0070f3); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; box-shadow: 0 4px 14px rgba(0,112,243,0.3);">
+                                 Ponovo poveži nalog (Reconnect)
+                            </button>
                         </td>
                     </tr>
                 `;
             }
-        } else {
-            // Kritične sistemske greške (npr. D1 baza nedostupna, loš JSON format)
-            root.setAttribute("data-status", AUTH_STATE.ERROR);
-            console.error("💥 KRITIČNI KRAH SISTEMA:", err.message);
+            return null;
+        }
 
-            const tbody = document.getElementById('users-table-body');
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:var(--red-alert); padding:40px; font-weight:600;">💥 Fatalna greška jezgra: ${err.message}</td></tr>`;
-            }
+        // STANJE 2: Pravi sistemski krah (Baza down, loš kôd, prekinut strim, ili BAD_RESPONSE_FORMAT)
+        root.setAttribute("data-status", AUTH_STATE.ERROR);
+        console.error("💥 SYSTEM FATAL ERROR:", err.message);
+
+        const tbody = document.getElementById('users-table-body');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:var(--red-alert); padding:40px; font-weight:600;">💥 Fatalna greška jezgra: ${err.message}</td></tr>`;
         }
 
         return null;
