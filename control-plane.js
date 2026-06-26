@@ -1,35 +1,26 @@
-// SELECTION CONTROL PLANE — admin-core.js (V4.6.0 - Anti-Race Condition Grounded)
+// SELECTION CONTROL PLANE — admin-core.js (V4.7.0 - Phone Unified & Anti-Race)
 import { bootstrapAdmin } from './bootstrap.js';
 
 const API_BASE = "https://api.selection.rs";
 
-// 🧠 Globalni kontekst aplikacije (RAM keš i identitet)
 let trenutnoUlogovaniKorisnik = null;
 let sviKorisniciKes = [];
 
-/**
- * 🪐 USTAVNI TRANSPORT: Potpuno izbačen stari Bearer/JWT šum.
- * Oslanjamo se isključivo na credentials: 'include' jer browser sam lepi Selection kolačiće.
- */
 export async function studioFetch(url, options = {}) {
     options.headers = {
         "Content-Type": "application/json",
         ...(options.headers || {})
     };
-
-    // Gvozdeni uslov za prenos autentifikacionih kolačića na api.selection.rs domenu
     options.credentials = 'include';
 
     try {
         const response = await fetch(url, options);
-
         if (response.status === 401 || response.status === 403) {
             console.warn("🚨 [Security Shield] Saas kapija prekinula sesiju (401/403). Redirekcija...");
             alert("🔒 Vaša administrativna sesija je istekla ili nemate Master privilegije.");
             window.location.href = "https://selection.rs";
             throw new Error("Unauthorized_Bypass_Blocked");
         }
-
         return response;
     } catch (e) {
         if (e.message === "Unauthorized_Bypass_Blocked") throw e;
@@ -38,27 +29,18 @@ export async function studioFetch(url, options = {}) {
     }
 }
 
-/**
- * 🛡️ ZAUSTAVLJANJE RACE CONDITION-A
- * Aplikacija ne sme da puca u prazno. Slušamo proglas iz bootstrap-a 
- * i tek po uspešnoj verifikaciji identiteta otvaramo komandnu stanicu.
- */
 document.addEventListener('ShellProvisionalReady', async (event) => {
     trenutnoUlogovaniKorisnik = event.detail;
-    console.log("🚀 [Control Plane] Signal primljen! Identitet verifikovan na ivici mreže:", trenutnoUlogovaniKorisnik.email);
-
+    console.log("🚀 [Control Plane] Signal primljen! Identitet verifikovan:", trenutnoUlogovaniKorisnik.email);
     initControlPlane();
 });
 
 function initControlPlane() {
-    console.log("🎮 [Control Plane] Komandna stanica aktivirana u punom kapacitetu.");
-
+    console.log("🎮 [Control Plane] Komandna stanica aktivirana.");
     const identityBadge = document.getElementById('admin-identity');
     if (identityBadge && trenutnoUlogovaniKorisnik) {
         identityBadge.textContent = trenutnoUlogovaniKorisnik.email;
     }
-
-    // Pokrećemo punjenje tabela i vezivanje osluškivača tek kada imamo gvozdenu sesiju
     osveziMasterTabeluKorisnika();
     setupEventListeners();
 }
@@ -70,18 +52,15 @@ function setupEventListeners() {
         form.addEventListener('submit', handleFormSubmit);
     }
 
-    // 🔍 Osluškivač za brzu pretragu unutar input polja (Čita direktno iz RAM keša)
     const searchInput = document.getElementById('master-search');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const pojam = e.target.value.toLowerCase().trim();
-
             const filtriraniKorisnici = sviKorisniciKes.filter(k => {
                 const emailMec = k.email ? k.email.toLowerCase().includes(pojam) : false;
                 const phoneMec = k.phone ? k.phone.toLowerCase().includes(pojam) : false;
                 return emailMec || phoneMec;
             });
-
             renderujTabelu(filtriraniKorisnici);
         });
     }
@@ -109,56 +88,47 @@ async function osveziMasterTabeluKorisnika() {
         if (!res.ok) throw new Error(`Edge ruter vratio status: ${res.status}`);
 
         const data = await res.json();
-
         if (!data.success || !data.users || data.users.length === 0) {
             tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color: var(--text-secondary); padding: 40px;">U D1 bazi trenutno nema registrovanih klijenata.</td></tr>`;
             return;
         }
 
-        sviKorisniciKes = data.users;    // Sipamo sveže podatke u RAM keš
-        renderujTabelu(sviKorisniciKes); // Pokrećemo crtanje prve iteracije
-
+        sviKorisniciKes = data.users;
+        renderujTabelu(sviKorisniciKes);
     } catch (err) {
         if (err.message === "Unauthorized_Bypass_Blocked") return;
         tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color: var(--red-alert); padding: 40px; font-weight: 500;">❌ Greška sa D1 šinom: ${err.message}</td></tr>`;
     }
 }
 
-// 🪐 UNIFIKOVANI GRAFIČKI RENDERER TABELE
 function renderujTabelu(korisnici) {
     const tbody = document.getElementById('users-table-body');
     if (!tbody) return;
-
-    tbody.innerHTML = ""; // Čistimo staro stanje pre crtanja
+    tbody.innerHTML = "";
 
     korisnici.forEach(klijent => {
         const tr = document.createElement('tr');
         const cistiTenantId = klijent.tenant_id || klijent.requested_subdomain || '';
 
-        // 1. Email
         const tdEmail = document.createElement('td');
         tdEmail.style.cssText = "font-weight: 600; color: #fff;";
         tdEmail.textContent = klijent.email;
         tr.appendChild(tdEmail);
 
-        // 2. Kontakt Telefon
         const tdPhone = document.createElement('td');
         tdPhone.style.cssText = "color: var(--text-secondary); font-size: 13px; font-family: monospace;";
         tdPhone.textContent = klijent.phone || "—";
         tr.appendChild(tdPhone);
 
-        // 3. Tenant ID
         const tdTenant = document.createElement('td');
         tdTenant.innerHTML = `<input type="text" value="${cistiTenantId || 'Nije alociran'}" class="shell-input" style="width: 150px; padding: 5px 10px;" disabled>`;
         tr.appendChild(tdTenant);
 
-        // 4. Uloga
         const tdRole = document.createElement('td');
         tdRole.style.cssText = "text-transform: uppercase; font-size: 11px; color: var(--text-secondary); font-weight: 600; letter-spacing:0.5px;";
         tdRole.textContent = klijent.role || 'client';
         tr.appendChild(tdRole);
 
-        // 5. Status Vize
         const tdStatus = document.createElement('td');
         if (klijent.status === 'active' || klijent.status === 'approved') {
             tdStatus.innerHTML = `<span class="badge badge-approved">✔️ Aktivan</span>`;
@@ -169,19 +139,16 @@ function renderujTabelu(korisnici) {
         }
         tr.appendChild(tdStatus);
 
-        // 6. Datum
         const tdDate = document.createElement('td');
         tdDate.innerHTML = `<span class="badge badge-version">${klijent.created_at ? klijent.created_at.split(' ')[0] : 'Uživo'}</span>`;
         tr.appendChild(tdDate);
 
-        // 7. Akcije (Okice 👁️)
         const tdActions = document.createElement('td');
         tdActions.style.cssText = "text-align: right; display: flex; gap: 8px; justify-content: flex-end; align-items: center;";
 
         if (klijent.email === "selectionrooms@gmail.com") {
             tdActions.innerHTML = `<span style="color: var(--gold); font-size: 12px; font-style: italic; font-weight: 500;">Centralno Jezgro</span>`;
         } else {
-            // Prvo dodajemo "Otvori Studio" link ako ispunjava uslove
             if ((klijent.status === 'active' || klijent.status === 'approved') && cistiTenantId) {
                 const btnStudio = document.createElement('a');
                 btnStudio.href = `https://composer.selection.rs?mode=admin&tenant=${cistiTenantId}`;
@@ -192,7 +159,6 @@ function renderujTabelu(korisnici) {
                 tdActions.appendChild(btnStudio);
             }
 
-            // Statusne akcije
             if (klijent.status === 'pending') {
                 const btnApprove = document.createElement('button');
                 btnApprove.className = "btn btn-sm btn-approve";
@@ -207,7 +173,6 @@ function renderujTabelu(korisnici) {
                 tdActions.appendChild(btnBlock);
             }
 
-            // Brisanje klijenta
             if (klijent.status !== 'deleted') {
                 const btnDelete = document.createElement('button');
                 btnDelete.className = "btn btn-sm btn-delete";
@@ -225,15 +190,23 @@ function renderujTabelu(korisnici) {
 
 async function masterKreirajNovogKorisnika() {
     const emailInput = document.getElementById('client-email');
+    const phoneInput = document.getElementById('client-phone'); // 📥 Čitamo uneti telefon
     const subInput = document.getElementById('client-subdomain');
     const companyInput = document.getElementById('client-company');
 
-    if (!emailInput || !subInput) return;
+    if (!emailInput || !subInput || !phoneInput) return;
     const email = emailInput.value.trim();
+    const phone = phoneInput.value.trim().replace(/\s+/g, '');
     const subdomain = subInput.value.trim().toLowerCase();
     const companyName = (companyInput && companyInput.value.trim()) ? companyInput.value.trim() : "Selection Klijent";
 
-    if (!email || !subdomain) return;
+    if (!email || !subdomain || !phone) return;
+
+    // E.164 Regex provera na klijentu pre slanja na Edge
+    if (!/^\+[1-9]\d{1,14}$/.test(phone)) {
+        alert("❌ Telefon mora biti u E.164 formatu (npr. +38160123456)");
+        return;
+    }
 
     try {
         const response = await studioFetch(`${API_BASE}/api/onboarding/request`, {
@@ -241,9 +214,9 @@ async function masterKreirajNovogKorisnika() {
             body: JSON.stringify({
                 company_name: companyName,
                 email: email,
-                phone: "+38160000000", // 🛡️ FIX: Prosleđujemo validan E.164 placeholder umesto sirovog prefiksa da prođe backend regex kapiju
+                phone: phone, // 🚀 Dinamički telefon ide na backend
                 requested_subdomain: subdomain,
-                expected_launch: new Date().toISOString().split('T')[0], // Automatsko popunjavanje ustavnog polja baze
+                expected_launch: new Date().toISOString().split('T')[0],
                 source_channel: "selection_gateway"
             })
         });
@@ -252,6 +225,7 @@ async function masterKreirajNovogKorisnika() {
         if (response.ok && rez.success) {
             alert(`🎉 USPEŠNO: Zahtev alociran!`);
             emailInput.value = '';
+            phoneInput.value = '';
             subInput.value = '';
             if (companyInput) companyInput.value = '';
             await osveziMasterTabeluKorisnika();
@@ -307,5 +281,4 @@ async function obrisiKlijentaMaster(requestId, email) {
     }
 }
 
-// 🪐 INICIJALIZACIJA NA STARTU: Pokrećemo državnu mašinu iz bootstrap-a
 bootstrapAdmin();
