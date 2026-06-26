@@ -1,8 +1,10 @@
 import { bootstrapAdmin } from './bootstrap.js';
 
 const API_BASE = "https://api.selection.rs";
-
 const user = await bootstrapAdmin();
+
+// 🧠 Globalni keš za munjevitu pretragu bez stalnog maltretiranja D1 baze podataka
+let sviKorisniciKes = [];
 
 if (user) {
     initControlPlane();
@@ -25,6 +27,22 @@ function setupEventListeners() {
     if (form) {
         form.removeEventListener('submit', handleFormSubmit);
         form.addEventListener('submit', handleFormSubmit);
+    }
+
+    // 🔍 Osluškivač za brzu pretragu unutar input polja
+    const searchInput = document.getElementById('master-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const pojam = e.target.value.toLowerCase().trim();
+
+            const filtriraniKorisnici = sviKorisniciKes.filter(k => {
+                const emailMec = k.email ? k.email.toLowerCase().includes(pojam) : false;
+                const phoneMec = k.phone ? k.phone.toLowerCase().includes(pojam) : false;
+                return emailMec || phoneMec;
+            });
+
+            renderujTabelu(filtriraniKorisnici);
+        });
     }
 }
 
@@ -75,7 +93,7 @@ async function osveziMasterTabeluKorisnika() {
 
     tbody.innerHTML = `
         <tr>
-            <td colspan="6" class="text-center" style="color: var(--gold); padding: 40px; font-weight:500;">
+            <td colspan="7" class="text-center" style="color: var(--gold); padding: 40px; font-weight:500;">
                 ⚡ Povezujem se na D1 relej, povlačim stanje iz čekaonice...
             </td>
         </tr>
@@ -88,107 +106,122 @@ async function osveziMasterTabeluKorisnika() {
         const data = await res.json();
 
         if (!data.success || !data.users || data.users.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--text-secondary); padding: 40px;">U D1 bazi trenutno nema registrovanih klijenata.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color: var(--text-secondary); padding: 40px;">U D1 bazi trenutno nema registrovanih klijenata.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = ""; // Čistimo loading
-
-        data.users.forEach(klijent => {
-            const tr = document.createElement('tr');
-            const cistiTenantId = klijent.tenant_id || klijent.requested_subdomain || '';
-
-            // 1. Email
-            const tdEmail = document.createElement('td');
-            tdEmail.style.cssText = "font-weight: 600; color: #fff;";
-            tdEmail.textContent = klijent.email;
-            tr.appendChild(tdEmail);
-
-            // 2. Tenant ID
-            const tdTenant = document.createElement('td');
-            tdTenant.innerHTML = `<input type="text" value="${cistiTenantId || 'Nije alociran'}" class="shell-input" style="width: 180px; padding: 5px 10px;" disabled>`;
-            tr.appendChild(tdTenant);
-
-            // 3. Uloga
-            const tdRole = document.createElement('td');
-            tdRole.style.cssText = "text-transform: uppercase; font-size: 11px; color: var(--text-secondary); font-weight: 600; letter-spacing:0.5px;";
-            tdRole.textContent = klijent.role || 'client';
-            tr.appendChild(tdRole);
-
-            // 4. Status Vize
-            const tdStatus = document.createElement('td');
-            if (klijent.status === 'active' || klijent.status === 'approved') {
-                tdStatus.innerHTML = `<span class="badge badge-approved">✔️ Aktivan / Odobren</span>`;
-            } else if (klijent.status === 'blocked' || klijent.status === 'rejected' || klijent.status === 'deleted') {
-                tdStatus.innerHTML = `<span class="badge badge-revoked">${klijent.status === 'deleted' ? '🗑️ U Grace Periodu' : '⛔ Blokiran'}</span>`;
-            } else {
-                tdStatus.innerHTML = `<span class="badge badge-pending">⏳ Čekaonica</span>`;
-            }
-            tr.appendChild(tdStatus);
-
-            // 5. Datum
-            const tdDate = document.createElement('td');
-            tdDate.innerHTML = `<span class="badge badge-version">${klijent.created_at ? klijent.created_at.split(' ')[0] : 'Uživo'}</span>`;
-            tr.appendChild(tdDate);
-
-            // 6. Akcije (Gde se crtaju OKICE 👁️)
-            const tdActions = document.createElement('td');
-            tdActions.style.cssText = "text-align: right; display: flex; gap: 8px; justify-content: flex-end; align-items: center;";
-
-            if (klijent.email === "selectionrooms@gmail.com") {
-                tdActions.innerHTML = `<span style="color: var(--gold); font-size: 12px; font-style: italic; font-weight: 500;">Centralno Jezgro</span>`;
-            } else {
-                let htmlAkcije = "";
-
-                // Ako je klijent aktivan, generišemo ustavni link sa okicom 👁️
-                if ((klijent.status === 'active' || klijent.status === 'approved') && cistiTenantId) {
-                    htmlAkcije += `
-                        <a href="https://composer.selection.rs?mode=admin&tenant=${cistiTenantId}" 
-                           target="_blank" 
-                           class="btn btn-sm" 
-                           style="background: var(--gold); color: #000; border: none; font-weight: 600; text-decoration: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
-                           👁️ Otvori Studio
-                        </a>
-                    `;
-                }
-
-                if (klijent.status === 'pending') {
-                    const btnApprove = document.createElement('button');
-                    btnApprove.className = "btn btn-sm btn-approve";
-                    btnApprove.textContent = "Odobri Vizu";
-                    btnApprove.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'approved'));
-                    tdActions.appendChild(btnApprove);
-                } else if (klijent.status === 'active' || klijent.status === 'approved') {
-                    const btnBlock = document.createElement('button');
-                    btnBlock.className = "btn btn-sm btn-revoke";
-                    btnBlock.textContent = "Oduzmi Vizu";
-                    btnBlock.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'blocked'));
-                    tdActions.appendChild(btnBlock);
-                }
-
-                // Privremeno lepljenje HTML stringa za okice pre običnih dugmića
-                if (htmlAkcije) {
-                    tdActions.insertAdjacentHTML('afterbegin', htmlAkcije);
-                }
-
-                if (klijent.status !== 'deleted') {
-                    const btnDelete = document.createElement('button');
-                    btnDelete.className = "btn btn-sm btn-delete";
-                    btnDelete.textContent = "🗑 Obriši";
-                    btnDelete.style.cssText = "background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #f07070; margin-left: 4px;";
-                    btnDelete.addEventListener('click', () => obrisiKlijentaMaster(klijent.id, klijent.email));
-                    tdActions.appendChild(btnDelete);
-                }
-            }
-
-            tr.appendChild(tdActions);
-            tbody.appendChild(tr);
-        });
+        sviKorisniciKes = data.users; // Sipamo sveže podatke u RAM keš
+        renderujTabelu(sviKorisniciKes); // Pokrećemo crtanje prve iteracije
 
     } catch (err) {
         if (err.message === "Unauthorized_Bypass_Blocked") return;
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--red-alert); padding: 40px; font-weight: 500;">❌ Greška sa D1 šinom: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color: var(--red-alert); padding: 40px; font-weight: 500;">❌ Greška sa D1 šinom: ${err.message}</td></tr>`;
     }
+}
+
+// 🪐 UNIFIKOVANI GRAFIČKI RENDERER TABELE (Zove se na load i tokom kucanja u search)
+function renderujTabelu(korisnici) {
+    const tbody = document.getElementById('users-table-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = ""; // Čistimo staro stanje pre crtanja
+
+    korisnici.forEach(klijent => {
+        const tr = document.createElement('tr');
+        const cistiTenantId = klijent.tenant_id || klijent.requested_subdomain || '';
+
+        // 1. Email
+        const tdEmail = document.createElement('td');
+        tdEmail.style.cssText = "font-weight: 600; color: #fff;";
+        tdEmail.textContent = klijent.email;
+        tr.appendChild(tdEmail);
+
+        // 2. Kontakt Telefon (📱 NOVO)
+        const tdPhone = document.createElement('td');
+        tdPhone.style.cssText = "color: var(--text-secondary); font-size: 13px; font-family: monospace;";
+        tdPhone.textContent = klijent.phone || "—";
+        tr.appendChild(tdPhone);
+
+        // 3. Tenant ID
+        const tdTenant = document.createElement('td');
+        tdTenant.innerHTML = `<input type="text" value="${cistiTenantId || 'Nije alociran'}" class="shell-input" style="width: 150px; padding: 5px 10px;" disabled>`;
+        tr.appendChild(tdTenant);
+
+        // 4. Uloga
+        const tdRole = document.createElement('td');
+        tdRole.style.cssText = "text-transform: uppercase; font-size: 11px; color: var(--text-secondary); font-weight: 600; letter-spacing:0.5px;";
+        tdRole.textContent = klijent.role || 'client';
+        tr.appendChild(tdRole);
+
+        // 5. Status Vize
+        const tdStatus = document.createElement('td');
+        if (klijent.status === 'active' || klijent.status === 'approved') {
+            tdStatus.innerHTML = `<span class="badge badge-approved">✔️ Aktivan</span>`;
+        } else if (klijent.status === 'blocked' || klijent.status === 'rejected' || klijent.status === 'deleted') {
+            tdStatus.innerHTML = `<span class="badge badge-revoked">${klijent.status === 'deleted' ? '🗑️ Grace' : '⛔ Blokiran'}</span>`;
+        } else {
+            tdStatus.innerHTML = `<span class="badge badge-pending">⏳ Čekaonica</span>`;
+        }
+        tr.appendChild(tdStatus);
+
+        // 6. Datum
+        const tdDate = document.createElement('td');
+        tdDate.innerHTML = `<span class="badge badge-version">${klijent.created_at ? klijent.created_at.split(' ')[0] : 'Uživo'}</span>`;
+        tr.appendChild(tdDate);
+
+        // 7. Akcije (Okice 👁️)
+        const tdActions = document.createElement('td');
+        tdActions.style.cssText = "text-align: right; display: flex; gap: 8px; justify-content: flex-end; align-items: center;";
+
+        if (klijent.email === "selectionrooms@gmail.com") {
+            tdActions.innerHTML = `<span style="color: var(--gold); font-size: 12px; font-style: italic; font-weight: 500;">Centralno Jezgro</span>`;
+        } else {
+            let htmlAkcije = "";
+
+            // Ako je klijent aktivan, generišemo ustavni link sa okicom 👁️
+            if ((klijent.status === 'active' || klijent.status === 'approved') && cistiTenantId) {
+                htmlAkcije += `
+                    <a href="https://composer.selection.rs?mode=admin&tenant=${cistiTenantId}" 
+                       target="_blank" 
+                       class="btn btn-sm" 
+                       style="background: var(--gold); color: #000; border: none; font-weight: 600; text-decoration: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                       👁️ Otvori Studio
+                    </a>
+                `;
+            }
+
+            if (klijent.status === 'pending') {
+                const btnApprove = document.createElement('button');
+                btnApprove.className = "btn btn-sm btn-approve";
+                btnApprove.textContent = "Odobri Vizu";
+                btnApprove.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'approved'));
+                tdActions.appendChild(btnApprove);
+            } else if (klijent.status === 'active' || klijent.status === 'approved') {
+                const btnBlock = document.createElement('button');
+                btnBlock.className = "btn btn-sm btn-revoke";
+                btnBlock.textContent = "Oduzmi Vizu";
+                btnBlock.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'blocked'));
+                tdActions.appendChild(btnBlock);
+            }
+
+            // Injektovanje okice pre dugmića za brisanje i blokiranje
+            if (htmlAkcije) {
+                tdActions.insertAdjacentHTML('afterbegin', htmlAkcije);
+            }
+
+            if (klijent.status !== 'deleted') {
+                const btnDelete = document.createElement('button');
+                btnDelete.className = "btn btn-sm btn-delete";
+                btnDelete.textContent = "🗑 Obriši";
+                btnDelete.style.cssText = "background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #f07070; margin-left: 4px;";
+                btnDelete.addEventListener('click', () => obrisiKlijentaMaster(klijent.id, klijent.email));
+                tdActions.appendChild(btnDelete);
+            }
+        }
+
+        tr.appendChild(tdActions);
+        tbody.appendChild(tr);
+    });
 }
 
 async function masterKreirajNovogKorisnika() {

@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; connect-src 'self' https://api.selection.rs https://admin.selection.rs; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
     <title>Selection Master Control Plane</title>
-    <link rel="stylesheet" href="style.css?v=20.0.0">
+    <link rel="stylesheet" href="style.css?v=21.0.0">
 </head>
 
 <body id="selection-admin-root" data-status="loading">
@@ -33,17 +33,27 @@
 
     <main class="dashboard-workspace">
         <section class="control-table-card">
-            <div class="table-title-area">
-                <h2>Sistemski Žurnal Korisnika</h2>
-                <p class="subtitle">Pregled aktivnih viza, dodeljenih resursa i Centralnih Override tačaka nad ivicom
-                    mreže</p>
+            <div class="table-title-area"
+                style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 25px;">
+                <div>
+                    <h2>Sistemski Žurnal Korisnika</h2>
+                    <p class="subtitle">Pregled aktivnih viza, dodeljenih resursa i Centralnih Override tačaka nad
+                        ivicom mreže</p>
+                </div>
+
+                <div class="search-box-container">
+                    <input type="text" id="master-search" class="shell-input"
+                        placeholder="🔍 Pretraži po emailu ili telefonu..."
+                        style="width: 100%; max-width: 380px; padding: 10px 15px; font-size: 13px; background: rgba(0, 0, 0, 0.2);">
+                </div>
             </div>
 
             <div class="table-responsive">
                 <table class="master-table">
                     <thead>
                         <tr>
-                            <th>Korisnik</th>
+                            <th>Korisnik (Email)</th>
+                            <th>Kontakt Telefon</th>
                             <th>Tenant (Poddomen)</th>
                             <th>Uloga</th>
                             <th>Status Vize</th>
@@ -53,7 +63,7 @@
                     </thead>
                     <tbody id="users-table-body">
                         <tr>
-                            <td colspan="6" class="text-center" style="padding: 40px; color: var(--gold);">
+                            <td colspan="7" class="text-center" style="padding: 40px; color: var(--gold);">
                                 ⚡ Inicijalizujem skeniranje D1 relejne baze podataka...
                             </td>
                         </tr>
@@ -63,7 +73,7 @@
         </section>
     </main>
 
-    <script type="module" src="control-plane.js?v=20.0.0"></script>
+    <script type="module" src="control-plane.js?v=21.0.0"></script>
 </body>
 
 </html>
