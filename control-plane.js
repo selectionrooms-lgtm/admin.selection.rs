@@ -51,8 +51,9 @@ async function handleFormSubmit(e) {
     await masterKreirajNovogKorisnika();
 }
 
+// 🛡️ Amandman 1: Unifikacija imena tokena sa ostatkom sistema (selection_jwt_token)
 function uzmiUstavniToken() {
-    return localStorage.getItem('selection_session_token') || "";
+    return localStorage.getItem('selection_jwt_token') || "";
 }
 
 function generisiBffHeaders() {
@@ -73,7 +74,7 @@ export async function studioFetch(url, options = {}) {
 
         if (response.status === 401 || response.status === 403) {
             console.warn("🚨 [Security Shield] Sesija prekinuta (401/403). Čišćenje...");
-            localStorage.removeItem("selection_session_token");
+            localStorage.removeItem("selection_jwt_token");
             alert("🔒 Vaša sesija je istekla ili je nalog suspendovan. Bićete preusmereni na početni ekran.");
             window.location.href = "/";
             throw new Error("Unauthorized_Bypass_Blocked");
@@ -119,7 +120,7 @@ async function osveziMasterTabeluKorisnika() {
     }
 }
 
-// 🪐 UNIFIKOVANI GRAFIČKI RENDERER TABELE (Zove se na load i tokom kucanja u search)
+// 🪐 UNIFIKOVANI GRAFIČKI RENDERER TABELE
 function renderujTabelu(korisnici) {
     const tbody = document.getElementById('users-table-body');
     if (!tbody) return;
@@ -136,7 +137,7 @@ function renderujTabelu(korisnici) {
         tdEmail.textContent = klijent.email;
         tr.appendChild(tdEmail);
 
-        // 2. Kontakt Telefon (📱 NOVO)
+        // 2. Kontakt Telefon
         const tdPhone = document.createElement('td');
         tdPhone.style.cssText = "color: var(--text-secondary); font-size: 13px; font-family: monospace;";
         tdPhone.textContent = klijent.phone || "—";
@@ -178,7 +179,7 @@ function renderujTabelu(korisnici) {
         } else {
             let htmlAkcije = "";
 
-            // Ako je klijent aktivan, generišemo ustavni link sa okicom 👁️
+            // 👁️ Slanje ustavnih parametara ka Studiju
             if ((klijent.status === 'active' || klijent.status === 'approved') && cistiTenantId) {
                 htmlAkcije += `
                     <a href="https://composer.selection.rs?mode=admin&tenant=${cistiTenantId}" 
@@ -204,7 +205,6 @@ function renderujTabelu(korisnici) {
                 tdActions.appendChild(btnBlock);
             }
 
-            // Injektovanje okice pre dugmića za brisanje i blokiranje
             if (htmlAkcije) {
                 tdActions.insertAdjacentHTML('afterbegin', htmlAkcije);
             }
