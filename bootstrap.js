@@ -45,7 +45,7 @@ export async function bootstrapAdmin() {
 
         let profile;
         try {
-            // Korak A: Proveravamo da li browser već ima važeći selection_session kolačić
+            // Korak A: Proveravamo da li pretraživač već ima važeći session kolačić
             profile = await safeFetch(`${API_BASE}/api/me`);
             console.log("🟢 [Direct Auth] Aktivna sesija pronađena. Preskačem razmenu.");
         } catch (err) {

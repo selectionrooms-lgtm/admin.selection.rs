@@ -1,4 +1,4 @@
-// SELECTION CONTROL PLANE — admin-core.js (V4.7.0 - Phone Unified & Anti-Race)
+// SELECTION CONTROL PLANE — control-plane.js (V5.0.0 - Hardened Unified Engine)
 import { bootstrapAdmin } from './bootstrap.js';
 
 const API_BASE = "https://api.selection.rs";
@@ -11,8 +11,7 @@ export async function studioFetch(url, options = {}) {
         "Content-Type": "application/json",
         ...(options.headers || {})
     };
-    options.credentials = 'include'; // 🎯 Ovo osigurava da svaka load/save/publish komanda nosi kolačić!
-    // ...
+    options.credentials = 'include'; // Ovo osigurava prenos kolačića!
 
     try {
         const response = await fetch(url, options);
@@ -60,7 +59,8 @@ function setupEventListeners() {
             const filtriraniKorisnici = sviKorisniciKes.filter(k => {
                 const emailMec = k.email ? k.email.toLowerCase().includes(pojam) : false;
                 const phoneMec = k.phone ? k.phone.toLowerCase().includes(pojam) : false;
-                return emailMec || phoneMec;
+                const subMec = k.subdomain ? k.subdomain.toLowerCase().includes(pojam) : false;
+                return emailMec || phoneMec || subMec;
             });
             renderujTabelu(filtriraniKorisnici);
         });
@@ -79,7 +79,7 @@ async function osveziMasterTabeluKorisnika() {
     tbody.innerHTML = `
         <tr>
             <td colspan="7" class="text-center" style="color: var(--gold); padding: 40px; font-weight:500;">
-                ⚡ Povezujem se na D1 relej, povlačim stanje iz čekaonice...
+                ⚡ Povezujem se na D1 relej, povlačim stanje iz unifikovane matrice...
             </td>
         </tr>
     `;
@@ -109,7 +109,7 @@ function renderujTabelu(korisnici) {
 
     korisnici.forEach(klijent => {
         const tr = document.createElement('tr');
-        const cistiTenantId = klijent.tenant_id || klijent.requested_subdomain || '';
+        const cistiSubdomain = klijent.subdomain || '';
 
         const tdEmail = document.createElement('td');
         tdEmail.style.cssText = "font-weight: 600; color: #fff;";
@@ -122,7 +122,7 @@ function renderujTabelu(korisnici) {
         tr.appendChild(tdPhone);
 
         const tdTenant = document.createElement('td');
-        tdTenant.innerHTML = `<input type="text" value="${cistiTenantId || 'Nije alociran'}" class="shell-input" style="width: 150px; padding: 5px 10px;" disabled>`;
+        tdTenant.innerHTML = `<input type="text" value="${cistiSubdomain || 'Nije alociran'}" class="shell-input" style="width: 150px; padding: 5px 10px;" disabled>`;
         tr.appendChild(tdTenant);
 
         const tdRole = document.createElement('td');
@@ -131,10 +131,12 @@ function renderujTabelu(korisnici) {
         tr.appendChild(tdRole);
 
         const tdStatus = document.createElement('td');
-        if (klijent.status === 'active' || klijent.status === 'approved') {
+        if (klijent.status === 'active') {
             tdStatus.innerHTML = `<span class="badge badge-approved">✔️ Aktivan</span>`;
-        } else if (klijent.status === 'blocked' || klijent.status === 'rejected' || klijent.status === 'deleted') {
-            tdStatus.innerHTML = `<span class="badge badge-revoked">${klijent.status === 'deleted' ? '🗑️ Grace' : '⛔ Blokiran'}</span>`;
+        } else if (klijent.status === 'blocked') {
+            tdStatus.innerHTML = `<span class="badge badge-revoked">⛔ Blokiran</span>`;
+        } else if (klijent.status === 'grace_period') {
+            tdStatus.innerHTML = `<span class="badge badge-revoked">🗑️ Grace Period</span>`;
         } else {
             tdStatus.innerHTML = `<span class="badge badge-pending">⏳ Čekaonica</span>`;
         }
@@ -147,12 +149,12 @@ function renderujTabelu(korisnici) {
         const tdActions = document.createElement('td');
         tdActions.style.cssText = "text-align: right; display: flex; gap: 8px; justify-content: flex-end; align-items: center;";
 
-        if (klijent.email === "selectionrooms@gmail.com") {
+        if (klijent.role === "master") {
             tdActions.innerHTML = `<span style="color: var(--gold); font-size: 12px; font-style: italic; font-weight: 500;">Centralno Jezgro</span>`;
         } else {
-            if ((klijent.status === 'active' || klijent.status === 'approved') && cistiTenantId) {
+            if (klijent.status === 'active' && cistiSubdomain) {
                 const btnStudio = document.createElement('a');
-                btnStudio.href = `https://composer.selection.rs?mode=admin&tenant=${cistiTenantId}`;
+                btnStudio.href = `https://composer.selection.rs?mode=admin&tenant=${klijent.tenant_id}`;
                 btnStudio.target = "_blank";
                 btnStudio.className = "btn btn-sm";
                 btnStudio.style.cssText = "background: var(--gold); color: #000; border: none; font-weight: 600; text-decoration: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;";
@@ -164,17 +166,17 @@ function renderujTabelu(korisnici) {
                 const btnApprove = document.createElement('button');
                 btnApprove.className = "btn btn-sm btn-approve";
                 btnApprove.textContent = "Odobri Vizu";
-                btnApprove.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'approved'));
+                btnApprove.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'approve'));
                 tdActions.appendChild(btnApprove);
-            } else if (klijent.status === 'active' || klijent.status === 'approved') {
+            } else if (klijent.status === 'active') {
                 const btnBlock = document.createElement('button');
                 btnBlock.className = "btn btn-sm btn-revoke";
                 btnBlock.textContent = "Oduzmi Vizu";
-                btnBlock.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'blocked'));
+                btnBlock.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'revoke'));
                 tdActions.appendChild(btnBlock);
             }
 
-            if (klijent.status !== 'deleted') {
+            if (klijent.status !== 'grace_period') {
                 const btnDelete = document.createElement('button');
                 btnDelete.className = "btn btn-sm btn-delete";
                 btnDelete.textContent = "🗑 Obriši";
@@ -191,7 +193,7 @@ function renderujTabelu(korisnici) {
 
 async function masterKreirajNovogKorisnika() {
     const emailInput = document.getElementById('client-email');
-    const phoneInput = document.getElementById('client-phone'); // 📥 Čitamo uneti telefon
+    const phoneInput = document.getElementById('client-phone');
     const subInput = document.getElementById('client-subdomain');
     const companyInput = document.getElementById('client-company');
 
@@ -199,11 +201,10 @@ async function masterKreirajNovogKorisnika() {
     const email = emailInput.value.trim();
     const phone = phoneInput.value.trim().replace(/\s+/g, '');
     const subdomain = subInput.value.trim().toLowerCase();
-    const companyName = (companyInput && companyInput.value.trim()) ? companyInput.value.trim() : "Selection Klijent";
+    const companyName = companyInput?.value.trim() || "Selection Klijent";
 
     if (!email || !subdomain || !phone) return;
 
-    // E.164 Regex provera na klijentu pre slanja na Edge
     if (!/^\+[1-9]\d{1,14}$/.test(phone)) {
         alert("❌ Telefon mora biti u E.164 formatu (npr. +38160123456)");
         return;
@@ -215,10 +216,8 @@ async function masterKreirajNovogKorisnika() {
             body: JSON.stringify({
                 company_name: companyName,
                 email: email,
-                phone: phone, // 🚀 Dinamički telefon ide na backend
-                requested_subdomain: subdomain,
-                expected_launch: new Date().toISOString().split('T')[0],
-                source_channel: "selection_gateway"
+                phone: phone,
+                requested_subdomain: subdomain
             })
         });
 
@@ -239,13 +238,15 @@ async function masterKreirajNovogKorisnika() {
     }
 }
 
-async function promeniStatusKlijentaMaster(requestId, status) {
-    if (!confirm(status === 'approved' ? `Odobriti aktivaciju?` : `Suspendovati klijenta?`)) return;
+async function promeniStatusKlijentaMaster(requestId, akcija) {
+    if (!confirm(akcija === 'approve' ? `Odobriti aktivaciju?` : `Suspendovati klijenta?`)) return;
+
+    const ruta = akcija === 'approve' ? '/api/master/approve-user' : '/api/master/revoke-user';
 
     try {
-        const response = await studioFetch(`${API_BASE}/api/master/approve-user`, {
+        const response = await studioFetch(`${API_BASE}${ruta}`, {
             method: 'POST',
-            body: JSON.stringify({ requestId, noviStatus: status })
+            body: JSON.stringify({ requestId })
         });
 
         const rez = await response.json();
@@ -261,7 +262,7 @@ async function promeniStatusKlijentaMaster(requestId, status) {
 }
 
 async function obrisiKlijentaMaster(requestId, email) {
-    if (!confirm(`🗑️ Obriši klijenta: ${email}?`)) return;
+    if (!confirm(`🗑️ Pokrenuti Grace Period za klijenta: ${email}?`)) return;
 
     try {
         const response = await studioFetch(`${API_BASE}/api/master/delete-request`, {
@@ -271,7 +272,7 @@ async function obrisiKlijentaMaster(requestId, email) {
 
         const rez = await response.json();
         if (response.ok && rez.success) {
-            alert(`✅ Klijent uspesno obrisan.`);
+            alert(`✅ Grace period uspešno inicijalizovan.`);
             await osveziMasterTabeluKorisnika();
         } else {
             alert(`❌ Greška: ${rez.error || ''}`);
