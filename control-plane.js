@@ -11,7 +11,8 @@ export async function studioFetch(url, options = {}) {
         "Content-Type": "application/json",
         ...(options.headers || {})
     };
-    options.credentials = 'include';
+    options.credentials = 'include'; // 🎯 Ovo osigurava da svaka load/save/publish komanda nosi kolačić!
+    // ...
 
     try {
         const response = await fetch(url, options);
