@@ -162,6 +162,7 @@ function renderujTabelu(korisnici) {
                 tdActions.appendChild(btnStudio);
             }
 
+            // 🎛️ KONTROLNA SKRETNICA ZA AKCIJE VIZE (Uvezan Rollback za blocked i grace_period)
             if (klijent.status === 'pending') {
                 const btnApprove = document.createElement('button');
                 btnApprove.className = "btn btn-sm btn-approve";
@@ -174,8 +175,17 @@ function renderujTabelu(korisnici) {
                 btnBlock.textContent = "Oduzmi Vizu";
                 btnBlock.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'revoke'));
                 tdActions.appendChild(btnBlock);
+            } else if (klijent.status === 'blocked' || klijent.status === 'grace_period') {
+                // Zeleno dugme sa restrikcionim borderom za vraćanje sistema iz mrtvih
+                const btnRestore = document.createElement('button');
+                btnRestore.className = "btn btn-sm btn-approve";
+                btnRestore.style.cssText = "background: rgba(50,220,50,0.15); border: 1px solid rgba(50,220,50,0.4); color: #70f070;";
+                btnRestore.textContent = "🔄 Vrati Vizu";
+                btnRestore.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'restore'));
+                tdActions.appendChild(btnRestore);
             }
 
+            // 🗑️ CRVENA ZONA UNIŠTENJA: Nudi se samo ako prostor već nije u procesu brisanja
             if (klijent.status !== 'grace_period') {
                 const btnDelete = document.createElement('button');
                 btnDelete.className = "btn btn-sm btn-delete";
