@@ -1,4 +1,4 @@
-// SELECTION CONTROL PLANE — control-plane.js (V5.0.0 - Hardened Unified Engine)
+// SELECTION CONTROL PLANE — control-plane.js (V5.1.0 - Hardened Rollback Architecture)
 import { bootstrapAdmin } from './bootstrap.js';
 
 const API_BASE = "https://api.selection.rs";
@@ -59,8 +59,8 @@ function setupEventListeners() {
             const filtriraniKorisnici = sviKorisniciKes.filter(k => {
                 const emailMec = k.email ? k.email.toLowerCase().includes(pojam) : false;
                 const phoneMec = k.phone ? k.phone.toLowerCase().includes(pojam) : false;
-                const subMec = k.subdomain ? k.subdomain.toLowerCase().includes(pojam) : false;
-                return emailMec || phoneMec || subMec;
+                const subdomainMec = k.subdomain ? k.subdomain.toLowerCase().includes(pojam) : false;
+                return emailMec || phoneMec || subdomainMec;
             });
             renderujTabelu(filtriraniKorisnici);
         });
@@ -162,36 +162,34 @@ function renderujTabelu(korisnici) {
                 tdActions.appendChild(btnStudio);
             }
 
-            // 🎛️ KONTROLNA SKRETNICA ZA AKCIJE VIZE (Uvezan Rollback za blocked i grace_period)
+            // 🎛️ SKRETNICA ZA ADMINISTRATIVNE AKCIJE NAD KLIJENTOM
             if (klijent.status === 'pending') {
                 const btnApprove = document.createElement('button');
                 btnApprove.className = "btn btn-sm btn-approve";
                 btnApprove.textContent = "Odobri Vizu";
-                btnApprove.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'approve'));
+                btnApprove.onclick = () => promeniStatusKlijentaMaster(klijent.id, 'approve');
                 tdActions.appendChild(btnApprove);
             } else if (klijent.status === 'active') {
                 const btnBlock = document.createElement('button');
                 btnBlock.className = "btn btn-sm btn-revoke";
                 btnBlock.textContent = "Oduzmi Vizu";
-                btnBlock.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'revoke'));
+                btnBlock.onclick = () => promeniStatusKlijentaMaster(klijent.id, 'revoke');
                 tdActions.appendChild(btnBlock);
             } else if (klijent.status === 'blocked' || klijent.status === 'grace_period') {
-                // Zeleno dugme sa restrikcionim borderom za vraćanje sistema iz mrtvih
                 const btnRestore = document.createElement('button');
                 btnRestore.className = "btn btn-sm btn-approve";
                 btnRestore.style.cssText = "background: rgba(50,220,50,0.15); border: 1px solid rgba(50,220,50,0.4); color: #70f070;";
                 btnRestore.textContent = "🔄 Vrati Vizu";
-                btnRestore.addEventListener('click', () => promeniStatusKlijentaMaster(klijent.id, 'restore'));
+                btnRestore.onclick = () => promeniStatusKlijentaMaster(klijent.id, 'restore');
                 tdActions.appendChild(btnRestore);
             }
 
-            // 🗑️ CRVENA ZONA UNIŠTENJA: Nudi se samo ako prostor već nije u procesu brisanja
             if (klijent.status !== 'grace_period') {
                 const btnDelete = document.createElement('button');
                 btnDelete.className = "btn btn-sm btn-delete";
                 btnDelete.textContent = "🗑 Obriši";
                 btnDelete.style.cssText = "background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #f07070;";
-                btnDelete.addEventListener('click', () => obrisiKlijentaMaster(klijent.id, klijent.email));
+                btnDelete.onclick = () => obrisiKlijentaMaster(klijent.id, klijent.email);
                 tdActions.appendChild(btnDelete);
             }
         }
@@ -199,6 +197,75 @@ function renderujTabelu(korisnici) {
         tr.appendChild(tdActions);
         tbody.appendChild(tr);
     });
+}
+
+async function promeniStatusKlijentaMaster(requestId, akcija) {
+    console.log(`📡 [Control Plane Triggered] Pokrećem akciju: ${akcija} za ID: ${requestId}`);
+
+    let potvrdnaPoruka = "";
+    let ruta = "";
+
+    // Gvozdeno razdvajanje stringova i ruta — onemogućen tihi fallback
+    switch (akcija) {
+        case 'approve':
+            potvrdnaPoruka = "Odobriti aktivaciju i izdati vizu klijentu?";
+            ruta = '/api/master/approve-user';
+            break;
+        case 'revoke':
+            potvrdnaPoruka = "Suspendovati klijenta i privremeno ukinuti vizu?";
+            ruta = '/api/master/revoke-user';
+            break;
+        case 'restore':
+            potvrdnaPoruka = "Poništiti sve restrikcije, prekinuti brisanje i ponovo aktivirati vizu klijentu?";
+            ruta = '/api/master/approve-user';
+            break;
+        default:
+            console.error("❌ Kritična greška: Prosleđena je nepoznata akcija jezgra:", akcija);
+            return;
+    }
+
+    if (!confirm(potvrdnaPoruka)) return;
+
+    try {
+        console.log(`🚀 Ispaljujem mrežni zahtev na: ${API_BASE}${ruta}`);
+        const response = await studioFetch(`${API_BASE}${ruta}`, {
+            method: 'POST',
+            body: JSON.stringify({ requestId })
+        });
+
+        const rez = await response.json();
+        if (response.ok && rez.success) {
+            console.log("🟢 Akcija uspešno izvršena u D1 bazi. Osvežavam prikaz.");
+            await osveziMasterTabeluKorisnika();
+        } else {
+            alert(`🔒 Kapija odbila promenu: ${rez.error || ''}`);
+        }
+    } catch (e) {
+        if (e.message === "Unauthorized_Bypass_Blocked") return;
+        alert("❌ Veza sa Control Plane panelom je prekinuta.");
+    }
+}
+
+async function obrisiKlijentaMaster(requestId, email) {
+    if (!confirm(`🗑️ Pokrenuti Grace Period za klijenta: ${email}?`)) return;
+
+    try {
+        const response = await studioFetch(`${API_BASE}/api/master/delete-request`, {
+            method: 'POST',
+            body: JSON.stringify({ requestId })
+        });
+
+        const rez = await response.json();
+        if (response.ok && rez.success) {
+            alert(`✅ Grace period uspešno inicijalizovan.`);
+            await osveziMasterTabeluKorisnika();
+        } else {
+            alert(`❌ Greška: ${rez.error || ''}`);
+        }
+    } catch (e) {
+        if (e.message === "Unauthorized_Bypass_Blocked") return;
+        alert("❌ Veza sa Control Plane panelom je prekinuta.");
+    }
 }
 
 async function masterKreirajNovogKorisnika() {
@@ -245,73 +312,6 @@ async function masterKreirajNovogKorisnika() {
     } catch (error) {
         if (error.message === "Unauthorized_Bypass_Blocked") return;
         alert("❌ Prekid veze sa centralnim D1 ruterom.");
-    }
-}
-
-// SELECTION CONTROL PLANE — Popravljena i gvozdeno usklađena funkcija restrikcija
-async function promeniStatusKlijentaMaster(requestId, akcija) {
-    let potvrdnaPoruka = "";
-    let ruta = "";
-
-    // 🏎️ Striktno mapiranje rute i teksta na osnovu prosleđene akcije sa tabele
-    if (akcija === 'approve') {
-        potvrdnaPoruka = "Odobriti aktivaciju i izdati vizu klijentu?";
-        ruta = '/api/master/approve-user';
-    } else if (akcija === 'revoke') {
-        potvrdnaPoruka = "Suspendovati klijenta i privremeno ukinuti vizu?";
-        ruta = '/api/master/revoke-user';
-    } else if (akcija === 'restore') {
-        // 🔄 ROLLBACK: Vraćanje iz blocked ili grace_period stanja ide na approve rutu
-        potvrdnaPoruka = "Poništiti sve restrikcije, prekinuti brisanje i vratiti vizu klijentu?";
-        ruta = '/api/master/approve-user';
-    }
-
-    // Sigurnosni guard u slučaju da akcija proleti nemapirana
-    if (!ruta) {
-        console.error("❌ Kritična greška: Nepoznata administrativna akcija:", akcija);
-        return;
-    }
-
-    if (!confirm(potvrdnaPoruka)) return;
-
-    try {
-        const response = await studioFetch(`${API_BASE}${ruta}`, {
-            method: 'POST',
-            body: JSON.stringify({ requestId })
-        });
-
-        const rez = await response.json();
-        if (response.ok && rez.success) {
-            // Ponovo skeniramo D1 i osvežavamo tabelu uživo na ekranu
-            await osveziMasterTabeluKorisnika();
-        } else {
-            alert(`🔒 Kapija odbila promenu: ${rez.error || ''}`);
-        }
-    } catch (e) {
-        if (e.message === "Unauthorized_Bypass_Blocked") return;
-        alert("❌ Veza sa Control Plane panelom je prekinuta.");
-    }
-}
-
-async function obrisiKlijentaMaster(requestId, email) {
-    if (!confirm(`🗑️ Pokrenuti Grace Period za klijenta: ${email}?`)) return;
-
-    try {
-        const response = await studioFetch(`${API_BASE}/api/master/delete-request`, {
-            method: 'POST',
-            body: JSON.stringify({ requestId })
-        });
-
-        const rez = await response.json();
-        if (response.ok && rez.success) {
-            alert(`✅ Grace period uspešno inicijalizovan.`);
-            await osveziMasterTabeluKorisnika();
-        } else {
-            alert(`❌ Greška: ${rez.error || ''}`);
-        }
-    } catch (e) {
-        if (e.message === "Unauthorized_Bypass_Blocked") return;
-        alert("❌ Veza sa Control Plane panelom je prekinuta.");
     }
 }
 
