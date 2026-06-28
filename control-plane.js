@@ -248,10 +248,31 @@ async function masterKreirajNovogKorisnika() {
     }
 }
 
+// SELECTION CONTROL PLANE — Popravljena i gvozdeno usklađena funkcija restrikcija
 async function promeniStatusKlijentaMaster(requestId, akcija) {
-    if (!confirm(akcija === 'approve' ? `Odobriti aktivaciju?` : `Suspendovati klijenta?`)) return;
+    let potvrdnaPoruka = "";
+    let ruta = "";
 
-    const ruta = akcija === 'approve' ? '/api/master/approve-user' : '/api/master/revoke-user';
+    // 🏎️ Striktno mapiranje rute i teksta na osnovu prosleđene akcije sa tabele
+    if (akcija === 'approve') {
+        potvrdnaPoruka = "Odobriti aktivaciju i izdati vizu klijentu?";
+        ruta = '/api/master/approve-user';
+    } else if (akcija === 'revoke') {
+        potvrdnaPoruka = "Suspendovati klijenta i privremeno ukinuti vizu?";
+        ruta = '/api/master/revoke-user';
+    } else if (akcija === 'restore') {
+        // 🔄 ROLLBACK: Vraćanje iz blocked ili grace_period stanja ide na approve rutu
+        potvrdnaPoruka = "Poništiti sve restrikcije, prekinuti brisanje i vratiti vizu klijentu?";
+        ruta = '/api/master/approve-user';
+    }
+
+    // Sigurnosni guard u slučaju da akcija proleti nemapirana
+    if (!ruta) {
+        console.error("❌ Kritična greška: Nepoznata administrativna akcija:", akcija);
+        return;
+    }
+
+    if (!confirm(potvrdnaPoruka)) return;
 
     try {
         const response = await studioFetch(`${API_BASE}${ruta}`, {
@@ -261,6 +282,7 @@ async function promeniStatusKlijentaMaster(requestId, akcija) {
 
         const rez = await response.json();
         if (response.ok && rez.success) {
+            // Ponovo skeniramo D1 i osvežavamo tabelu uživo na ekranu
             await osveziMasterTabeluKorisnika();
         } else {
             alert(`🔒 Kapija odbila promenu: ${rez.error || ''}`);
