@@ -1,4 +1,4 @@
-// SELECTION CONTROL PLANE — control-plane.js (V5.1.0 - Hardened Rollback Architecture)
+// SELECTION CONTROL PLANE — control-plane.js (V5.2.0 - Hardened Unified Architecture Alignment)
 import { bootstrapAdmin } from './bootstrap.js';
 
 const API_BASE = "https://api.selection.rs";
@@ -153,6 +153,7 @@ function renderujTabelu(korisnici) {
             tdActions.innerHTML = `<span style="color: var(--gold); font-size: 12px; font-style: italic; font-weight: 500;">Centralno Jezgro</span>`;
         } else {
             if (klijent.status === 'active' && cistiSubdomain) {
+                // 🌐 VARIJANTA B: Master otvara klijentov prostor direktno na centralnom composer domenu preko čistog tekstualnog poddomena (tenant_id)
                 const btnStudio = document.createElement('a');
                 btnStudio.href = `https://composer.selection.rs?mode=admin&tenant=${klijent.tenant_id}`;
                 btnStudio.target = "_blank";
@@ -162,7 +163,6 @@ function renderujTabelu(korisnici) {
                 tdActions.appendChild(btnStudio);
             }
 
-            // 🎛️ SKRETNICA ZA ADMINISTRATIVNE AKCIJE NAD KLIJENTOM
             if (klijent.status === 'pending') {
                 const btnApprove = document.createElement('button');
                 btnApprove.className = "btn btn-sm btn-approve";
@@ -200,12 +200,11 @@ function renderujTabelu(korisnici) {
 }
 
 async function promeniStatusKlijentaMaster(requestId, akcija) {
-    console.log(`📡 [Control Plane Triggered] Pokrećem akciju: ${akcija} za ID: ${requestId}`);
+    console.log(`Grid [Control Plane Triggered] Pokrećem akciju: ${akcija} za ID: ${requestId}`);
 
     let potvrdnaPoruka = "";
     let ruta = "";
 
-    // Gvozdeno razdvajanje stringova i ruta — onemogućen tihi fallback
     switch (akcija) {
         case 'approve':
             potvrdnaPoruka = "Odobriti aktivaciju i izdati vizu klijentu?";
