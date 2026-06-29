@@ -169,7 +169,7 @@ function renderujTabelu(korisnici) {
         } else {
             if (klijent.status === 'active' && cistiSubdomain) {
                 const btnStudio = document.createElement('a');
-                btnStudio.href = `https://composer.selection.rs?mode=admin&tenant=${klijent.tenant_id}`;
+                btnStudio.href = `https://composer.selection.rs?mode=admin&tenant=${klijent.tenant_id}&token=${window.CF_SOURCE_TOKEN}`;
                 btnStudio.target = "_blank";
                 btnStudio.className = "btn btn-sm";
                 btnStudio.style.cssText = "background: var(--gold); color: #000; border: none; font-weight: 600; text-decoration: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;";
