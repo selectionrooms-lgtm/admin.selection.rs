@@ -1,4 +1,4 @@
-// admin/bootstrap.js (V25.5.6 - Hardened Explicit Recovery Engine)
+// admin/bootstrap.js (V26.0.0 - Hardened Stateless Control Plane Engine)
 const API_BASE = "https://api.selection.rs";
 
 export const AUTH_STATE = {
@@ -8,19 +8,27 @@ export const AUTH_STATE = {
     ERROR: "error"
 };
 
-// Komentar: Pomoćna funkcija za asinhronu pauzu (daje browseru vreme da zapiše kolačić)
-const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+// Pomoćna funkcija za čitanje kolačića na frontendu
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
 
-async function safeFetch(url) {
-    console.log("📡 [Network] START FETCH:", url);
+async function safeFetch(url, cfToken) {
+    console.log("📡 [Network Plane] START FETCH:", url);
 
     const res = await fetch(url, {
         method: "GET",
-        credentials: "include", // Automatski prenosi __Secure-selection_session kolačić
-        headers: { "Content-Type": "application/json" }
+        headers: {
+            "Content-Type": "application/json",
+            // ⚡ DONOSIMO DOKAZ: Šaljemo Cloudflare token direktno u novom zaglavlju!
+            "x-cf-source-token": cfToken || ""
+        }
     });
 
-    console.log("📡 [Network] FETCH RESPONSE STATUS:", res.status);
+    console.log("📡 [Network Plane] FETCH RESPONSE STATUS:", res.status);
 
     const text = await res.text();
     const cleanText = text.trim();
@@ -30,9 +38,8 @@ async function safeFetch(url) {
         throw new Error("HTML_FALLBACK_DETECTED");
     }
 
-    // Komentar: Ako je 401, proveri da li je odgovor zapravo JSON sa AUTH_REQUIRED strukturom
-    if (res.status === 401) {
-        throw new Error("API_STATUS_401");
+    if (res.status === 401 || res.status === 403) {
+        throw new Error("API_STATUS_UNAUTHORIZED");
     }
 
     if (!res.ok) {
@@ -58,84 +65,60 @@ export async function bootstrapAdmin() {
     root.setAttribute("data-status", AUTH_STATE.LOADING);
 
     try {
-        const profile = await safeFetch(`${API_BASE}/api/me`);
+        // 1. Čitamo Cloudflare Access token direktno iz pretraživača
+        const cfTokenAssertion = getCookie("CF_Authorization");
 
-        // Komentar: Provera unutrašnje strukture odgovora
-        if (!profile || profile.success === false) {
-            throw new Error("API_STATUS_401");
+        if (!cfTokenAssertion) {
+            console.error("🔒 [Gatekeeper] CF_Authorization kolačić ne postoji u memoriji.");
+            PrikaziRucniLoginUI();
+            return null;
         }
 
-        console.log("🟢 [Kernel] FETCH DONE - Uspešna autorizacija.");
+        // 2. Idemo pravo na verifikaciju identiteta i dobijanje profila
+        const profile = await safeFetch(`${API_BASE}/api/me`, cfTokenAssertion);
 
-        const finalIdentity = profile.identity || profile;
+        if (!profile || profile.success === false || !profile.identity) {
+            throw new Error("API_STATUS_UNAUTHORIZED");
+        }
+
+        console.log("🟢 [Kernel] GATEKEEPER APPROVED - Admin uspešno autorizovan.");
+
+        const finalIdentity = profile.identity;
         root.setAttribute("data-status", AUTH_STATE.AUTHENTICATED);
 
         const identityBadge = document.getElementById('admin-identity');
         if (identityBadge) identityBadge.textContent = finalIdentity.email;
 
+        // Zakucavamo token globalno u window da ga tvoje ostale funkcije (npr. za učitavanje tabele korisnika) pokupe!
+        window.CF_SOURCE_TOKEN = cfTokenAssertion;
+
         document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: finalIdentity }));
         return finalIdentity;
 
     } catch (err) {
-        console.error("🚨 [Kernel] AUTH DEBUG CATCH:", err.message);
-
-        if (err.message === "API_STATUS_401" || err.message === "HTML_FALLBACK_DETECTED") {
-            root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
-
-            // 1. Čitamo Cloudflare Access token koji je urezan na nivou .selection.rs domena
-            const cfTokenAssertion = document.cookie.match(/CF_Authorization=([^;]+)/)?.[1];
-
-            if (!cfTokenAssertion) {
-                console.error("🔒 [Recovery Path] CF_Authorization kolačić ne postoji unutar browser memorije.");
-                PrikaziRucniLoginUI();
-                return null;
-            }
-
-            console.log("🚀 [Recovery Path] Token pronađen. Šaljem eksplicitno na /api/auth/exchange...");
-
-            try {
-                const exchangeRes = await fetch(`${API_BASE}/api/auth/exchange`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include", // Ključno: Omogućava primanje Set-Cookie sa API-ja
-                    body: JSON.stringify({ cfToken: cfTokenAssertion })
-                });
-
-                if (exchangeRes.ok) {
-                    console.log("🟢 [Recovery Success] Sesija uspešno iskovana preko razmnoživača! Čekam stabilizaciju...");
-
-                    // Komentar: Dajemo browseru tačno 150ms predaha da bezbedno upiše kolačić u skladište poddomena
-                    await sleep(150);
-
-                    // Ponovo pokrećemo bootstrap, sada imamo spreman i urezan kolačić
-                    return await bootstrapAdmin();
-                } else {
-                    console.error("❌ API kapija je odbila eksplicitnu razmenu tokena.");
-                    PrikaziRucniLoginUI();
-                }
-            } catch (exErr) {
-                console.error("❌ Mrežni krah tokom exchange oporavka:", exErr.message);
-                PrikaziRucniLoginUI();
-            }
-            return null;
-        }
-
+        console.error("🚨 [Kernel] BOOTSTRAP EXCEPTION:", err.message);
         root.setAttribute("data-status", AUTH_STATE.ERROR);
+
+        PrikaziRucniLoginUI();
+
         const tbody = document.getElementById('users-table-body');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:var(--red-alert); padding:40px; font-weight:600;">💥 Fatalna greška jezgra: ${err.message}</td></tr>`;
+        if (tbody && err.message !== "API_STATUS_UNAUTHORIZED") {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:var(--red-alert); padding:40px; font-weight:600;">💥 Fatalna greška jezgra: ${err.message}</td></tr>`;
+        }
         return null;
     }
 }
 
 function PrikaziRucniLoginUI() {
+    root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
     document.dispatchEvent(new CustomEvent('ShellAuthLost', { detail: { reason: "No active session." } }));
     const tbody = document.getElementById('users-table-body');
     if (tbody) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" class="text-center" style="padding: 60px 20px;">
-                    <div style="margin-bottom: 20px; font-weight: 600; color: var(--text-muted);">🔒 Vaša sesija je istekla ili niste autorizovani.</div>
-                    <button onclick="window.location.href='https://api.selection.rs/api/me?returnTo=${encodeURIComponent(window.location.href)}'" class="btn-reconnect" style="display: inline-block; padding: 10px 20px; background: #d4b483; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Poveži nalog preko Cloudflare Access-a</button>
+                    <div style="margin-bottom: 20px; font-weight: 600; color: var(--text-muted);">🔒 Vaša sesija je istekla ili nemate Master pristup bazi.</div>
+                    <button onclick="window.location.href='https://admin.selection.rs'" class="btn-reconnect" style="display: inline-block; padding: 10px 20px; background: #d4b483; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Poveži nalog preko Cloudflare Access-a</button>
                 </td>
             </tr>`;
     }

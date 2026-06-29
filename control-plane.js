@@ -1,4 +1,4 @@
-// SELECTION CONTROL PLANE — control-plane.js (V5.3.0 - Hardened Unified Architecture Alignment)
+// SELECTION CONTROL PLANE — control-plane.js (V6.0.0 - Stateless Injection Unified)
 import { bootstrapAdmin } from './bootstrap.js';
 
 const API_BASE = "https://api.selection.rs";
@@ -7,21 +7,24 @@ let trenutnoUlogovaniKorisnik = null;
 let sviKorisniciKes = [];
 
 export async function studioFetch(url, options = {}) {
+    // ⚡ MODEL UPRAVLJANJA DOKAZIMA: Pakujemo token koji je bootstrap izvukao iz CF_Authorization kolačića
     options.headers = {
         "Content-Type": "application/json",
+        "x-cf-source-token": window.CF_SOURCE_TOKEN || "", // Centralni dokaz identiteta za otvoreni API
         ...(options.headers || {})
     };
-    options.credentials = 'include'; // Ovo osigurava prenos kolačića!
+
+    // Pošto je API potpuno na bypass-u, unutrašnji session kolačići nam više ne trebaju
+    options.credentials = 'omit';
 
     try {
         const response = await fetch(url, options);
 
-        // 🛡️ SECURITY SHIELD: Ako je klijent u tabeli kliknuo akciju, a sesija mu je u međuvremenu istekla
+        // 🛡️ SECURITY SHIELD: Ako Gatekeeper na API-ju primeti bilo kakvu anomaliju (status 401/403)
         if (response.status === 401 || response.status === 403) {
             console.warn("🚨 [Security Shield] Saas kapija prekinula sesiju (401/403).");
             alert("🔒 Vaša administrativna sesija je istekla ili nemate Master privilegije.");
 
-            // Umesto instant skoka koji pravi loop, pasivno prekidamo i obaveštavamo bootstrap
             document.dispatchEvent(new CustomEvent('ShellAuthLost', { detail: { reason: "Session expired." } }));
             throw new Error("Unauthorized_Bypass_Blocked");
         }
