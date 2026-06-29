@@ -1,4 +1,4 @@
-// admin/bootstrap.js (V25.5.5 - Hardened Explicit Recovery Engine)
+// admin/bootstrap.js (V25.5.6 - Hardened Explicit Recovery Engine)
 const API_BASE = "https://api.selection.rs";
 
 export const AUTH_STATE = {
@@ -7,6 +7,9 @@ export const AUTH_STATE = {
     UNAUTHENTICATED: "unauthenticated",
     ERROR: "error"
 };
+
+// Komentar: Pomoćna funkcija za asinhronu pauzu (daje browseru vreme da zapiše kolačić)
+const sleep = (ms) => new Promise(res => setTimeout(res, ms));
 
 async function safeFetch(url) {
     console.log("📡 [Network] START FETCH:", url);
@@ -27,6 +30,7 @@ async function safeFetch(url) {
         throw new Error("HTML_FALLBACK_DETECTED");
     }
 
+    // Komentar: Ako je 401, proveri da li je odgovor zapravo JSON sa AUTH_REQUIRED strukturom
     if (res.status === 401) {
         throw new Error("API_STATUS_401");
     }
@@ -55,6 +59,12 @@ export async function bootstrapAdmin() {
 
     try {
         const profile = await safeFetch(`${API_BASE}/api/me`);
+
+        // Komentar: Provera unutrašnje strukture odgovora
+        if (!profile || profile.success === false) {
+            throw new Error("API_STATUS_401");
+        }
+
         console.log("🟢 [Kernel] FETCH DONE - Uspešna autorizacija.");
 
         const finalIdentity = profile.identity || profile;
@@ -87,13 +97,17 @@ export async function bootstrapAdmin() {
                 const exchangeRes = await fetch(`${API_BASE}/api/auth/exchange`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ cfToken: cfTokenAssertion }) // Eksplicitno guranje kroz body
+                    credentials: "include", // Ključno: Omogućava primanje Set-Cookie sa API-ja
+                    body: JSON.stringify({ cfToken: cfTokenAssertion })
                 });
 
                 if (exchangeRes.ok) {
-                    console.log("🟢 [Recovery Success] Sesija uspešno iskovana preko razmnoživača! Radim re-entry...");
-                    // Ponovo pokrećemo bootstrap, sada imamo kolačić
+                    console.log("🟢 [Recovery Success] Sesija uspešno iskovana preko razmnoživača! Čekam stabilizaciju...");
+
+                    // Komentar: Dajemo browseru tačno 150ms predaha da bezbedno upiše kolačić u skladište poddomena
+                    await sleep(150);
+
+                    // Ponovo pokrećemo bootstrap, sada imamo spreman i urezan kolačić
                     return await bootstrapAdmin();
                 } else {
                     console.error("❌ API kapija je odbila eksplicitnu razmenu tokena.");
