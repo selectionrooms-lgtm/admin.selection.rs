@@ -8,7 +8,6 @@ export const AUTH_STATE = {
     ERROR: "error"
 };
 
-// Pomoćna funkcija za čitanje kolačića na frontendu
 function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
@@ -23,8 +22,8 @@ async function safeFetch(url, cfToken) {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
-            // ⚡ DONOSIMO DOKAZ: Šaljemo Cloudflare token direktno u novom zaglavlju!
-            "x-source-token": cfToken || ""
+            // 🔥 PUN STANDARD: Šaljemo unificirano zaglavlje koje ruter očekuje
+            "x-cf-source-token": cfToken || ""
         }
     });
 
@@ -65,7 +64,6 @@ export async function bootstrapAdmin() {
     root.setAttribute("data-status", AUTH_STATE.LOADING);
 
     try {
-        // 1. Čitamo Cloudflare Access token direktno iz pretraživača
         const cfTokenAssertion = getCookie("CF_Authorization");
 
         if (!cfTokenAssertion) {
@@ -74,7 +72,6 @@ export async function bootstrapAdmin() {
             return null;
         }
 
-        // 2. Idemo pravo na verifikaciju identiteta i dobijanje profila
         const profile = await safeFetch(`${API_BASE}/api/me`, cfTokenAssertion);
 
         if (!profile || profile.success === false || !profile.identity) {
@@ -89,7 +86,6 @@ export async function bootstrapAdmin() {
         const identityBadge = document.getElementById('admin-identity');
         if (identityBadge) identityBadge.textContent = finalIdentity.email;
 
-        // Zakucavamo token globalno u window da ga tvoje ostale funkcije (npr. za učitavanje tabele korisnika) pokupe!
         window.CF_SOURCE_TOKEN = cfTokenAssertion;
 
         document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: finalIdentity }));
@@ -110,7 +106,12 @@ export async function bootstrapAdmin() {
 }
 
 function PrikaziRucniLoginUI() {
-    root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
+    // 🛡️ FIX: Dohvatamo element unutar opsega ove funkcije da sprečimo ReferenceError
+    const root = document.getElementById("selection-admin-root");
+    if (root) {
+        root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
+    }
+
     document.dispatchEvent(new CustomEvent('ShellAuthLost', { detail: { reason: "No active session." } }));
     const tbody = document.getElementById('users-table-body');
     if (tbody) {
@@ -124,5 +125,5 @@ function PrikaziRucniLoginUI() {
     }
 }
 
-// Jedini korenski okidač pri učitavanju fajla
+// Pokretanje procesa inicijalizacije
 bootstrapAdmin();
