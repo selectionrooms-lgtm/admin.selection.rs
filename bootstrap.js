@@ -1,4 +1,4 @@
-// admin/bootstrap.js (V26.0.3 - Cookie Transport & Zero-Preflight Architecture)
+// admin/bootstrap.js (V26.0.4 - Hardened Stateless Control Plane Engine)
 const API_BASE = "https://api.selection.rs";
 
 export const AUTH_STATE = {
@@ -15,19 +15,17 @@ function getCookie(name) {
     return null;
 }
 
-// 📡 Izolovani mrežni izvršilac sa Cookie podrškom
-async function safeFetch(url) {
+async function safeFetch(url, token) {
     try {
         console.log("[FETCH START]", url);
         console.log("[COOKIE PRESENT]", document.cookie.includes("CF_Authorization"));
 
         const res = await fetch(url, {
             method: "GET",
-            // ⚡ KLJUČNA PROMENA: Dozvoljavamo prenos kolačića kroz cross-origin
-            credentials: "include",
+            credentials: "include", // ⚡ Čelični standard: Uvek nosimo kolačiće
             headers: {
-                "Content-Type": "application/json"
-                // NEMA x-source-token zaglavlja! CORS preflight eliminisan!
+                "Content-Type": "application/json",
+                "x-source-token": token || "" // ⚡ Unifikovani standard
             }
         });
 
@@ -52,8 +50,8 @@ function getIdentity() {
     return getCookie("CF_Authorization");
 }
 
-async function verifyIdentityAndGetProfile() {
-    const profileResult = await safeFetch(`${API_BASE}/api/me`);
+async function verifyIdentityAndGetProfile(token) {
+    const profileResult = await safeFetch(`${API_BASE}/api/me`, token);
 
     if (!profileResult || !profileResult.ok) {
         throw new Error(`API_STATUS_UNAUTHORIZED_OR_FAILED_${profileResult?.status}`);
@@ -98,12 +96,12 @@ export async function bootstrapAdmin() {
         if (!token) {
             console.log("[BOOT STOP] no token cookie found");
             PrikaziRucniLoginUI();
-            return;
+            return null;
         }
 
         console.log("[BOOT 03] before me");
 
-        const me = await verifyIdentityAndGetProfile();
+        const me = await verifyIdentityAndGetProfile(token);
 
         console.log("[BOOT 04] me", me);
 
@@ -113,7 +111,8 @@ export async function bootstrapAdmin() {
             if (identityBadge) identityBadge.textContent = "Test Reached Mode";
 
             window.CF_SOURCE_TOKEN = token;
-            document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: { email: "test@selection.rs" } }));
+            document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: { email: "selectionrooms@gmail.com" } }));
+            return { email: "selectionrooms@gmail.com" };
         }
 
         console.log("[BOOT DONE]");

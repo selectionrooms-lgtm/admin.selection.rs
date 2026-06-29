@@ -1,26 +1,23 @@
-// SELECTION CONTROL PLANE — control-plane.js (V6.0.0 - Stateless Injection Unified)
-import { bootstrapAdmin } from './bootstrap.js';
-
+// SELECTION CONTROL PLANE — control-plane.js (V6.0.1 - Stateless Injection Unified)
 const API_BASE = "https://api.selection.rs";
 
 let trenutnoUlogovaniKorisnik = null;
 let sviKorisniciKes = [];
 
 export async function studioFetch(url, options = {}) {
-    // ⚡ MODEL UPRAVLJANJA DOKAZIMA: Pakujemo token koji je bootstrap izvukao iz CF_Authorization kolačića
     options.headers = {
         "Content-Type": "application/json",
-        "x-cf-source-token": window.CF_SOURCE_TOKEN || "", // Centralni dokaz identiteta za otvoreni API
+        // ⚡ GVOZDENI UKLONJENI ČVOR: Sve ujednačeno na x-source-token standard
+        "x-source-token": window.CF_SOURCE_TOKEN || "",
         ...(options.headers || {})
     };
 
-    // Pošto je API potpuno na bypass-u, unutrašnji session kolačići nam više ne trebaju
-    options.credentials = 'omit';
+    // ⚡ PROLAZ ZA KEKS: Menjamo 'omit' u 'include' da kolačići lete kroz cross-origin mrežu
+    options.credentials = 'include';
 
     try {
         const response = await fetch(url, options);
 
-        // 🛡️ SECURITY SHIELD: Ako Gatekeeper na API-ju primeti bilo kakvu anomaliju (status 401/403)
         if (response.status === 401 || response.status === 403) {
             console.warn("🚨 [Security Shield] Saas kapija prekinula sesiju (401/403).");
             alert("🔒 Vaša administrativna sesija je istekla ili nemate Master privilegije.");
@@ -36,7 +33,6 @@ export async function studioFetch(url, options = {}) {
     }
 }
 
-// Slušamo autoritativni signal iz bootstrap.js koji se ispaljuje SAMO pri uspešnoj verifikaciji
 document.addEventListener('ShellProvisionalReady', async (event) => {
     trenutnoUlogovaniKorisnik = event.detail;
     console.log("🚀 [Control Plane] Signal primljen! Identitet verifikovan:", trenutnoUlogovaniKorisnik.email);
@@ -315,5 +311,3 @@ async function masterKreirajNovogKorisnika() {
         alert("❌ Prekid veze sa centralnim D1 ruterom.");
     }
 }
-
-// 🛑 UKLONJEN KORENSKI OKIDAČ bootstrapAdmin() - Izvršava se isključivo unutar bootstrap.js!
