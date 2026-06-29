@@ -1,4 +1,4 @@
-// admin/bootstrap.js (V25.5.0 - STERILE DIAGNOSTIC BLOCK)
+// admin/bootstrap.js (V25.5.5 - Hardened Explicit Recovery Engine)
 const API_BASE = "https://api.selection.rs";
 
 export const AUTH_STATE = {
@@ -13,7 +13,7 @@ async function safeFetch(url) {
 
     const res = await fetch(url, {
         method: "GET",
-        credentials: "include",
+        credentials: "include", // Automatski prenosi __Secure-selection_session kolačić
         headers: { "Content-Type": "application/json" }
     });
 
@@ -43,7 +43,6 @@ async function safeFetch(url) {
 }
 
 export async function bootstrapAdmin() {
-    // Brojač izvršenja na samom vrhu funkcije
     console.count("🔍 [Kernel] BOOTSTRAP_EXECUTION_COUNT");
 
     const root = document.getElementById("selection-admin-root");
@@ -58,17 +57,73 @@ export async function bootstrapAdmin() {
         const profile = await safeFetch(`${API_BASE}/api/me`);
         console.log("🟢 [Kernel] FETCH DONE - Uspešna autorizacija.");
 
+        const finalIdentity = profile.identity || profile;
         root.setAttribute("data-status", AUTH_STATE.AUTHENTICATED);
-        return profile;
+
+        const identityBadge = document.getElementById('admin-identity');
+        if (identityBadge) identityBadge.textContent = finalIdentity.email;
+
+        document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: finalIdentity }));
+        return finalIdentity;
 
     } catch (err) {
-        // GVOZDENI DIAGNOSTIK BLOK — SVI REDIREKTI I SKOKOVI SU INTERNIRANI
         console.error("🚨 [Kernel] AUTH DEBUG CATCH:", err.message);
 
-        root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
+        if (err.message === "API_STATUS_401" || err.message === "HTML_FALLBACK_DETECTED") {
+            root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
 
-        // ZABETONIRAN STOP. Nema koda, nema navigacije, nema ničega posle ovoga.
+            // 1. Čitamo Cloudflare Access token koji je urezan na nivou .selection.rs domena
+            const cfTokenAssertion = document.cookie.match(/CF_Authorization=([^;]+)/)?.[1];
+
+            if (!cfTokenAssertion) {
+                console.error("🔒 [Recovery Path] CF_Authorization kolačić ne postoji unutar browser memorije.");
+                PrikaziRucniLoginUI();
+                return null;
+            }
+
+            console.log("🚀 [Recovery Path] Token pronađen. Šaljem eksplicitno na /api/auth/exchange...");
+
+            try {
+                const exchangeRes = await fetch(`${API_BASE}/api/auth/exchange`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ cfToken: cfTokenAssertion }) // Eksplicitno guranje kroz body
+                });
+
+                if (exchangeRes.ok) {
+                    console.log("🟢 [Recovery Success] Sesija uspešno iskovana preko razmnoživača! Radim re-entry...");
+                    // Ponovo pokrećemo bootstrap, sada imamo kolačić
+                    return await bootstrapAdmin();
+                } else {
+                    console.error("❌ API kapija je odbila eksplicitnu razmenu tokena.");
+                    PrikaziRucniLoginUI();
+                }
+            } catch (exErr) {
+                console.error("❌ Mrežni krah tokom exchange oporavka:", exErr.message);
+                PrikaziRucniLoginUI();
+            }
+            return null;
+        }
+
+        root.setAttribute("data-status", AUTH_STATE.ERROR);
+        const tbody = document.getElementById('users-table-body');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:var(--red-alert); padding:40px; font-weight:600;">💥 Fatalna greška jezgra: ${err.message}</td></tr>`;
         return null;
+    }
+}
+
+function PrikaziRucniLoginUI() {
+    document.dispatchEvent(new CustomEvent('ShellAuthLost', { detail: { reason: "No active session." } }));
+    const tbody = document.getElementById('users-table-body');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center" style="padding: 60px 20px;">
+                    <div style="margin-bottom: 20px; font-weight: 600; color: var(--text-muted);">🔒 Vaša sesija je istekla ili niste autorizovani.</div>
+                    <button onclick="window.location.href='https://api.selection.rs/api/me?returnTo=${encodeURIComponent(window.location.href)}'" class="btn-reconnect" style="display: inline-block; padding: 10px 20px; background: #d4b483; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Poveži nalog preko Cloudflare Access-a</button>
+                </td>
+            </tr>`;
     }
 }
 
