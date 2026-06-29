@@ -1,4 +1,4 @@
-// admin/bootstrap.js (V26.0.2 - Frontend Bootstrap Isolation & Diagnostics)
+// admin/bootstrap.js (V26.0.3 - Cookie Transport & Zero-Preflight Architecture)
 const API_BASE = "https://api.selection.rs";
 
 export const AUTH_STATE = {
@@ -15,17 +15,19 @@ function getCookie(name) {
     return null;
 }
 
-// 📡 Izolovani mrežni izvršilac
-async function safeFetch(url, token) {
+// 📡 Izolovani mrežni izvršilac sa Cookie podrškom
+async function safeFetch(url) {
     try {
         console.log("[FETCH START]", url);
+        console.log("[COOKIE PRESENT]", document.cookie.includes("CF_Authorization"));
 
         const res = await fetch(url, {
             method: "GET",
-            credentials: "omit",
+            // ⚡ KLJUČNA PROMENA: Dozvoljavamo prenos kolačića kroz cross-origin
+            credentials: "include",
             headers: {
-                "Content-Type": "application/json",
-                "x-source-token": token || ""
+                "Content-Type": "application/json"
+                // NEMA x-source-token zaglavlja! CORS preflight eliminisan!
             }
         });
 
@@ -46,19 +48,17 @@ async function safeFetch(url, token) {
     }
 }
 
-// 🔒 Unutrašnji izvršioci za vađenje tokena i verifikaciju profila
 function getIdentity() {
     return getCookie("CF_Authorization");
 }
 
-async function verifyIdentityAndGetProfile(token) {
-    const profileResult = await safeFetch(`${API_BASE}/api/me`, token);
+async function verifyIdentityAndGetProfile() {
+    const profileResult = await safeFetch(`${API_BASE}/api/me`);
 
     if (!profileResult || !profileResult.ok) {
         throw new Error(`API_STATUS_UNAUTHORIZED_OR_FAILED_${profileResult?.status}`);
     }
 
-    // Sigurno parsiranje unutar izolovanog izvršioca
     try {
         return JSON.parse(profileResult.body);
     } catch (parseErr) {
@@ -85,9 +85,6 @@ function PrikaziRucniLoginUI() {
     }
 }
 
-// ==========================================
-// 🛡️ TVOJ ZAŠTITNI DIAGNOSTIČKI OMOTAČ
-// ==========================================
 export async function bootstrapAdmin() {
     try {
         console.log("[BOOT 01] start");
@@ -96,18 +93,17 @@ export async function bootstrapAdmin() {
         if (root) root.setAttribute("data-status", AUTH_STATE.LOADING);
 
         const token = await getIdentity();
-
-        console.log("[BOOT 02] identity", !!token); // Logujemo postojanje (true/false) bez prljanja konzole celim stringom
+        console.log("[BOOT 02] identity cookie exists:", !!token);
 
         if (!token) {
-            console.log("[BOOT STOP] no token");
+            console.log("[BOOT STOP] no token cookie found");
             PrikaziRucniLoginUI();
             return;
         }
 
         console.log("[BOOT 03] before me");
 
-        const me = await verifyIdentityAndGetProfile(token);
+        const me = await verifyIdentityAndGetProfile();
 
         console.log("[BOOT 04] me", me);
 
@@ -127,17 +123,9 @@ export async function bootstrapAdmin() {
         if (root) root.setAttribute("data-status", AUTH_STATE.ERROR);
 
         PrikaziRucniLoginUI();
-
-        console.error(
-            "[BOOT FATAL]",
-            e,
-            e?.stack
-        );
-
-        // Zaustavlja izvršavanje u F12 kako bi mogao tačno da pregledaš stanje memorije i promenljivih u trenutku pucanja!
+        console.error("[BOOT FATAL]", e, e?.stack);
         debugger;
     }
 }
 
-// Inicijalni okidač kontrolne table
 bootstrapAdmin();
