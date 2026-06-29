@@ -24,7 +24,7 @@ async function safeFetch(url, cfToken) {
         headers: {
             "Content-Type": "application/json",
             // ⚡ DONOSIMO DOKAZ: Šaljemo Cloudflare token direktno u novom zaglavlju!
-            "x-cf-source-token": cfToken || ""
+            "x-source-token": cfToken || ""
         }
     });
 
