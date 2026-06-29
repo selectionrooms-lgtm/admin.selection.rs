@@ -1,4 +1,4 @@
-// admin/bootstrap.js (V26.0.4 - Hardened Stateless Control Plane Engine)
+// admin/bootstrap.js (V26.0.5 - Hardened State Latch Architecture)
 const API_BASE = "https://api.selection.rs";
 
 export const AUTH_STATE = {
@@ -7,6 +7,9 @@ export const AUTH_STATE = {
     UNAUTHENTICATED: "unauthenticated",
     ERROR: "error"
 };
+
+// 🔒 Inicijalizacija globalnog latch stanja na samom startu
+window.__CF_BOOTSTRAP_STATE__ = null;
 
 function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -18,45 +21,29 @@ function getCookie(name) {
 async function safeFetch(url, token) {
     try {
         console.log("[FETCH START]", url);
-        console.log("[COOKIE PRESENT]", document.cookie.includes("CF_Authorization"));
-
         const res = await fetch(url, {
             method: "GET",
-            credentials: "include", // ⚡ Čelični standard: Uvek nosimo kolačiće
+            credentials: "include", // Kolačići lete kroz cross-origin
             headers: {
                 "Content-Type": "application/json",
-                "x-source-token": token || "" // ⚡ Unifikovani standard
+                "x-source-token": token || ""
             }
         });
 
         console.log("[FETCH STATUS]", res.status);
-
         const text = await res.text();
-        console.log("[FETCH BODY]", text);
-
-        return {
-            ok: res.ok,
-            status: res.status,
-            body: text
-        };
-
+        return { ok: res.ok, status: res.status, body: text };
     } catch (e) {
         console.error("[FETCH CRASH]", e);
         throw e;
     }
 }
 
-function getIdentity() {
-    return getCookie("CF_Authorization");
-}
-
 async function verifyIdentityAndGetProfile(token) {
     const profileResult = await safeFetch(`${API_BASE}/api/me`, token);
-
     if (!profileResult || !profileResult.ok) {
         throw new Error(`API_STATUS_UNAUTHORIZED_OR_FAILED_${profileResult?.status}`);
     }
-
     try {
         return JSON.parse(profileResult.body);
     } catch (parseErr) {
@@ -66,31 +53,17 @@ async function verifyIdentityAndGetProfile(token) {
 
 function PrikaziRucniLoginUI() {
     const root = document.getElementById("selection-admin-root");
-    if (root) {
-        root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
-    }
-
+    if (root) root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
     document.dispatchEvent(new CustomEvent('ShellAuthLost', { detail: { reason: "No active session." } }));
-    const tbody = document.getElementById('users-table-body');
-    if (tbody) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" class="text-center" style="padding: 60px 20px;">
-                    <div style="margin-bottom: 20px; font-weight: 600; color: var(--text-muted);">🔒 Vaša sesija je istekla ili nemate Master pristup bazi.</div>
-                    <button onclick="window.location.href='https://admin.selection.rs'" class="btn-reconnect" style="display: inline-block; padding: 10px 20px; background: #d4b483; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Poveži nalog preko Cloudflare Access-a</button>
-                </td>
-            </tr>`;
-    }
 }
 
 export async function bootstrapAdmin() {
     try {
         console.log("[BOOT 01] start");
-
         const root = document.getElementById("selection-admin-root");
         if (root) root.setAttribute("data-status", AUTH_STATE.LOADING);
 
-        const token = await getIdentity();
+        const token = getCookie("CF_Authorization");
         console.log("[BOOT 02] identity cookie exists:", !!token);
 
         if (!token) {
@@ -100,30 +73,35 @@ export async function bootstrapAdmin() {
         }
 
         console.log("[BOOT 03] before me");
+        const profile = await verifyIdentityAndGetProfile(token);
 
-        const me = await verifyIdentityAndGetProfile(token);
-
-        console.log("[BOOT 04] me", me);
-
-        if (me && (me.success || me.reached)) {
-            if (root) root.setAttribute("data-status", AUTH_STATE.AUTHENTICATED);
-            const identityBadge = document.getElementById('admin-identity');
-            if (identityBadge) identityBadge.textContent = "Test Reached Mode";
-
-            window.CF_SOURCE_TOKEN = token;
-            document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: { email: "selectionrooms@gmail.com" } }));
-            return { email: "selectionrooms@gmail.com" };
+        if (!profile || profile.success === false || !profile.identity) {
+            throw new Error("API_STATUS_UNAUTHORIZED");
         }
 
-        console.log("[BOOT DONE]");
+        console.log("🟢 [Kernel] GATEKEEPER APPROVED - Admin autorizovan.");
+        const finalIdentity = profile.identity;
+
+        // 🧠 MEMORIJSKI LATCH: Zakucavamo stanje u globalni prozor PRE ispaljivanja signala!
+        window.__CF_BOOTSTRAP_STATE__ = finalIdentity;
+        window.CF_SOURCE_TOKEN = token;
+
+        if (root) root.setAttribute("data-status", AUTH_STATE.AUTHENTICATED);
+        const identityBadge = document.getElementById('admin-identity');
+        if (identityBadge) identityBadge.textContent = finalIdentity.email;
+
+        // Emitujemo event kao sekundarnu mrežnu notifikaciju
+        document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: finalIdentity }));
+        console.log("[BOOT DONE] State latched successfully.");
+        return finalIdentity;
 
     } catch (e) {
         const root = document.getElementById("selection-admin-root");
         if (root) root.setAttribute("data-status", AUTH_STATE.ERROR);
-
         PrikaziRucniLoginUI();
         console.error("[BOOT FATAL]", e, e?.stack);
         debugger;
+        return null;
     }
 }
 

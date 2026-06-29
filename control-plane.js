@@ -1,27 +1,22 @@
-// SELECTION CONTROL PLANE — control-plane.js (V6.0.2 - Cookie Transport Verified)
+// SELECTION CONTROL PLANE — control-plane.js (V6.0.3 - Cache Persistence Buffer)
 const API_BASE = "https://api.selection.rs";
 
 let trenutnoUlogovaniKorisnik = null;
 let sviKorisniciKes = [];
 
 export async function studioFetch(url, options = {}) {
-    // ⚡ UNIFIKACIJA: Izbacujemo x-cf-source-token i ručne tokene u potpunosti!
     options.headers = {
         "Content-Type": "application/json",
+        "x-source-token": window.CF_SOURCE_TOKEN || "",
         ...(options.headers || {})
     };
-
-    // ⚡ GVOZDENI STANDARD: Obezbeđujemo da Cloudflare Access kolačić (keks) leti kroz cross-origin
     options.credentials = 'include';
 
     try {
         const response = await fetch(url, options);
-
-        // 🛡️ SECURITY SHIELD: Ako Gatekeeper na API-ju primeti bilo kakvu anomaliju (status 401/403)
         if (response.status === 401 || response.status === 403) {
             console.warn("🚨 [Security Shield] Saas kapija prekinula sesiju (401/403).");
             alert("🔒 Vaša administrativna sesija je istekla ili nemate Master privilegije.");
-
             document.dispatchEvent(new CustomEvent('ShellAuthLost', { detail: { reason: "Session expired." } }));
             throw new Error("Unauthorized_Bypass_Blocked");
         }
@@ -33,13 +28,6 @@ export async function studioFetch(url, options = {}) {
     }
 }
 
-// Slušamo autoritativni signal iz bootstrap.js koji se ispaljuje SAMO pri uspešnoj verifikaciji
-document.addEventListener('ShellProvisionalReady', async (event) => {
-    trenutnoUlogovaniKorisnik = event.detail;
-    console.log("🚀 [Control Plane] Signal primljen! Identitet verifikovan:", trenutnoUlogovaniKorisnik.email);
-    initControlPlane();
-});
-
 function initControlPlane() {
     console.log("🎮 [Control Plane] Komandna stanica aktivirana.");
     const identityBadge = document.getElementById('admin-identity');
@@ -49,6 +37,26 @@ function initControlPlane() {
     osveziMasterTabeluKorisnika();
     setupEventListeners();
 }
+
+// 🧠 KRITIČNI KRUG ODREDIŠTA: Provera i evakuacija latched stanja na ulazu
+function proveriIBootstrapujIzLatchedStanja() {
+    const cachedIdentity = window.__CF_BOOTSTRAP_STATE__;
+    if (cachedIdentity) {
+        console.log("⚡ [Control Plane] Trka pobeđena! Identitet uspešno evakuisan iz globalnog latch-a:", cachedIdentity.email);
+        trenutnoUlogovaniKorisnik = cachedIdentity;
+        initControlPlane();
+        return true;
+    }
+    return false;
+}
+
+// Slušamo event ako se control-plane učitao pre završetka bootstrapa
+document.addEventListener('ShellProvisionalReady', (event) => {
+    if (trenutnoUlogovaniKorisnik) return; // Ako smo već podigli sistem kroz latch, ignoriši zakasneli event
+    trenutnoUlogovaniKorisnik = event.detail;
+    console.log("🚀 [Control Plane] Signal primljen preko mrežnog eventa:", trenutnoUlogovaniKorisnik.email);
+    initControlPlane();
+});
 
 function setupEventListeners() {
     const form = document.getElementById('provision-form');
@@ -192,7 +200,7 @@ function renderujTabelu(korisnici) {
                 const btnDelete = document.createElement('button');
                 btnDelete.className = "btn btn-sm btn-delete";
                 btnDelete.textContent = "🗑 Obriši";
-                btnDelete.style.cssText = "background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #f07070;";
+                btnDelete.style.cssText = "background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #70f070;";
                 btnDelete.onclick = () => obrisiKlijentaMaster(klijent.id, klijent.email);
                 tdActions.appendChild(btnDelete);
             }
@@ -206,7 +214,6 @@ function renderujTabelu(korisnici) {
 async function promeniStatusKlijentaMaster(requestId, akcija) {
     let potvrdnaPoruka = "";
     let ruta = "";
-
     switch (akcija) {
         case 'approve':
             potvrdnaPoruka = "Odobriti aktivaciju i izdati vizu klijentu?";
@@ -223,92 +230,47 @@ async function promeniStatusKlijentaMaster(requestId, akcija) {
         default:
             return;
     }
-
     if (!confirm(potvrdnaPoruka)) return;
-
     try {
-        const response = await studioFetch(`${API_BASE}${ruta}`, {
-            method: 'POST',
-            body: JSON.stringify({ requestId })
-        });
-
+        const response = await studioFetch(`${API_BASE}${ruta}`, { method: 'POST', body: JSON.stringify({ requestId }) });
         const rez = await response.json();
-        if (response.ok && rez.success) {
-            await osveziMasterTabeluKorisnika();
-        } else {
-            alert(`🔒 Kapija odbila promenu: ${rez.error || ''}`);
-        }
-    } catch (e) {
-        if (e.message === "Unauthorized_Bypass_Blocked") return;
-        alert("❌ Veza sa Control Plane panelom je prekinuta.");
-    }
+        if (response.ok && rez.success) await osveziMasterTabeluKorisnika();
+    } catch (e) { console.error(e); }
 }
 
 async function obrisiKlijentaMaster(requestId, email) {
     if (!confirm(`🗑️ Pokrenuti Grace Period za klijenta: ${email}?`)) return;
-
     try {
-        const response = await studioFetch(`${API_BASE}/api/master/delete-request`, {
-            method: 'POST',
-            body: JSON.stringify({ requestId })
-        });
-
+        const response = await studioFetch(`${API_BASE}/api/master/delete-request`, { method: 'POST', body: JSON.stringify({ requestId }) });
         const rez = await response.json();
-        if (response.ok && rez.success) {
-            alert(`✅ Grace period uspešno inicijalizovan.`);
-            await osveziMasterTabeluKorisnika();
-        } else {
-            alert(`❌ Greška: ${rez.error || ''}`);
-        }
-    } catch (e) {
-        if (e.message === "Unauthorized_Bypass_Blocked") return;
-        alert("❌ Veza sa Control Plane panelom je prekinuta.");
-    }
+        if (response.ok && rez.success) await osveziMasterTabeluKorisnika();
+    } catch (e) { console.error(e); }
 }
 
 async function masterKreirajNovogKorisnika() {
     const emailInput = document.getElementById('client-email');
     const phoneInput = document.getElementById('client-phone');
     const subInput = document.getElementById('client-subdomain');
-    const companyInput = document.getElementById('client-company');
-
     if (!emailInput || !subInput || !phoneInput) return;
+
     const email = emailInput.value.trim();
     const phone = phoneInput.value.trim().replace(/\s+/g, '');
     const subdomain = subInput.value.trim().toLowerCase();
-    const companyName = companyInput?.value.trim() || "Selection Klijent";
-
     if (!email || !subdomain || !phone) return;
-
-    if (!/^\+[1-9]\d{1,14}$/.test(phone)) {
-        alert("❌ Telefon mora biti u E.164 formatu (npr. +38160123456)");
-        return;
-    }
 
     try {
         const response = await studioFetch(`${API_BASE}/api/onboarding/request`, {
             method: 'POST',
-            body: JSON.stringify({
-                company_name: companyName,
-                email: email,
-                phone: phone,
-                requested_subdomain: subdomain
-            })
+            body: JSON.stringify({ company_name: "Selection Klijent", email, phone, requested_subdomain: subdomain })
         });
-
         const rez = await response.json();
         if (response.ok && rez.success) {
-            alert(`🎉 USPEŠNO: Zahtev alociran!`);
-            emailInput.value = '';
-            phoneInput.value = '';
-            subInput.value = '';
-            if (companyInput) companyInput.value = '';
+            alert(`🎉 Zahtev alociran!`);
+            emailInput.value = ''; phoneInput.value = ''; subInput.value = '';
             await osveziMasterTabeluKorisnika();
-        } else {
-            alert(`❌ Greška: ${rez.error || "Odbijeno sa servera."}`);
         }
-    } catch (error) {
-        if (error.message === "Unauthorized_Bypass_Blocked") return;
-        alert("❌ Prekid veze sa centralnim D1 ruterom.");
-    }
+    } catch (error) { console.error(error); }
 }
+
+// 🏁 EKSPRESNO OKIDANJE: Proveravamo latch odmah pri samom inicijalnom učitavanju skripte!
+proveriIBootstrapujIzLatchedStanja();
