@@ -1,4 +1,4 @@
-// admin/bootstrap.js (V26.0.1 - Hardened Stateless Control Plane Forensics)
+// admin/bootstrap.js (V26.0.0 - Hardened Stateless Control Plane Engine)
 const API_BASE = "https://api.selection.rs";
 
 export const AUTH_STATE = {
@@ -15,34 +15,40 @@ function getCookie(name) {
     return null;
 }
 
-async function safeFetch(url, token) {
+async function safeFetch(url, cfToken) {
+    console.log("📡 [Network Plane] START FETCH:", url);
+
+    const res = await fetch(url, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            // 🔥 PUN STANDARD: Šaljemo unificirano zaglavlje koje ruter očekuje
+            "x-cf-source-token": cfToken || ""
+        }
+    });
+
+    console.log("📡 [Network Plane] FETCH RESPONSE STATUS:", res.status);
+
+    const text = await res.text();
+    const cleanText = text.trim();
+    const looksLikeHtml = cleanText.startsWith("<!DOCTYPE") || cleanText.startsWith("<html");
+
+    if (looksLikeHtml) {
+        throw new Error("HTML_FALLBACK_DETECTED");
+    }
+
+    if (res.status === 401 || res.status === 403) {
+        throw new Error("API_STATUS_UNAUTHORIZED");
+    }
+
+    if (!res.ok) {
+        throw new Error(`API_STATUS_${res.status}`);
+    }
+
     try {
-        console.log("[FETCH START]", url);
-
-        const res = await fetch(url, {
-            method: "GET",
-            credentials: "omit", // Izbegavamo slanje kolačića na Bypass aplikaciju
-            headers: {
-                "Content-Type": "application/json",
-                // ⚡ SINHRONIZOVANO: Čist x-source-token prateći serverske izmene
-                "x-source-token": token || ""
-            }
-        });
-
-        console.log("[FETCH STATUS]", res.status);
-
-        const text = await res.text();
-        console.log("[FETCH BODY]", text);
-
-        return {
-            ok: res.ok,
-            status: res.status,
-            body: text
-        };
-
-    } catch (e) {
-        console.error("[FETCH CRASH]", e);
-        throw e;
+        return JSON.parse(cleanText);
+    } catch {
+        throw new Error("BAD_RESPONSE_FORMAT");
     }
 }
 
@@ -66,30 +72,24 @@ export async function bootstrapAdmin() {
             return null;
         }
 
-        const profileResult = await safeFetch(`${API_BASE}/api/me`, cfTokenAssertion);
+        const profile = await safeFetch(`${API_BASE}/api/me`, cfTokenAssertion);
 
-        // Pošto safeFetch sada vraća raširen objekat, prilagođavamo verifikaciju
-        if (!profileResult || !profileResult.ok) {
+        if (!profile || profile.success === false || !profile.identity) {
             throw new Error("API_STATUS_UNAUTHORIZED");
         }
 
-        const profile = JSON.parse(profileResult.body);
+        console.log("🟢 [Kernel] GATEKEEPER APPROVED - Admin uspešno autorizovan.");
 
-        if (!profile || profile.success === false && !profile.reached) {
-            throw new Error("API_STATUS_UNAUTHORIZED");
-        }
-
-        console.log("🟢 [Kernel] GATEKEEPER APPROVED - Iskopana test putanja!");
-
+        const finalIdentity = profile.identity;
         root.setAttribute("data-status", AUTH_STATE.AUTHENTICATED);
 
         const identityBadge = document.getElementById('admin-identity');
-        if (identityBadge) identityBadge.textContent = "Test Reached Mode";
+        if (identityBadge) identityBadge.textContent = finalIdentity.email;
 
         window.CF_SOURCE_TOKEN = cfTokenAssertion;
 
-        document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: { email: "test@selection.rs" } }));
-        return { email: "test@selection.rs" };
+        document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: finalIdentity }));
+        return finalIdentity;
 
     } catch (err) {
         console.error("🚨 [Kernel] BOOTSTRAP EXCEPTION:", err.message);
@@ -106,6 +106,7 @@ export async function bootstrapAdmin() {
 }
 
 function PrikaziRucniLoginUI() {
+    // 🛡️ FIX: Dohvatamo element unutar opsega ove funkcije da sprečimo ReferenceError
     const root = document.getElementById("selection-admin-root");
     if (root) {
         root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
@@ -124,4 +125,5 @@ function PrikaziRucniLoginUI() {
     }
 }
 
+// Pokretanje procesa inicijalizacije
 bootstrapAdmin();
