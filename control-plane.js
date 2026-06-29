@@ -1,23 +1,23 @@
-// SELECTION CONTROL PLANE — control-plane.js (V6.0.1 - Stateless Injection Unified)
+// SELECTION CONTROL PLANE — control-plane.js (V6.0.2 - Cookie Transport Verified)
 const API_BASE = "https://api.selection.rs";
 
 let trenutnoUlogovaniKorisnik = null;
 let sviKorisniciKes = [];
 
 export async function studioFetch(url, options = {}) {
+    // ⚡ UNIFIKACIJA: Izbacujemo x-cf-source-token i ručne tokene u potpunosti!
     options.headers = {
         "Content-Type": "application/json",
-        // ⚡ GVOZDENI UKLONJENI ČVOR: Sve ujednačeno na x-source-token standard
-        "x-source-token": window.CF_SOURCE_TOKEN || "",
         ...(options.headers || {})
     };
 
-    // ⚡ PROLAZ ZA KEKS: Menjamo 'omit' u 'include' da kolačići lete kroz cross-origin mrežu
+    // ⚡ GVOZDENI STANDARD: Obezbeđujemo da Cloudflare Access kolačić (keks) leti kroz cross-origin
     options.credentials = 'include';
 
     try {
         const response = await fetch(url, options);
 
+        // 🛡️ SECURITY SHIELD: Ako Gatekeeper na API-ju primeti bilo kakvu anomaliju (status 401/403)
         if (response.status === 401 || response.status === 403) {
             console.warn("🚨 [Security Shield] Saas kapija prekinula sesiju (401/403).");
             alert("🔒 Vaša administrativna sesija je istekla ili nemate Master privilegije.");
@@ -33,6 +33,7 @@ export async function studioFetch(url, options = {}) {
     }
 }
 
+// Slušamo autoritativni signal iz bootstrap.js koji se ispaljuje SAMO pri uspešnoj verifikaciji
 document.addEventListener('ShellProvisionalReady', async (event) => {
     trenutnoUlogovaniKorisnik = event.detail;
     console.log("🚀 [Control Plane] Signal primljen! Identitet verifikovan:", trenutnoUlogovaniKorisnik.email);
