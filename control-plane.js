@@ -1,4 +1,4 @@
-// SELECTION CONTROL PLANE — control-plane.js (V5.2.0 - Hardened Unified Architecture Alignment)
+// SELECTION CONTROL PLANE — control-plane.js (V5.3.0 - Hardened Unified Architecture Alignment)
 import { bootstrapAdmin } from './bootstrap.js';
 
 const API_BASE = "https://api.selection.rs";
@@ -15,10 +15,14 @@ export async function studioFetch(url, options = {}) {
 
     try {
         const response = await fetch(url, options);
+
+        // 🛡️ SECURITY SHIELD: Ako je klijent u tabeli kliknuo akciju, a sesija mu je u međuvremenu istekla
         if (response.status === 401 || response.status === 403) {
-            console.warn("🚨 [Security Shield] Saas kapija prekinula sesiju (401/403). Redirekcija...");
+            console.warn("🚨 [Security Shield] Saas kapija prekinula sesiju (401/403).");
             alert("🔒 Vaša administrativna sesija je istekla ili nemate Master privilegije.");
-            window.location.href = "https://selection.rs";
+
+            // Umesto instant skoka koji pravi loop, pasivno prekidamo i obaveštavamo bootstrap
+            document.dispatchEvent(new CustomEvent('ShellAuthLost', { detail: { reason: "Session expired." } }));
             throw new Error("Unauthorized_Bypass_Blocked");
         }
         return response;
@@ -29,6 +33,7 @@ export async function studioFetch(url, options = {}) {
     }
 }
 
+// Slušamo autoritativni signal iz bootstrap.js koji se ispaljuje SAMO pri uspešnoj verifikaciji
 document.addEventListener('ShellProvisionalReady', async (event) => {
     trenutnoUlogovaniKorisnik = event.detail;
     console.log("🚀 [Control Plane] Signal primljen! Identitet verifikovan:", trenutnoUlogovaniKorisnik.email);
@@ -153,7 +158,6 @@ function renderujTabelu(korisnici) {
             tdActions.innerHTML = `<span style="color: var(--gold); font-size: 12px; font-style: italic; font-weight: 500;">Centralno Jezgro</span>`;
         } else {
             if (klijent.status === 'active' && cistiSubdomain) {
-                // 🌐 VARIJANTA B: Master otvara klijentov prostor direktno na centralnom composer domenu preko čistog tekstualnog poddomena (tenant_id)
                 const btnStudio = document.createElement('a');
                 btnStudio.href = `https://composer.selection.rs?mode=admin&tenant=${klijent.tenant_id}`;
                 btnStudio.target = "_blank";
@@ -200,8 +204,6 @@ function renderujTabelu(korisnici) {
 }
 
 async function promeniStatusKlijentaMaster(requestId, akcija) {
-    console.log(`Grid [Control Plane Triggered] Pokrećem akciju: ${akcija} za ID: ${requestId}`);
-
     let potvrdnaPoruka = "";
     let ruta = "";
 
@@ -219,14 +221,12 @@ async function promeniStatusKlijentaMaster(requestId, akcija) {
             ruta = '/api/master/approve-user';
             break;
         default:
-            console.error("❌ Kritična greška: Prosleđena je nepoznata akcija jezgra:", akcija);
             return;
     }
 
     if (!confirm(potvrdnaPoruka)) return;
 
     try {
-        console.log(`🚀 Ispaljujem mrežni zahtev na: ${API_BASE}${ruta}`);
         const response = await studioFetch(`${API_BASE}${ruta}`, {
             method: 'POST',
             body: JSON.stringify({ requestId })
@@ -234,7 +234,6 @@ async function promeniStatusKlijentaMaster(requestId, akcija) {
 
         const rez = await response.json();
         if (response.ok && rez.success) {
-            console.log("🟢 Akcija uspešno izvršena u D1 bazi. Osvežavam prikaz.");
             await osveziMasterTabeluKorisnika();
         } else {
             alert(`🔒 Kapija odbila promenu: ${rez.error || ''}`);
@@ -314,4 +313,4 @@ async function masterKreirajNovogKorisnika() {
     }
 }
 
-bootstrapAdmin();
+// 🛑 UKLONJEN KORENSKI OKIDAČ bootstrapAdmin() - Izvršava se isključivo unutar bootstrap.js!
