@@ -1,4 +1,4 @@
-// admin/bootstrap.js (V26.0.6 - Production Hardened State Latch Engine)
+// admin/bootstrap.js (V26.0.7 - Sovereign State Latch Fetcher)
 const API_BASE = "https://api.selection.rs";
 
 export const AUTH_STATE = {
@@ -8,7 +8,7 @@ export const AUTH_STATE = {
     ERROR: "error"
 };
 
-// 🔒 Inicijalizacija globalnog latch stanja na samom startu
+// 🔒 Inicijalizacija globalnog latch stanja na samom startu za control-plane
 window.__CF_BOOTSTRAP_STATE__ = null;
 
 function getCookie(name) {
@@ -16,50 +16,6 @@ function getCookie(name) {
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(';').shift();
     return null;
-}
-
-async function safeFetch(url, token) {
-    console.log("📡 [Network Plane] START FETCH:", url);
-
-    try {
-        const res = await fetch(url, {
-            method: "GET",
-            credentials: "include", // ⚡ Kolačići lete kroz cross-origin
-            headers: {
-                "Content-Type": "application/json",
-                "x-source-token": token || "" // ⚡ Unifikovani čelični standard
-            }
-        });
-
-        console.log("📡 [Network Plane] FETCH RESPONSE STATUS:", res.status);
-
-        const text = await res.text();
-        const cleanText = text.trim();
-
-        // 🛡️ FORENZIČKA ZAŠTITA: Detekcija da li je Cloudflare WAF/Access vratio HTML stranicu umesto JSON-a
-        const looksLikeHtml = cleanText.startsWith("<!DOCTYPE") || cleanText.startsWith("<html");
-        if (looksLikeHtml) {
-            throw new Error("HTML_FALLBACK_DETECTED");
-        }
-
-        if (res.status === 401 || res.status === 403) {
-            throw new Error("API_STATUS_UNAUTHORIZED");
-        }
-
-        if (!res.ok) {
-            throw new Error(`API_STATUS_${res.status}`);
-        }
-
-        try {
-            return JSON.parse(cleanText);
-        } catch {
-            throw new Error("BAD_RESPONSE_FORMAT");
-        }
-
-    } catch (e) {
-        console.error("❌ [Network Plane] FETCH CRASH:", e);
-        throw e;
-    }
 }
 
 export async function bootstrapAdmin() {
@@ -75,25 +31,46 @@ export async function bootstrapAdmin() {
 
     try {
         const cfTokenAssertion = getCookie("CF_Authorization");
-        console.log("🔍 [Kernel] BOOT 02 identity cookie exists:", !!cfTokenAssertion);
+        console.log("🔍 [Kernel] CF_Authorization token prepoznat u klijentu:", !!cfTokenAssertion);
 
         if (!cfTokenAssertion) {
-            console.error("🔒 [Gatekeeper] CF_Authorization kolačić ne postoji u memoriji.");
+            console.error("🔒 [Gatekeeper] CF_Authorization kolačić ne postoji. Preusmeravam na login.");
             PrikaziRucniLoginUI();
             return null;
         }
 
-        console.log("🔍 [Kernel] BOOT 03 before verification");
-        const profile = await safeFetch(`${API_BASE}/api/me`, cfTokenAssertion);
+        console.log("📡 [Network Plane] START FETCH -> /api/me");
+        const res = await fetch(`${API_BASE}/api/me`, {
+            method: "GET",
+            credentials: "include", // Kolačići lete cross-origin automatski
+            headers: {
+                "Content-Type": "application/json",
+                "x-source-token": cfTokenAssertion // Dupla sigurnosna šina za cross-domain
+            }
+        });
 
-        if (!profile || profile.success === false || !profile.identity) {
-            throw new Error("API_STATUS_UNAUTHORIZED");
+        console.log("📡 [Network Plane] RESPONSE STATUS:", res.status);
+        const text = await res.text();
+        const cleanText = text.trim();
+
+        // Provera WAF/Access HTML presretanja
+        if (cleanText.startsWith("<!DOCTYPE") || cleanText.startsWith("<html")) {
+            throw new Error("HTML_FALLBACK_DETECTED");
         }
 
-        console.log("🟢 [Kernel] GATEKEEPER APPROVED - Admin uspešno autorizovan.");
+        if (!res.ok) {
+            throw new Error(`API_STATUS_${res.status}`);
+        }
+
+        const profile = JSON.parse(cleanText);
+        if (!profile || profile.success === false || !profile.identity) {
+            throw new Error("D1_IDENTITY_REJECTION");
+        }
+
+        console.log("🟢 [Kernel] D1 SUVERENI IDENTITET ODOBREN:", profile.identity.email);
         const finalIdentity = profile.identity;
 
-        // 🧠 MEMORIJSKI LATCH: Zakucavamo stanje u globalni prozor PRE ispaljivanja signala!
+        // 🧠 STATE LATCH ZAKUCAVANJE: Čeka spreman control-plane.js
         window.__CF_BOOTSTRAP_STATE__ = finalIdentity;
         window.CF_SOURCE_TOKEN = cfTokenAssertion;
 
@@ -102,30 +79,21 @@ export async function bootstrapAdmin() {
         const identityBadge = document.getElementById('admin-identity');
         if (identityBadge) identityBadge.textContent = finalIdentity.email;
 
-        // Emitujemo event kao sekundarnu mrežnu notifikaciju za asinhroni lanac
+        // Okidamo signal za asinhroni front lanac
         document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: finalIdentity }));
-        console.log("[BOOT DONE] State latched successfully.");
         return finalIdentity;
 
     } catch (err) {
         console.error("🚨 [Kernel] BOOTSTRAP EXCEPTION:", err.message);
         root.setAttribute("data-status", AUTH_STATE.ERROR);
-
         PrikaziRucniLoginUI();
-
-        const tbody = document.getElementById('users-table-body');
-        if (tbody && err.message !== "API_STATUS_UNAUTHORIZED") {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:var(--red-alert); padding:40px; font-weight:600;">💥 Fatalna greška jezgra: ${err.message}</td></tr>`;
-        }
         return null;
     }
 }
 
 function PrikaziRucniLoginUI() {
     const root = document.getElementById("selection-admin-root");
-    if (root) {
-        root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
-    }
+    if (root) root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
 
     document.dispatchEvent(new CustomEvent('ShellAuthLost', { detail: { reason: "No active session." } }));
     const tbody = document.getElementById('users-table-body');
@@ -140,5 +108,4 @@ function PrikaziRucniLoginUI() {
     }
 }
 
-// Pokretanje procesa inicijalizacije
 bootstrapAdmin();

@@ -1,4 +1,4 @@
-// SELECTION CONTROL PLANE — control-plane.js (V6.0.3 - Cache Persistence Buffer)
+// SELECTION CONTROL PLANE — control-plane.js (V6.0.4 - Production D1 Unified Bridge)
 const API_BASE = "https://api.selection.rs";
 
 let trenutnoUlogovaniKorisnik = null;
@@ -7,6 +7,8 @@ let sviKorisniciKes = [];
 export async function studioFetch(url, options = {}) {
     options.headers = {
         "Content-Type": "application/json",
+        // ⚡ UNIFIKACIJA: Šaljemo token kroz standardni Authorization i cross-domain šine
+        "Authorization": window.CF_SOURCE_TOKEN ? `Bearer ${window.CF_SOURCE_TOKEN}` : "",
         "x-source-token": window.CF_SOURCE_TOKEN || "",
         ...(options.headers || {})
     };
