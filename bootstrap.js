@@ -1,4 +1,4 @@
-// admin/bootstrap.js (V25.3.0 - Unified Direct API Gateway Alignment)
+// admin/bootstrap.js (V25.4.0 - Explicit Exchanger Flow)
 const API_BASE = "https://api.selection.rs";
 
 export const AUTH_STATE = {
@@ -11,11 +11,10 @@ export const AUTH_STATE = {
 async function safeFetch(url) {
     const res = await fetch(url, {
         method: "GET",
-        credentials: "include", // Šalje __Secure-selection_session automatski
+        credentials: "include",
         headers: { "Content-Type": "application/json" }
     });
 
-    // Sprečavamo krah ako Cloudflare ili Nginx vrate HTML error stranicu umesto JSON-a
     const text = await res.text();
     const cleanText = text.trim();
     const looksLikeHtml = cleanText.startsWith("<!DOCTYPE") || cleanText.startsWith("<html") || cleanText.startsWith("<head");
@@ -48,7 +47,7 @@ export async function bootstrapAdmin() {
     try {
         console.log("🕵️‍♂️ [1/4] Pokrećem bootstrap... Provera Selection sesije na unifikovanoj kapiji.");
 
-        // Direktno pitamo SSOT bez lokalnog čitanja document.cookie
+        // Prvi korak: Proveravamo čist /api/me
         const profile = await safeFetch(`${API_BASE}/api/me`);
 
         const finalIdentity = profile.identity || profile;
@@ -67,19 +66,43 @@ export async function bootstrapAdmin() {
         console.warn("⚠️ [State Machine Transition] Prekid inicijalizacije.");
 
         if (err.message === "API_STATUS_401" || err.message === "HTML_FALLBACK_DETECTED") {
+            console.log("🔄 Sesija fali. Pokrećem EXPLICIT EXCHANGER...");
+
+            // Čitamo CF_Authorization koji je urezan na nivou celog .selection.rs domena
+            const cfTokenAssertion = document.cookie.match(/CF_Authorization=([^;]+)/)?.[1];
+
+            if (cfTokenAssertion) {
+                console.log("🚀 [Token Bridge] Šaljem token na eksplicitnu razmenu (/api/auth/exchange)...");
+
+                try {
+                    const exchangeRes = await fetch(`${API_BASE}/api/auth/exchange`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({ cfToken: cfTokenAssertion })
+                    });
+
+                    if (exchangeRes.ok) {
+                        console.log("🟢 Razmena uspešna. Pokrećem re-entry verifikaciju...");
+                        // Rekurzivno ponavljamo bootstrap, sada imamo kolačić!
+                        return await bootstrapAdmin();
+                    } else {
+                        console.error("❌ Razmena tokena odbijena od strane API kapije.");
+                    }
+                } catch (exchangeError) {
+                    console.error("❌ Mrežni krah tokom razmene tokena:", exchangeError.message);
+                }
+            } else {
+                console.warn("⚠️ Cloudflare Access viza nije pronađena u pretraživaču.");
+            }
+
+            // Ako nema tokena ili je razmena propala, šaljemo na CF Access login preko admin.selection.rs aplikacije
             root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
             document.dispatchEvent(new CustomEvent('ShellAuthLost', { detail: { reason: "No active session." } }));
 
-            const tbody = document.getElementById('users-table-body');
-            if (tbody) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="text-center" style="padding: 60px 20px;">
-                            <div style="margin-bottom: 20px; font-weight: 600; color: var(--text-muted);">🔒 Vaša sesija je istekla ili niste autorizovani.</div>
-                            <button onclick="window.location.replace('https://api.selection.rs/api/me')" class="btn-reconnect" style="display: inline-block; padding: 10px 20px; background: #0070f3; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; box-shadow: 0 4px 14px rgba(0,112,243,0.3);">Ponovo poveži nalog</button>
-                        </td>
-                    </tr>`;
-            }
+            console.log("🛡️ Preusmeravam pretraživač na Cloudflare mrežni izazov...");
+            // Pošto admin.selection.rs ima "Require" polisu u Access-u, obično osvežavanje stranice rešava login
+            window.location.reload();
             return null;
         }
 
