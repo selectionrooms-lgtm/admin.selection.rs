@@ -1,4 +1,4 @@
-// admin/bootstrap.js (V25.4.0 - Explicit Exchanger Flow)
+// admin/bootstrap.js (V25.4.5 - Anti-Loop Explicit Exchanger)
 const API_BASE = "https://api.selection.rs";
 
 export const AUTH_STATE = {
@@ -45,9 +45,7 @@ export async function bootstrapAdmin() {
     root.setAttribute("data-status", AUTH_STATE.LOADING);
 
     try {
-        console.log("🕵️‍♂️ [1/4] Pokrećem bootstrap... Provera Selection sesije na unifikovanoj kapiji.");
-
-        // Prvi korak: Proveravamo čist /api/me
+        console.log("🕵️‍♂️ [1/4] Provera Selection sesije na unifikovanoj kapiji...");
         const profile = await safeFetch(`${API_BASE}/api/me`);
 
         const finalIdentity = profile.identity || profile;
@@ -63,57 +61,75 @@ export async function bootstrapAdmin() {
         return finalIdentity;
 
     } catch (err) {
-        console.warn("⚠️ [State Machine Transition] Prekid inicijalizacije.");
+        console.warn("⚠️ [State Machine] Sesija nije aktivna ili je istekla.");
 
         if (err.message === "API_STATUS_401" || err.message === "HTML_FALLBACK_DETECTED") {
-            console.log("🔄 Sesija fali. Pokrećem EXPLICIT EXCHANGER...");
-
-            // Čitamo CF_Authorization koji je urezan na nivou celog .selection.rs domena
+            // 1. ČITAMO CF TOKEN
             const cfTokenAssertion = document.cookie.match(/CF_Authorization=([^;]+)/)?.[1];
 
-            if (cfTokenAssertion) {
-                console.log("🚀 [Token Bridge] Šaljem token na eksplicitnu razmenu (/api/auth/exchange)...");
+            // 🛑 GVOZDENA KOČNICA: Ako nema CF tokena u browseru, STOP! Ne osvežavaj besomučno!
+            if (!cfTokenAssertion) {
+                console.error("⛔ [Anti-Loop Guard] CF_Authorization ne postoji u kolačićima. Prekidam izvršavanje da sprečim loop.");
 
-                try {
-                    const exchangeRes = await fetch(`${API_BASE}/api/auth/exchange`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        credentials: "include",
-                        body: JSON.stringify({ cfToken: cfTokenAssertion })
-                    });
+                root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
+                document.dispatchEvent(new CustomEvent('ShellAuthLost', { detail: { reason: "No Cloudflare Access token." } }));
 
-                    if (exchangeRes.ok) {
-                        console.log("🟢 Razmena uspešna. Pokrećem re-entry verifikaciju...");
-                        // Rekurzivno ponavljamo bootstrap, sada imamo kolačić!
-                        return await bootstrapAdmin();
-                    } else {
-                        console.error("❌ Razmena tokena odbijena od strane API kapije.");
-                    }
-                } catch (exchangeError) {
-                    console.error("❌ Mrežni krah tokom razmene tokena:", exchangeError.message);
+                // Prikazujemo statičnu poruku korisniku umesto loop-a
+                const tbody = document.getElementById('users-table-body');
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center" style="padding: 60px 20px;">
+                                <div style="margin-bottom: 20px; font-weight: 600; color: var(--text-muted);">🔒 Niste autentifikovani na Cloudflare Access nivou.</div>
+                                <button onclick="window.location.href='https://api.selection.rs/api/me?returnTo=${encodeURIComponent(window.location.href)}'" class="btn-reconnect" style="display: inline-block; padding: 10px 20px; background: #d4b483; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Iniciraj Cloudflare Login</button>
+                            </td>
+                        </tr>`;
                 }
-            } else {
-                console.warn("⚠️ Cloudflare Access viza nije pronađena u pretraživaču.");
+                return null;
             }
 
-            // Ako nema tokena ili je razmena propala, šaljemo na CF Access login preko admin.selection.rs aplikacije
-            root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
-            document.dispatchEvent(new CustomEvent('ShellAuthLost', { detail: { reason: "No active session." } }));
+            // 2. AKO TOKEN POSTOJI, IDEMO NA EKSPLICITNU RAZMENU
+            console.log("🚀 [Token Bridge] Token pronađen. Pokrećem eksplicitnu razmenu...");
 
-            console.log("🛡️ Preusmeravam pretraživač na Cloudflare mrežni izazov...");
-            // Pošto admin.selection.rs ima "Require" polisu u Access-u, obično osvežavanje stranice rešava login
-            window.location.reload();
+            try {
+                const exchangeRes = await fetch(`${API_BASE}/api/auth/exchange`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ cfToken: cfTokenAssertion })
+                });
+
+                if (exchangeRes.ok) {
+                    console.log("🟢 Razmena uspešna. Kolačić postavljen. Radim re-entry...");
+                    // Čist, kontrolisani re-entry
+                    return await bootstrapAdmin();
+                } else {
+                    console.error("❌ Kapija je odbila CF token na /api/auth/exchange.");
+                }
+            } catch (exchangeError) {
+                console.error("❌ Greška na mreži tokom razmene:", exchangeError.message);
+            }
+
+            // Fallback ako exchange propadne - stopiramo loop i dajemo dugme za ručni reset
+            root.setAttribute("data-status", AUTH_STATE.UNAUTHENTICATED);
+            const tbody = document.getElementById('users-table-body');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center" style="padding: 40px;">
+                            <div style="color: var(--text-muted); margin-bottom: 15px;">Razmena autorizacije nije uspela.</div>
+                            <button onclick="window.location.reload()" class="btn-reconnect" style="background:#0070f3; color:#fff; padding: 8px 16px; border:none; border-radius:4px; cursor:pointer;">Pokušaj ponovo</button>
+                        </td>
+                    </tr>`;
+            }
             return null;
         }
 
         root.setAttribute("data-status", AUTH_STATE.ERROR);
         console.error("💥 SYSTEM FATAL ERROR:", err.message);
-
-        const tbody = document.getElementById('users-table-body');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:var(--red-alert); padding:40px; font-weight:600;">💥 Fatalna greška jezgra: ${err.message}</td></tr>`;
         return null;
     }
 }
 
-// Inicijalni korenski okidač
+// Pokretač
 bootstrapAdmin();
