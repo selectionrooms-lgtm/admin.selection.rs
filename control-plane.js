@@ -228,6 +228,8 @@ function renderujTabelu(korisnici) {
                 const btnBlock = document.createElement('button');
                 btnBlock.className = "btn btn-sm btn-revoke";
                 btnBlock.textContent = "Oduzmi Vizu";
+                // Plavi stajling unutar iste estetske matrice (prozirno-plava pozadina sa jasnim borderom i tekstom)
+                btnBlock.style.cssText = "background: rgba(52, 152, 219, 0.15); border: 1px solid rgba(52, 152, 219, 0.4); color: #74b9ff; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer;";
                 btnBlock.onclick = () => promeniStatusKlijentaMaster(klijent.id, 'revoke');
                 tdActions.appendChild(btnBlock);
             } else if (klijent.status === 'blocked' || klijent.status === 'grace_period') {
@@ -255,7 +257,7 @@ function renderujTabelu(korisnici) {
                 btnWa.href = waUrl;
                 btnWa.target = "_blank";
                 btnWa.title = `Ispucaj WhatsApp poruku za status: ${waLabel}`;
-                btnWa.style.cssText = "background: #128C7E; color: #fff; font-weight: 600; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s; cursor: pointer;";
+                btnWa.style.cssText = "background: #095047ff; color: #fff; font-weight: 600; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s; cursor: pointer;";
                 btnWa.innerHTML = `💬 WA: ${waLabel}`;
                 tdActions.appendChild(btnWa);
             }
