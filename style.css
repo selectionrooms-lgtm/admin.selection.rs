@@ -1,14 +1,19 @@
-/* 👑 SELECTION CONTROL PLANE VISUAL ENGINE — Production Premium V19.0.0 */
+/* 👑 SELECTION CONTROL PLANE VISUAL ENGINE — Production Premium V26.1.0 */
 
 :root {
-    --bg-main: #0b0f14;
-    /* Duboki modro-crni antracit ton */
-    --bg-bar: #11161d;
-    /* Tamna, čvrsta podloga za kontrolne trake */
+    /* 🪐 SEVERE BLUE UNIFICATION CORE */
+    --bg-main: #0f171e;
+    /* Glavna duboka Selection plava pozadina */
+    --bg-bar: #1c2a39;
+    /* Sekundarna plava za kartice, trake i kontejnere */
+    --bg-input: #0a1015;
+    /* Ultra tamna plava podloga za polja unosa */
+
     --border-color: rgba(212, 180, 131, 0.15);
     /* Mikro-zlatne linije */
     --text-primary: #ffffff;
-    --text-secondary: #7e8e9f;
+    --text-secondary: #a0acb8;
+    /* Prigušeni plavičasto-sivi tekst za monospaced i subtitlove */
     --gold: #d4b483;
     /* Mat Selection zlato */
     --gold-hover: #e5c9a3;
@@ -23,7 +28,7 @@
 }
 
 body {
-    background-color: var(--bg-main);
+    background-color: var(--bg-main) !important;
     color: var(--text-primary);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -40,7 +45,7 @@ body {
     left: 0;
     width: 100%;
     height: 75px;
-    background-color: rgba(17, 22, 29, 0.92);
+    background-color: rgba(15, 23, 30, 0.85) !important;
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border-bottom: 1px solid var(--border-color);
@@ -81,7 +86,7 @@ body {
 }
 
 .shell-input {
-    background-color: #05070a;
+    background-color: var(--bg-input);
     border: 1px solid var(--border-color);
     border-radius: 6px;
     padding: 8px 14px;
@@ -107,7 +112,7 @@ body {
 }
 
 .addon-tag {
-    background-color: #05070a;
+    background-color: var(--bg-input);
     border: 1px solid var(--border-color);
     border-left: none;
     padding: 8px 12px;
@@ -118,7 +123,6 @@ body {
     white-space: nowrap;
 }
 
-/* ⚡ POPRAVKA: Uklonjen opacity:0 da bi se tvoj admin identitet zapravo video na ekranu */
 .user-badge-gold {
     font-size: 12px;
     color: var(--gold);
@@ -140,7 +144,7 @@ body {
 }
 
 .control-table-card {
-    background-color: var(--bg-bar);
+    background-color: var(--bg-bar) !important;
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 30px;
@@ -199,6 +203,16 @@ body {
     background-color: rgba(255, 255, 255, 0.01);
 }
 
+/* 🌐 DIZAJN ZA MULTI-TENANT LINKOVE U TABELI */
+.shell-link {
+    transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.shell-link:hover {
+    color: var(--gold-hover) !important;
+    opacity: 0.9;
+}
+
 /* ==========================================================================
     🎛️ DUGMADI I BEDŽEVI
    ========================================================================== */
@@ -216,7 +230,7 @@ body {
 
 .btn-gold {
     background-color: var(--gold);
-    color: #0b0f14;
+    color: #0f171e;
 }
 
 .btn-gold:hover {
@@ -253,6 +267,17 @@ body {
     color: #fff;
 }
 
+/* ⚠️ APPLE STYLE DESIGN ZA DUGME: UGASI OVERRIDE */
+#btn-clear-override {
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+#btn-clear-override:hover {
+    background-color: rgba(255, 69, 58, 0.15) !important;
+    border-color: rgba(255, 69, 58, 0.6) !important;
+    color: #ff453a !important;
+}
+
 .badge {
     display: inline-block;
     padding: 3px 8px;
@@ -280,7 +305,7 @@ body {
 }
 
 .badge-version {
-    background-color: #05070a;
+    background-color: var(--bg-input);
     color: var(--text-secondary);
     font-family: monospace;
     font-size: 11px;

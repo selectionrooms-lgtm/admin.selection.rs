@@ -36,6 +36,32 @@ function initControlPlane() {
     if (identityBadge && trenutnoUlogovaniKorisnik) {
         identityBadge.textContent = trenutnoUlogovaniKorisnik.email;
     }
+
+    // 🔄 INTEGRACIJA DUGMETA ZA POVRATAK IZ OVERRIDE-A
+    const aktivniOverride = localStorage.getItem("selection_admin_override_tenant");
+    const navigationBar = document.querySelector('.master-navigation-bar');
+
+    // Ako sistem detektuje da ti je u memoriji ostao klijent, ubacujemo dugme za čišćenje
+    if (aktivniOverride && navigationBar && !document.getElementById('btn-clear-override')) {
+        const btnClear = document.createElement('button');
+        btnClear.id = 'btn-clear-override';
+        btnClear.className = 'btn';
+        btnClear.style.cssText = "background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #ff6b6b; font-weight: 600; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; margin-left: 15px; display: inline-flex; align-items: center; gap: 6px;";
+        btnClear.innerHTML = `⚠️ Ugasi Override (${aktivniOverride.toUpperCase()})`;
+
+        btnClear.onclick = () => {
+            localStorage.removeItem("selection_admin_override_tenant");
+            alert("🔒 Override ugašen. Vaš admin Studio je vraćen na fabrička podešavanja Centralnog Jezgra.");
+            window.location.reload();
+        };
+
+        // Kačimo dugme odmah pored forme za lansiranje klijenata
+        const provisionForm = document.getElementById('provision-form');
+        if (provisionForm) {
+            provisionForm.after(btnClear);
+        }
+    }
+
     osveziMasterTabeluKorisnika();
     setupEventListeners();
 }
