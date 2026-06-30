@@ -1,4 +1,4 @@
-// SELECTION CONTROL PLANE — control-plane.js (V6.0.4 - Production D1 Unified Bridge)
+// SELECTION CONTROL PLANE — control-plane.js (V6.1.0 - Production D1 Unified Bridge)
 const API_BASE = "https://api.selection.rs";
 
 let trenutnoUlogovaniKorisnik = null;
@@ -35,31 +35,6 @@ function initControlPlane() {
     const identityBadge = document.getElementById('admin-identity');
     if (identityBadge && trenutnoUlogovaniKorisnik) {
         identityBadge.textContent = trenutnoUlogovaniKorisnik.email;
-    }
-
-    // 🔄 INTEGRACIJA DUGMETA ZA POVRATAK IZ OVERRIDE-A
-    const aktivniOverride = localStorage.getItem("selection_admin_override_tenant");
-    const navigationBar = document.querySelector('.master-navigation-bar');
-
-    // Ako sistem detektuje da ti je u memoriji ostao klijent, ubacujemo dugme za čišćenje
-    if (aktivniOverride && navigationBar && !document.getElementById('btn-clear-override')) {
-        const btnClear = document.createElement('button');
-        btnClear.id = 'btn-clear-override';
-        btnClear.className = 'btn';
-        btnClear.style.cssText = "background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #ff6b6b; font-weight: 600; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; margin-left: 15px; display: inline-flex; align-items: center; gap: 6px;";
-        btnClear.innerHTML = `⚠️ Ugasi Override (${aktivniOverride.toUpperCase()})`;
-
-        btnClear.onclick = () => {
-            localStorage.removeItem("selection_admin_override_tenant");
-            alert("🔒 Override ugašen. Vaš admin Studio je vraćen na fabrička podešavanja Centralnog Jezgra.");
-            window.location.reload();
-        };
-
-        // Kačimo dugme odmah pored forme za lansiranje klijenata
-        const provisionForm = document.getElementById('provision-form');
-        if (provisionForm) {
-            provisionForm.after(btnClear);
-        }
     }
 
     osveziMasterTabeluKorisnika();
@@ -151,17 +126,47 @@ function renderujTabelu(korisnici) {
     korisnici.forEach(klijent => {
         const tr = document.createElement('tr');
         const cistiSubdomain = klijent.subdomain || '';
+        const cistiPhone = klijent.phone ? String(klijent.phone).trim().replace(/\s+/g, '') : '';
+        const whatsappNumber = cistiPhone.replace(/[^0-9]/g, '');
 
+        // --- PRIPREMA DINAMIČKIH WHATSAPP PORUKA ---
+        let waUrl = "";
+        let waLabel = "Pristup";
+
+        if (whatsappNumber) {
+            const txtActive = `🎉 *VIZA ODOBRENA — Pristup Otključan!*\n\n🌐 *Vaš aktivni domen:* https://${cistiSubdomain}.selection.rs\n🎨 *Vaš kreativni Composer:* https://composer.selection.rs\n\nDobrodošli u Selection ekosistem.`;
+            const txtBlocked = `🔒 *OBAVEŠTENJE: Viza Privremeno Ukinuta*\n\nStatus Vaše digitalne vize za domen *${cistiSubdomain}.selection.rs* je promenjen u *SUSPENDOVAN*. Radni prostor je privremeno zaključan.`;
+            const txtGrace = `🗑️ *UPOZORENJE: Pokrenut Grace Period (30 Dana)*\n\nVaš prostor *${cistiSubdomain}.selection.rs* je obeležen za brisanje. Imate 30 dana da preuzmete podatke pre trajnog uništenja na našem sistemu.`;
+
+            if (klijent.status === 'active') {
+                waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(txtActive)}`;
+                waLabel = "Pristup";
+            } else if (klijent.status === 'blocked') {
+                waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(txtBlocked)}`;
+                waLabel = "Suspenzija";
+            } else if (klijent.status === 'grace_period') {
+                waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(txtGrace)}`;
+                waLabel = "Grace";
+            } else {
+                // Za pending / čekaonicu šaljemo podrazumevani pristupni šablon
+                waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(txtActive)}`;
+                waLabel = "Pristup";
+            }
+        }
+
+        // 1. Kolona: Korisnik (Email)
         const tdEmail = document.createElement('td');
         tdEmail.style.cssText = "font-weight: 600; color: #fff;";
         tdEmail.textContent = klijent.email;
         tr.appendChild(tdEmail);
 
+        // 2. Kolona: Kontakt Telefon
         const tdPhone = document.createElement('td');
         tdPhone.style.cssText = "color: var(--text-secondary); font-size: 13px; font-family: monospace;";
         tdPhone.textContent = klijent.phone || "—";
         tr.appendChild(tdPhone);
 
+        // 3. Kolona: Tenant (Poddomen)
         const tdTenant = document.createElement('td');
         if (cistiSubdomain) {
             tdTenant.innerHTML = `<a href="https://${cistiSubdomain}.selection.rs" target="_blank" class="shell-link" style="color: var(--gold); text-decoration: none; font-weight: 500; font-family: monospace; display: inline-flex; align-items: center; gap: 4px;">🌐 ${cistiSubdomain}.selection.rs</a>`;
@@ -170,11 +175,13 @@ function renderujTabelu(korisnici) {
         }
         tr.appendChild(tdTenant);
 
+        // 4. Kolona: Uloga
         const tdRole = document.createElement('td');
         tdRole.style.cssText = "text-transform: uppercase; font-size: 11px; color: var(--text-secondary); font-weight: 600; letter-spacing:0.5px;";
         tdRole.textContent = klijent.role || 'client';
         tr.appendChild(tdRole);
 
+        // 5. Kolona: Status Vize
         const tdStatus = document.createElement('td');
         if (klijent.status === 'active') {
             tdStatus.innerHTML = `<span class="badge badge-approved">✔️ Aktivan</span>`;
@@ -187,26 +194,30 @@ function renderujTabelu(korisnici) {
         }
         tr.appendChild(tdStatus);
 
+        // 6. Kolona: Verzija Zapisa / Datum
         const tdDate = document.createElement('td');
         tdDate.innerHTML = `<span class="badge badge-version">${klijent.created_at ? klijent.created_at.split(' ')[0] : 'Uživo'}</span>`;
         tr.appendChild(tdDate);
 
+        // 7. Kolona: Akcije
         const tdActions = document.createElement('td');
-        tdActions.style.cssText = "text-align: right; display: flex; gap: 8px; justify-content: flex-end; align-items: center;";
+        tdActions.style.cssText = "text-align: right; display: flex; gap: 8px; justify-content: flex-end; align-items: center; wrap: nowrap;";
 
         if (klijent.role === "master") {
             tdActions.innerHTML = `<span style="color: var(--gold); font-size: 12px; font-style: italic; font-weight: 500;">Centralno Jezgro</span>`;
         } else {
+            // Oko dugmeta za Studio (otvara novi prozor eksternom putanjom)
             if (klijent.status === 'active' && cistiSubdomain) {
                 const btnStudio = document.createElement('a');
                 btnStudio.href = `https://composer.selection.rs/studio/?mode=admin&tenant=${klijent.tenant_id}&token=${window.CF_SOURCE_TOKEN}`;
-                btnStudio.target = "_blank"; // 👈 VRAĆENO: Ponovo otvara čisti novi prozor!
+                btnStudio.target = "_blank";
                 btnStudio.className = "btn btn-sm";
                 btnStudio.style.cssText = "background: var(--gold); color: #000; border: none; font-weight: 600; text-decoration: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;";
                 btnStudio.innerHTML = `👁️ Otvori Studio`;
                 tdActions.appendChild(btnStudio);
             }
 
+            // Upravljanje administrativnim statusima
             if (klijent.status === 'pending') {
                 const btnApprove = document.createElement('button');
                 btnApprove.className = "btn btn-sm btn-approve";
@@ -228,13 +239,25 @@ function renderujTabelu(korisnici) {
                 tdActions.appendChild(btnRestore);
             }
 
+            // Grace period / Brisanje
             if (klijent.status !== 'grace_period') {
                 const btnDelete = document.createElement('button');
                 btnDelete.className = "btn btn-sm btn-delete";
                 btnDelete.textContent = "🗑 Obriši";
-                btnDelete.style.cssText = "background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #70f070;";
+                btnDelete.style.cssText = "background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #ff6b6b; padding: 5px 10px; border-radius: 4px; font-size: 12px;";
                 btnDelete.onclick = () => obrisiKlijentaMaster(klijent.id, klijent.email);
                 tdActions.appendChild(btnDelete);
+            }
+
+            // 🟢 ZELENO DUGME: Brzo slanje WhatsApp-a zasnovano na trenutnom stanju baze
+            if (whatsappNumber) {
+                const btnWa = document.createElement('a');
+                btnWa.href = waUrl;
+                btnWa.target = "_blank";
+                btnWa.title = `Ispucaj WhatsApp poruku za status: ${waLabel}`;
+                btnWa.style.cssText = "background: #25D366; color: #000; font-weight: 700; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s; cursor: pointer;";
+                btnWa.innerHTML = `💬 WA: ${waLabel}`;
+                tdActions.appendChild(btnWa);
             }
         }
 
