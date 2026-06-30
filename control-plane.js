@@ -198,17 +198,12 @@ function renderujTabelu(korisnici) {
             tdActions.innerHTML = `<span style="color: var(--gold); font-size: 12px; font-style: italic; font-weight: 500;">Centralno Jezgro</span>`;
         } else {
             if (klijent.status === 'active' && cistiSubdomain) {
-                const btnStudio = document.createElement('button'); // Menjamo u taster
+                const btnStudio = document.createElement('a');
+                btnStudio.href = `https://composer.selection.rs?mode=admin&tenant=${klijent.tenant_id}&token=${window.CF_SOURCE_TOKEN}`;
+                btnStudio.target = "_blank"; // 👈 VRAĆENO: Ponovo otvara čisti novi prozor!
                 btnStudio.className = "btn btn-sm";
-                btnStudio.style.cssText = "background: var(--gold); color: #000; border: none; font-weight: 600; padding: 5px 12px; border-radius: 4px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;";
+                btnStudio.style.cssText = "background: var(--gold); color: #000; border: none; font-weight: 600; text-decoration: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;";
                 btnStudio.innerHTML = `👁️ Otvori Studio`;
-
-                // ⚡ DIREKTNA TRANZICIJA: Čistimo stari override i skačemo u isti prozor sa URL parametrima!
-                btnStudio.onclick = () => {
-                    localStorage.removeItem("selection_admin_override_tenant"); // Čistimo stari keš ako postoji
-                    window.location.href = `https://composer.selection.rs?mode=admin&tenant=${klijent.tenant_id}&token=${window.CF_SOURCE_TOKEN}`;
-                };
-
                 tdActions.appendChild(btnStudio);
             }
 
