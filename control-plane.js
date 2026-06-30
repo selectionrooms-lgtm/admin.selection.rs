@@ -255,7 +255,7 @@ function renderujTabelu(korisnici) {
                 btnWa.href = waUrl;
                 btnWa.target = "_blank";
                 btnWa.title = `Ispucaj WhatsApp poruku za status: ${waLabel}`;
-                btnWa.style.cssText = "background: #25D366; color: #000; font-weight: 700; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s; cursor: pointer;";
+                btnWa.style.cssText = "background: #128C7E; color: #fff; font-weight: 600; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s; cursor: pointer;";
                 btnWa.innerHTML = `💬 WA: ${waLabel}`;
                 tdActions.appendChild(btnWa);
             }
