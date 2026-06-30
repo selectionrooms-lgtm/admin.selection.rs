@@ -137,7 +137,11 @@ function renderujTabelu(korisnici) {
         tr.appendChild(tdPhone);
 
         const tdTenant = document.createElement('td');
-        tdTenant.innerHTML = `<input type="text" value="${cistiSubdomain || 'Nije alociran'}" class="shell-input" style="width: 150px; padding: 5px 10px;" disabled>`;
+        if (cistiSubdomain) {
+            tdTenant.innerHTML = `<a href="https://${cistiSubdomain}.selection.rs" target="_blank" class="shell-link" style="color: var(--gold); text-decoration: none; font-weight: 500; font-family: monospace; display: inline-flex; align-items: center; gap: 4px;">🌐 ${cistiSubdomain}.selection.rs</a>`;
+        } else {
+            tdTenant.innerHTML = `<span style="color: var(--text-secondary); font-size: 12px; font-style: italic;">Nije alociran</span>`;
+        }
         tr.appendChild(tdTenant);
 
         const tdRole = document.createElement('td');

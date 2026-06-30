@@ -79,6 +79,20 @@ export async function bootstrapAdmin() {
         const identityBadge = document.getElementById('admin-identity');
         if (identityBadge) identityBadge.textContent = finalIdentity.email;
 
+        // 🌐 VIZUELNO PEGLANJE: Menjamo sirovi ID na front-endu human-friendly natpisom
+        // Pokušavamo da uhvatimo elemente zaglavlja koji ispisuju sistemske ID-jeve
+        const tenantBadge = document.getElementById('studio-tenant-subdomain') || document.getElementById('tenant-display');
+        const overrideBadge = document.getElementById('cp-override-status') || document.getElementById('override-display');
+
+        // Ako si Master, podrazumevano stanje je centralni sistem
+        if (finalIdentity.role === 'master') {
+            if (overrideBadge) overrideBadge.textContent = "👑 OVERRIDE: MASTER CORE";
+            if (tenantBadge) tenantBadge.textContent = "CENTRAL CORE SYSTEM";
+        } else {
+            // Ako je u pitanju običan klijent, pišemo mu da je u svom prostoru
+            if (tenantBadge) tenantBadge.textContent = "MOJ RADNI PROSTOR";
+        }
+
         // Okidamo signal za asinhroni front lanac
         document.dispatchEvent(new CustomEvent('ShellProvisionalReady', { detail: finalIdentity }));
         return finalIdentity;
